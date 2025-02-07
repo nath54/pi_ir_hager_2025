@@ -1,0 +1,9 @@
+*.txt
+*.pth
+*.tch
+*.pkl
+*.bin
+**/__pycache__
+**/.mypy_cache
+*.
+**/database

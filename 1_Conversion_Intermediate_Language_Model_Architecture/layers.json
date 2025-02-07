@@ -1,0 +1,913 @@
+[
+{
+        "layer_name": "Conv1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 - kernel_size + 1, n4)",
+        "pytorch_layer_name": "Conv1d",
+        "tensorflow_keras_layer_name": "Conv1D"
+}
+,
+{
+        "layer_name": "Conv2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 - kernel_size + 1, n3 - kernel_size + 1, n5)",
+        "pytorch_layer_name": "Conv2d",
+        "tensorflow_keras_layer_name": "Conv2D"
+}
+,
+{
+        "layer_name": "Conv3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 - kernel_size + 1, n3 - kernel_size + 1, n4 - kernel_size + 1, n6)",
+        "pytorch_layer_name": "Conv3d",
+        "tensorflow_keras_layer_name": "Conv3D"
+}
+,
+{
+        "layer_name": "ConvTranspose1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 * stride - padding, n4)",
+        "pytorch_layer_name": "ConvTranspose1d",
+        "tensorflow_keras_layer_name": "Conv1DTranspose"
+}
+,
+{
+        "layer_name": "ConvTranspose2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 * stride - padding, n3 * stride - padding, n5)",
+        "pytorch_layer_name": "ConvTranspose2d",
+        "tensorflow_keras_layer_name": "Conv2DTranspose"
+}
+,
+{
+        "layer_name": "ConvTranspose3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 * stride - padding, n3 * stride - padding, n4 * stride - padding, n6)",
+        "pytorch_layer_name": "ConvTranspose3d",
+        "tensorflow_keras_layer_name": "Conv3DTranspose"
+}
+,
+{
+        "layer_name": "Unfold",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 * kernel_size[0] * kernel_size[1], (n3 - kernel_size[0] + 1) * (n4 - kernel_size[1] + 1))",
+        "pytorch_layer_name": "Unfold",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "Fold",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 // (kernel_size[0] * kernel_size[1]), output_size[0], output_size[1])",
+        "pytorch_layer_name": "Fold",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "MaxPool1D",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3)",
+        "pytorch_layer_name": "MaxPool1d",
+        "tensorflow_keras_layer_name": "MaxPooling1D"
+}
+,
+{
+        "layer_name": "MaxPool2D",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3 // pool_size, n4)",
+        "pytorch_layer_name": "MaxPool2d",
+        "tensorflow_keras_layer_name": "MaxPooling2D"
+}
+,
+{
+        "layer_name": "MaxPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3 // pool_size, n4 // pool_size, n5)",
+        "pytorch_layer_name": "MaxPool3d",
+        "tensorflow_keras_layer_name": "MaxPooling3D"
+}
+,
+{
+        "layer_name": "MaxUnpool1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)", "(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 * stride, n3)",
+        "pytorch_layer_name": "MaxUnpool1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "MaxUnpool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)", "(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 * stride, n3 * stride, n4)",
+        "pytorch_layer_name": "MaxUnpool2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "MaxUnpool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)", "(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 * stride, n3 * stride, n4 * stride, n5)",
+        "pytorch_layer_name": "MaxUnpool3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AvgPool1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3)",
+        "pytorch_layer_name": "AvgPool1d",
+        "tensorflow_keras_layer_name": "AveragePooling1D"
+}
+,
+{
+        "layer_name": "AvgPool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3 // pool_size, n4)",
+        "pytorch_layer_name": "AvgPool2d",
+        "tensorflow_keras_layer_name": "AveragePooling2D"
+}
+,
+{
+        "layer_name": "AvgPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 // pool_size, n3 // pool_size, n4 // pool_size, n5)",
+        "pytorch_layer_name": "AvgPool3d",
+        "tensorflow_keras_layer_name": "AveragePooling3D"
+}
+,
+{
+        "layer_name": "FractionalMaxPool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 // output_ratio, n3 // output_ratio, n4)",
+        "pytorch_layer_name": "FractionalMaxPool2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "FractionalMaxPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 // kernel_size, n3 // kernel_size, n4 // kernel_size, n5)",
+        "pytorch_layer_name": "FractionalMaxPool3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "LPPool1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2 // kernel_size, n3)",
+        "pytorch_layer_name": "LPPool1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "LPPool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 // kernel_size, n3 // kernel_size, n4)",
+        "pytorch_layer_name": "LPPool2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "LPPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 // kernel_size, n3 // kernel_size, n4 // kernel_size, n5)",
+        "pytorch_layer_name": "LPPool3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AdaptiveMaxPool1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, output_size)",
+        "pytorch_layer_name": "AdaptiveMaxPool1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AdaptiveMaxPool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, output_size[0], output_size[1], n4)",
+        "pytorch_layer_name": "AdaptiveMaxPool2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AdaptiveMaxPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, output_size[0], output_size[1], output_size[2], n5)",
+        "pytorch_layer_name": "AdaptiveMaxPool3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AdaptiveAvgPool1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, output_size)",
+        "pytorch_layer_name": "AdaptiveAvgPool1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "AdaptiveAvgPool2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n4)",
+        "pytorch_layer_name": "AdaptiveAvgPool2d",
+        "tensorflow_keras_layer_name": "GlobalAveragePooling2D"
+}
+,
+{
+        "layer_name": "AdaptiveAvgPool3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, output_size[0], output_size[1], output_size[2], n5)",
+        "pytorch_layer_name": "AdaptiveAvgPool3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReflectionPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "ReflectionPad1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReflectionPad2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 + padding_top + padding_bottom, n3 + padding_left + padding_right, n4)",
+        "pytorch_layer_name": "ReflectionPad2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReflectionPad3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 + padding_front + padding_back, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right, n5)",
+        "pytorch_layer_name": "ReflectionPad3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReplicationPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "ReplicationPad1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReplicationPad2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 + padding_top + padding_bottom, n3 + padding_left + padding_right, n4)",
+        "pytorch_layer_name": "ReplicationPad2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ReplicationPad3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 + padding_front + padding_back, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right, n5)",
+        "pytorch_layer_name": "ReplicationPad3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ZeroPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "ZeroPad1d",
+        "tensorflow_keras_layer_name": "ZeroPadding1D"
+}
+,
+{
+        "layer_name": "ZeroPad2D",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 + padding_top + padding_bottom, n3 + padding_left + padding_right, n4)",
+        "pytorch_layer_name": "ZeroPad2d",
+        "tensorflow_keras_layer_name": "ZeroPadding2D"
+}
+,
+{
+        "layer_name": "ConstantPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "ConstantPad1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ConstantPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "ConstantPad1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ConstantPad2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right)",
+        "pytorch_layer_name": "ConstantPad2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ConstantPad3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 + padding_front + padding_back, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right, n5)",
+        "pytorch_layer_name": "ConstantPad3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "CircularPad1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_left + padding_right)",
+        "pytorch_layer_name": "CircularPad1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "CircularPad2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right)",
+        "pytorch_layer_name": "CircularPad2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "CircularPad3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2 + padding_front + padding_back, n3 + padding_top + padding_bottom, n4 + padding_left + padding_right, n5)",
+        "pytorch_layer_name": "CircularPad3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "ELU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "ELU",
+        "tensorflow_keras_layer_name": "ELU"
+}
+,
+{
+        "layer_name": "Hardshrink",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Hardshrink",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "Hardsigmoid",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Hardsigmoid",
+        "tensorflow_keras_layer_name": "Hardsigmoid"
+}
+,
+{
+        "layer_name": "Hardtanh",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Hardtanh",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "Hardswish",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Hardswish",
+        "tensorflow_keras_layer_name": "Hardswish"
+}
+,
+{
+        "layer_name": "LeakyReLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "LeakyReLU",
+        "tensorflow_keras_layer_name": "LeakyReLU"
+}
+,
+{
+        "layer_name": "LogSigmoid",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "LogSigmoid",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "MultiHeadAttention",
+        "tensor_inputs_shapes": ["(n1, n2, n3)", "(n1, n2, n3)", "(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "MultiheadAttention",
+        "tensorflow_keras_layer_name": "MultiHeadAttention"
+}
+,
+{
+        "layer_name": "PReLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "PReLU",
+        "tensorflow_keras_layer_name": "PReLU"
+}
+,
+{
+        "layer_name": "ReLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "ReLU",
+        "tensorflow_keras_layer_name": "ReLU"
+}
+,
+{
+        "layer_name": "ReLU6",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "ReLU6",
+        "tensorflow_keras_layer_name": "ReLU6"
+}
+,
+{
+        "layer_name": "RReLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "RReLU",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "SELU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "SELU",
+        "tensorflow_keras_layer_name": "SELU"
+}
+,
+{
+        "layer_name": "CELU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "CELU",
+        "tensorflow_keras_layer_name": "CELU"
+}
+,
+{
+        "layer_name": "GELU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "GELU",
+        "tensorflow_keras_layer_name": "GELU"
+}
+,
+{
+        "layer_name": "Sigmoid",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Sigmoid",
+        "tensorflow_keras_layer_name": "Sigmoid"
+}
+,
+{
+        "layer_name": "SiLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "SiLU",
+        "tensorflow_keras_layer_name": "SiLU"
+}
+,
+{
+        "layer_name": "Mish",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Mish",
+        "tensorflow_keras_layer_name": "Mish"
+}
+,
+{
+        "layer_name": "Softplus",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Softplus",
+        "tensorflow_keras_layer_name": "Softplus"
+}
+,
+{
+        "layer_name": "Softshrink",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Softshrink",
+        "tensorflow_keras_layer_name": "Softshrink"
+}
+,
+{
+        "layer_name": "Softsign",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Softsign",
+        "tensorflow_keras_layer_name": "Softsign"
+}
+,
+{
+        "layer_name": "Tanh",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Tanh",
+        "tensorflow_keras_layer_name": "Tanh"
+}
+,
+{
+        "layer_name": "Tanhshrink",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Tanhshrink",
+        "tensorflow_keras_layer_name": "Tanhshrink"
+}
+,
+{
+        "layer_name": "Threshold",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Threshold",
+        "tensorflow_keras_layer_name": "Threshold"
+}
+,
+{
+        "layer_name": "GLU",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2/2)",
+        "pytorch_layer_name": "GLU",
+        "tensorflow_keras_layer_name": "GLU"
+}
+,
+{
+        "layer_name": "Softmin",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Softmin",
+        "tensorflow_keras_layer_name": "Softmin"
+}
+,
+{
+        "layer_name": "Softmax",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Softmax",
+        "tensorflow_keras_layer_name": "Softmax"
+}
+,
+{
+        "layer_name": "Softmax2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "Softmax2d",
+        "tensorflow_keras_layer_name": "Softmax"
+}
+,
+{
+        "layer_name": "LogSoftmax",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "LogSoftmax",
+        "tensorflow_keras_layer_name": "LogSoftmax"
+}
+,
+{
+        "layer_name": "AdaptiveLogSoftmaxWithLoss",
+        "tensor_inputs_shapes": ["(n1, n2)", "(n1)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "AdaptiveLogSoftmaxWithLoss",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "BatchNorm1d",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "BatchNorm1d",
+        "tensorflow_keras_layer_name": "BatchNormalization"
+}
+,
+{
+        "layer_name": "BatchNorm2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "BatchNorm2d",
+        "tensorflow_keras_layer_name": "BatchNormalization"
+}
+,
+{
+        "layer_name": "BatchNorm3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2, n3, n4, n5)",
+        "pytorch_layer_name": "BatchNorm3d",
+        "tensorflow_keras_layer_name": "BatchNormalization"
+}
+,
+{
+        "layer_name": "GroupNorm",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "GroupNorm",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "SyncBatchNorm",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "SyncBatchNorm",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "InstanceNorm1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "InstanceNorm1d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "InstanceNorm2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "InstanceNorm2d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "InstanceNorm3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2, n3, n4, n5)",
+        "pytorch_layer_name": "InstanceNorm3d",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "LayerNormalization",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "LayerNorm",
+        "tensorflow_keras_layer_name": "LayerNormalization"
+}
+,
+{
+        "layer_name": "LocalResponseNorm",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2, n3, n4, n5)",
+        "pytorch_layer_name": "LocalResponseNorm",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "RMSNorm",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "RMSNorm",
+        "tensorflow_keras_layer_name": "None"
+}
+,
+{
+        "layer_name": "RNN",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n4)",
+        "pytorch_layer_name": "RNN",
+        "tensorflow_keras_layer_name": "SimpleRNN"
+}
+,
+{
+        "layer_name": "LSTM",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n4)",
+        "pytorch_layer_name": "LSTM",
+        "tensorflow_keras_layer_name": "LSTM"
+}
+,
+{
+        "layer_name": "GRU",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n4)",
+        "pytorch_layer_name": "GRU",
+        "tensorflow_keras_layer_name": "GRU"
+}
+,
+{
+        "layer_name": "RNNCell",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n3)",
+        "pytorch_layer_name": "RNNCell",
+        "tensorflow_keras_layer_name": "SimpleRNNCell"
+}
+,
+{
+        "layer_name": "LSTMCell",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n3)",
+        "pytorch_layer_name": "LSTMCell",
+        "tensorflow_keras_layer_name": "LSTMCell"
+}
+,
+{
+        "layer_name": "GRUCell",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n3)",
+        "pytorch_layer_name": "GRUCell",
+        "tensorflow_keras_layer_name": "GRUCell"
+}
+,
+{
+        "layer_name": "Transformer",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "Transformer",
+        "tensorflow_keras_layer_name": "Transformer"
+}
+,
+{
+        "layer_name": "TransformerEncoder",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "TransformerEncoder",
+        "tensorflow_keras_layer_name": "TransformerEncoder"
+}
+,
+{
+        "layer_name": "TransformerDecoder",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "TransformerDecoder",
+        "tensorflow_keras_layer_name": "TransformerDecoder"
+}
+,
+{
+        "layer_name": "TransformerEncoderLayer",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "TransformerEncoderLayer",
+        "tensorflow_keras_layer_name": "TransformerEncoderLayer"
+}
+,
+{
+        "layer_name": "TransformerDecoderLayer",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "TransformerDecoderLayer",
+        "tensorflow_keras_layer_name": "TransformerDecoderLayer"
+}
+,
+{
+        "layer_name": "Identity",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Identity",
+        "tensorflow_keras_layer_name": "Identity"
+}
+,
+{
+        "layer_name": "Linear",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, m)",
+        "pytorch_layer_name": "Linear",
+        "tensorflow_keras_layer_name": "Dense"
+}
+,
+{
+        "layer_name": "Bilinear",
+        "tensor_inputs_shapes": ["(n1, n2)", "(n1, n3)"],
+        "tensor_output_shape": "(n1, m)",
+        "pytorch_layer_name": "Bilinear",
+        "tensorflow_keras_layer_name": "Bilinear"
+}
+,
+{
+        "layer_name": "Dropout",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "Dropout",
+        "tensorflow_keras_layer_name": "Dropout"
+}
+,
+{
+        "layer_name": "Dropout1d",
+        "tensor_inputs_shapes": ["(n1, n2, n3)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "Dropout1d",
+        "tensorflow_keras_layer_name": "Dropout1d"
+}
+,
+{
+        "layer_name": "Dropout2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "Dropout2d",
+        "tensorflow_keras_layer_name": "Dropout2d"
+}
+,
+{
+        "layer_name": "Dropout3d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4, n5)"],
+        "tensor_output_shape": "(n1, n2, n3, n4, n5)",
+        "pytorch_layer_name": "Dropout3d",
+        "tensorflow_keras_layer_name": "Dropout3d"
+}
+,
+{
+        "layer_name": "AlphaDropout",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2)",
+        "pytorch_layer_name": "AlphaDropout",
+        "tensorflow_keras_layer_name": "AlphaDropout"
+}
+,
+{
+        "layer_name": "FeatureAlphaDropout",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "FeatureAlphaDropout",
+        "tensorflow_keras_layer_name": "FeatureAlphaDropout"
+}
+,
+{
+        "layer_name": "Embedding",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n2, n3)",
+        "pytorch_layer_name": "Embedding",
+        "tensorflow_keras_layer_name": "Embedding"
+}
+,
+{
+        "layer_name": "EmbeddingBag",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, n3)",
+        "pytorch_layer_name": "EmbeddingBag",
+        "tensorflow_keras_layer_name": "EmbeddingBag"
+}
+,
+{
+        "layer_name": "PixelShuffle",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 // r^2, n3 * r, n4 * r)",
+        "pytorch_layer_name": "PixelShuffle",
+        "tensorflow_keras_layer_name": "PixelShuffle"
+}
+,
+{
+        "layer_name": "PixelUnshuffle",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 * r^2, n3 // r, n4 // r)",
+        "pytorch_layer_name": "PixelUnshuffle",
+        "tensorflow_keras_layer_name": "PixelUnshuffle"
+}
+,
+{
+        "layer_name": "Upsample",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2 * size[0], n3 * size[1], n4)",
+        "pytorch_layer_name": "Upsample",
+        "tensorflow_keras_layer_name": "UpSampling2D"
+}
+,
+{
+        "layer_name": "UpsamplingNearest2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3 * size[0], n4 * size[1])",
+        "pytorch_layer_name": "UpsamplingNearest2d",
+        "tensorflow_keras_layer_name": "UpSampling2D"
+}
+,
+{
+        "layer_name": "UpsamplingBilinear2d",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3 * size[0], n4 * size[1])",
+        "pytorch_layer_name": "UpsamplingBilinear2d",
+        "tensorflow_keras_layer_name": "UpSampling2D"
+}
+,
+{
+        "layer_name": "ChannelShuffle",
+        "tensor_inputs_shapes": ["(n1, n2, n3, n4)"],
+        "tensor_output_shape": "(n1, n2, n3, n4)",
+        "pytorch_layer_name": "ChannelShuffle",
+        "tensorflow_keras_layer_name": "ChannelShuffle"
+}
+,
+{
+        "layer_name": "Flatten",
+        "tensor_inputs_shapes": ["(n1, n2, n3, ...)"],
+        "tensor_output_shape": "(n1, n2 * n3 * ...)",
+        "pytorch_layer_name": "Flatten",
+        "tensorflow_keras_layer_name": "Flatten"
+}
+,
+{
+        "layer_name": "Unflatten",
+        "tensor_inputs_shapes": ["(n1, n2)"],
+        "tensor_output_shape": "(n1, dim1, dim2, ...)",
+        "pytorch_layer_name": "Unflatten",
+        "tensorflow_keras_layer_name": "Reshape"
+}
+]
