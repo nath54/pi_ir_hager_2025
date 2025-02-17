@@ -1,34 +1,12 @@
 #
-from typing import Any
-#
 import ast
 import json
 #
 import sys
 import os
 
+
 #
-def debug_var(var: Any, txt_sup: str = "") -> None:
-    #
-    n: int = 0
-    #
-    for attr in dir(var):
-        if not attr.startswith("__") and attr not in ["denominator", "imag", "numerator", "real"]:
-            n += 1
-            debug_var( getattr(var, attr), txt_sup=f"{txt_sup}{'.' if txt_sup else ''}{attr}")
-    #
-    if isinstance(var, list):
-        for i in range(len(var)):
-            debug_var( var[i], txt_sup=f"{txt_sup}[{i}]")
-    #
-    if isinstance(var, dict):
-        for key in var:
-            debug_var( var[key], txt_sup=f"{txt_sup}['{key}']")
-    #
-    if isinstance(var, int) or isinstance(var, float) or isinstance(var, str) or isinstance(var, list) or isinstance(var, dict):
-        print(f"DEBUG VAR | {txt_sup} = {var}")
-
-
 class LayerInfo:
     def __init__(self, name, var_name, shape=None, datatype=None):
         self.name = name
@@ -46,6 +24,7 @@ class LayerInfo:
             "data": "path_toward_binary_file"  # Placeholder for actual data
         }
 
+#
 class LayerOperation:
     def __init__(self, name, tensor_input, tensor_output):
         self.name = name
@@ -60,6 +39,7 @@ class LayerOperation:
             "tensor_output": self.tensor_output
         }
 
+#
 class BlockInfo:
     def __init__(self, name, input_shape, input_datatype, output_shape, output_datatype):
         self.name = name
@@ -88,6 +68,7 @@ class BlockInfo:
             "control_flow": [layer.to_dict() for layer in self.layers],
         }
 
+#
 class ModelInfo:
     def __init__(self, name, input_shape, input_datatype, output_shape, output_datatype):
         self.name = name
@@ -111,6 +92,7 @@ class ModelInfo:
             "blocks": [block.to_dict() for block in self.blocks]
         }
 
+#
 class ModelAnalyzer(ast.NodeVisitor):
     def __init__(self):
         self.models = []
@@ -186,6 +168,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+#
 if __name__ == "__main__":
 
     #
