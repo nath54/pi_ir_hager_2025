@@ -89,11 +89,16 @@ class ModelAnalyzer(ast.NodeVisitor):
                 lc.FlowControlVariableInit(var_name, var_type, var_value)
             )
 
+    #
+    def process_forward_expr(self, item: ast.Expr, block: lc.ModelBlock) -> None:
+        # TODO
+        pass
+
     def process_rhs_value(self, rhs: ast.AST) -> tuple[str, Any]:
         try:
             value = ast.literal_eval(rhs)
             return type(value).__name__, value
-        except:
+        except Exception as _:
             return 'unknown', ast.unparse(rhs).strip()
 
     def process_call_arguments(self, call: ast.Call) -> dict[str, Any]:
@@ -102,6 +107,8 @@ class ModelAnalyzer(ast.NodeVisitor):
             key = f'arg{idx}'
             args[key] = self.parse_arg_value(arg)
         for kw in call.keywords:
+            if kw.arg is None:
+                continue
             key = kw.arg
             args[key] = self.parse_arg_value(kw.value)
         return args
@@ -109,7 +116,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     def parse_arg_value(self, node: ast.AST) -> Any:
         try:
             return ast.literal_eval(node)
-        except:
+        except Exception as _:
             return ast.unparse(node).strip()
 
 

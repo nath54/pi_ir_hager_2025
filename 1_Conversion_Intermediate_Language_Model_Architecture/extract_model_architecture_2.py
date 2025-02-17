@@ -137,10 +137,11 @@ class ModelAnalyzer(ast.NodeVisitor):
                             self.model_blocks[self.current_model_visit].block_parameters[var_name] = (var_type, var_value)
                     else:
                         # Simple assignment (not a call) treated as a parameter initialization
-                        var_type: str = type(node.value).__name__
-                        var_value: str = get_node_repr(node.value)
+                        var_type = type(node.value).__name__
+                        var_value = get_node_repr(node.value)
                         self.model_blocks[self.current_model_visit].block_parameters[var_name] = (var_type, var_value)
         elif self.current_method == "forward":
+
             # Process assignments in forward: these can represent variable initializations, layer calls, or function calls.
             output_vars: List[str] = []
             for target in node.targets:
@@ -151,6 +152,8 @@ class ModelAnalyzer(ast.NodeVisitor):
                     for elt in target.elts:
                         if isinstance(elt, ast.Name):
                             output_vars.append(elt.id)
+            #
+            instruction: lc.FlowControlInstruction
 
             # If the right-hand side is a call, further distinguish between layer passes and other function calls.
             if isinstance(node.value, ast.Call):
@@ -162,7 +165,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 ):
                     # This is a layer call (e.g., x = self.conv1(x))
                     layer_name: str = call_node.func.attr
-                    call_args: Dict[str, Any] = extract_call_arguments(call_node)
+                    call_args = extract_call_arguments(call_node)
                     instruction = lc.FlowControlLayerPass(
                         output_variables=output_vars, layer_name=layer_name, layer_arguments=call_args
                     )
@@ -170,15 +173,15 @@ class ModelAnalyzer(ast.NodeVisitor):
                 else:
                     # Regular function call (not a layer call)
                     function_called: str = get_node_repr(call_node.func)
-                    call_args: Dict[str, Any] = extract_call_arguments(call_node)
+                    call_args = extract_call_arguments(call_node)
                     instruction = lc.FlowControlFunctionCall(
                         output_variables=output_vars, function_called=function_called, function_arguments=call_args
                     )
                     self.model_blocks[self.current_model_visit].forward_flow_control.append(instruction)
             else:
                 # Not a call; treat as variable initialization
-                var_type: str = type(node.value).__name__
-                var_value: str = get_node_repr(node.value)
+                var_type = type(node.value).__name__
+                var_value = get_node_repr(node.value)
                 # For each variable initialized, record a variable initialization instruction
                 for var in output_vars:
                     instruction = lc.FlowControlVariableInit(var_name=var, var_type=var_type, var_value=var_value)
@@ -192,6 +195,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         # In the forward method, expressions (e.g. standalone function calls) should be processed
         if self.current_method == "forward" and isinstance(node.value, ast.Call):
             call_node = node.value
+            #
+            instruction: lc.FlowControlInstruction
+            #
             if (
                 isinstance(call_node.func, ast.Attribute)
                 and isinstance(call_node.func.value, ast.Name)
@@ -205,7 +211,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             else:
                 # A generic function call with no output
                 function_called: str = get_node_repr(call_node.func)
-                call_args: Dict[str, Any] = extract_call_arguments(call_node)
+                call_args = extract_call_arguments(call_node)
                 instruction = lc.FlowControlFunctionCall(output_variables=[], function_called=function_called, function_arguments=call_args)
                 self.model_blocks[self.current_model_visit].forward_flow_control.append(instruction)
         #

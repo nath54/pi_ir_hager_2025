@@ -76,7 +76,7 @@ class FlowControlFunctionCall(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\n\t * FlowControlVariableInit:\n\t\t-output_variables: {self.output_variables}\n\t\t-function_called: {self.function_called}\n\t\t-function_arguments: {self.function_arguments}\n"
+        return f"\n\t * FlowControlFunctionCall:\n\t\t-output_variables: {self.output_variables}\n\t\t-function_called: {self.function_called}\n\t\t-function_arguments: {self.function_arguments}\n"
 
 
 #
