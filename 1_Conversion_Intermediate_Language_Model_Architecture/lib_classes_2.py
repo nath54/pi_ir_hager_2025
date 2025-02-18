@@ -1,5 +1,5 @@
-#
-from typing import Any, Optional
+# First script: lib_classes.py (extended)
+from typing import Any, Optional, Union, List, Dict, Tuple
 
 # NOTE: when saying variable type, if there is an iterable or a tensor, the shape must be indicated
 
@@ -40,7 +40,6 @@ class LayerCondition(Layer):
         # So there are constraints, like the fact that each of theses layers must have the same input shapes and same output shapes
         # The idea is to create the blocks when we see an if in a forward pass (so link to the layers that are used in the main block)
         # Okay, so, finally, there is no need to create completely new blocks, just sub block functions `BlockFunction`, so there is no issues of weights / layers duplications.
-
 
 
 ####################################################################
@@ -97,21 +96,6 @@ class FlowControlFunctionCall(FlowControlInstruction):
 
 
 #
-class FlowControlSubBlockFunctionCall(FlowControlInstruction):
-    #
-    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Any]) -> None:
-        #
-        self.output_variables: list[str] = output_variables
-        self.function_called: str = function_called
-        self.function_arguments: dict[str, Any] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
-
-    #
-    def __str__(self) -> str:
-        #
-        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})\n"
-
-
-#
 class FlowControlLayerPass(FlowControlInstruction):
     #
     def __init__(self, output_variables: list[str], layer_name: str, layer_arguments: dict[str, Any]) -> None:
@@ -139,7 +123,59 @@ class FlowControlReturn(FlowControlInstruction):
         return f"\t\t * return {self.return_variables}"
 
 
-# TODO: Create mode FlowControl classes **if needed** for basic operations and variables manipulation, mathematical operations, and other stuff
+# Additional Flow Control Classes for completeness
+
+#
+class FlowControlIf(FlowControlInstruction):
+    #
+    def __init__(self, condition: str, true_block: List[FlowControlInstruction], false_block: Optional[List[FlowControlInstruction]] = None) -> None:
+        #
+        self.condition: str = condition  # String representation of the condition
+        self.true_block: List[FlowControlInstruction] = true_block  # Instructions to execute if condition is True
+        self.false_block: Optional[List[FlowControlInstruction]] = false_block  # Instructions to execute if condition is False
+
+    #
+    def __str__(self) -> str:
+        #
+        true_block_str = "\n".join([instr.__str__() for instr in self.true_block])
+        if self.false_block:
+            false_block_str = "\n".join([instr.__str__() for instr in self.false_block])
+            return f"\t\t * if {self.condition}:\n{true_block_str}\n\t\t * else:\n{false_block_str}\n"
+        return f"\t\t * if {self.condition}:\n{true_block_str}\n"
+
+
+#
+class FlowControlLoop(FlowControlInstruction):
+    #
+    def __init__(self, loop_type: str, iterator: str, iterable: str, body: List[FlowControlInstruction]) -> None:
+        #
+        self.loop_type: str = loop_type  # 'for' or 'while'
+        self.iterator: str = iterator  # Variable used for iteration (in for loops)
+        self.iterable: str = iterable  # The condition (for while) or the iterable (for for)
+        self.body: List[FlowControlInstruction] = body  # Instructions to execute in the loop body
+
+    #
+    def __str__(self) -> str:
+        #
+        body_str = "\n".join([instr.__str__() for instr in self.body])
+        if self.loop_type == "for":
+            return f"\t\t * for {self.iterator} in {self.iterable}:\n{body_str}\n"
+        else:  # while
+            return f"\t\t * while {self.iterable}:\n{body_str}\n"
+
+
+#
+class FlowControlAssignment(FlowControlInstruction):
+    #
+    def __init__(self, target: str, expression: str) -> None:
+        #
+        self.target: str = target  # Left side of assignment
+        self.expression: str = expression  # Right side of assignment
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"\t\t * {self.target} = {self.expression}\n"
 
 
 ##############################################################
@@ -160,14 +196,11 @@ class BlockFunction:
         self.function_flow_control: list[FlowControlInstruction] = []  # To complete while analysis
 
     #
-    def __repr__(self) -> str:
-        #
-        return self.__str__()
-
-    #
     def __str__(self) -> str:
         #
-        return f"\t * Function {self.function_name} ( {self.function_arguments} ) : \n{"\n".join([ffc.__str__() for ffc in self.function_flow_control])}"
+        args_str = ", ".join([f"{arg_name}: {arg_type}" for arg_name, (arg_type, _) in self.function_arguments.items()])
+        flow_control_str = "".join([ffc.__str__() for ffc in self.function_flow_control])
+        return f"\n\t-function {self.function_name}({args_str}):\n{flow_control_str}\n"
 
 
 #
@@ -184,6 +217,9 @@ class ModelBlock:
         }
         #
         self.block_variables: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable value)
+        #
+        self.forward_arguments: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
+        self.forward_flow_control: list[FlowControlInstruction] = []
 
     #
     def __repr__(self) -> str:
@@ -193,6 +229,10 @@ class ModelBlock:
     #
     def __str__(self) -> str:
         #
-        return f"\n\nModelBlock:\n\t-block_name: {self.block_name}\n\t-block_parameters: {self.block_parameters}\n\t-block_layers: \n{"\n".join([self.block_layers[layer].__str__() for layer in self.block_layers])}\n\t-Functions:\n\n{"\n\n".join([fn_name + " = " + self.block_functions[fn_name].__str__() for fn_name in self.block_functions])}\n"
+        layers_str = "\n".join([self.block_layers[layer].__str__() for layer in self.block_layers]) if self.block_layers else "None"
+        functions_str = "\n".join([self.block_functions[func].__str__() for func in self.block_functions]) if self.block_functions else "None"
+        forward_flow_str = "".join([ffc.__str__() for ffc in self.forward_flow_control]) if self.forward_flow_control else "None"
 
-
+        return (f"\n\nModelBlock:\n\t-block_name: {self.block_name}\n\t-block_parameters: {self.block_parameters}\n"
+                f"\t-block_layers: \n{layers_str}\n\t-block_functions: \n{functions_str}\n"
+                f"\t-forward_arguments: {self.forward_arguments}\n\t-forward_flow_control: \n{forward_flow_str}\n")

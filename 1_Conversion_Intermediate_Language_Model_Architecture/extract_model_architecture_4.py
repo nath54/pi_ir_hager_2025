@@ -54,7 +54,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                     layer_type = call.func.attr
                     layer_name = target.attr
                     parameters = self.process_call_arguments(call)
-                    block.block_layers[layer_name] = lc.Layer(layer_type, parameters)
+                    block.block_layers[layer_name] = lc.Layer(layer_name, layer_type, parameters)
 
     def process_forward_item(self, item: ast.AST, block: lc.ModelBlock) -> None:
         if isinstance(item, ast.Assign):
