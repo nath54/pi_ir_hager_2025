@@ -137,10 +137,12 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         self.current_function_visit = "__init__"
+
         #
         # TODO: Get the argument of the current class definition
         # TODO: to put here: self.model_blocks[block_name].block_parameters
         pass
+
         #
         # TODO: Get the layers definitions of the class
         # TODO: Get the variables definitions of the class
@@ -158,6 +160,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         self.current_function_visit = "forward"
+
         #
         # TODO: Get the arguments of the forward method
         pass
@@ -171,6 +174,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         # TODO:   - the returns (lc.FlowControlReturn)
         # TODO:   - the conditions blocks -> Create sub-blocks for each condition branch, add a layer to the model block layers definitions of type lc.LayerCondition, and then add a flow instruction of type lc.FlowControlLayerPass
         # TODO:   - the loops (lc.FlowControlForLoop or lc.FlowControlWhileLoop)
+        pass
 
     #
     def _analyse_other_method(self, node: ast.FunctionDef) -> None:
@@ -183,6 +187,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         self.current_function_visit = node.name
+
         #
         # TODO
         pass
@@ -199,10 +204,15 @@ class ModelAnalyzer(ast.NodeVisitor):
             str: _description_
         """
 
+        #
         if isinstance(func, ast.Attribute):
             return func.attr
+
+        #
         elif isinstance(func, ast.Name):
             return func.id
+
+        #
         return ""
 
 
@@ -221,6 +231,8 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+        pass
+
         #
         ast.NodeVisitor.generic_visit(self, node)
 
