@@ -393,7 +393,7 @@ class ModelBlock:
 
 
 #
-class MainModelAnalysis:
+class Language1_Model:
     #
     def __init__(self) -> None:
         """
