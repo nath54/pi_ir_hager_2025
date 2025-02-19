@@ -402,8 +402,6 @@ class MainModelAnalysis:
         Attributes:
             - model_blocks (dict[str, lc.ModelBlock]): list of all the blocks analyzed here, indexed by their blocks id (e.g. their name)
             - main_block (str): id of the main block, given in sys.argv with `--main-block <MainBlockName>`
-            - current_model_visit (list[str]): stack of all the current blocks we are working on currently, access to the top one with [-1]
-            - current_function_visit (str): name of the current visited function if we are
         """
         #
         self.model_blocks: dict[str, ModelBlock] = {}

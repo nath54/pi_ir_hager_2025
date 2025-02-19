@@ -226,38 +226,23 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
     # --------------------------------------------------------- #
-    # ----            BASIC & EASY OPTIMISATIONS           ---- #
-    # --------------------------------------------------------- #
-
-    #
-    def basic_optimisations(self) -> None:
-        """
-        _summary_
-        """
-
-        #
-        # TODO: Search for basic optimisations like checking useless control flow instructions or optimisations of temporaries variables (if there is a way to reduce their numbers by checking the variables dependancy graph for instance)
-        # TODO: Clarify and explain what is done in this method
-        # TODO: Decompose the task in multiple sub methods for better code
-        #
-        pass
-
-
-    # --------------------------------------------------------- #
-    # ----                    CLEANING                     ---- #
+    # ----           CLEANING & ERROR DETECTIONS           ---- #
     # --------------------------------------------------------- #
 
 
     #
-    def cleaning(self) -> None:
+    def cleaning_and_error_detections(self) -> None:
         """
         _summary_
         """
 
         #
         # TODO: Cleaning unused functions in blocks (need a control flow analysis)
+        # TODO: While cleaning, check for basic errors (like a block without forward method, and things like that)
         # TODO: Clarify and explain what is done in this method
         # TODO: Decompose the task in multiple sub methods for better code
+        pass
+
         #
         pass
 
