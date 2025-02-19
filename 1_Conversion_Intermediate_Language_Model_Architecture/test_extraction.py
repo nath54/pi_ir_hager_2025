@@ -248,18 +248,22 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
 #
-if __name__ == "__main__":
+def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_Model:
+    """
+    Extracts a neural network model architecture from models that are written with Pytorch library from a python script file.
 
-    #
-    if len(sys.argv) != 2:
-        raise UserWarning(f"Error: if you use this script directly, you should use it like that :\n  python {sys.argv[0]} path_to_model_script.py")
+    Note: All the dependecies of the model must be in this single script file, the imports are not followed.
 
-    #
-    # TODO: add the support for the main model block argument that specifies which block is the main model block
-    pass
+    Args:
+        filepath (str): Path to file to extract the architecture of the model from.
+        main_block_name (str, optional): Indicates the name of the entry point of the model. Defaults to "".
 
-    #
-    path_to_file: str = sys.argv[1]
+    Raises:
+        FileNotFoundError: If the file is not found
+
+    Returns:
+        lc.Language1_Model: The architecture of the model extracted
+    """
 
     #
     if not os.path.exists(path_to_file):
@@ -274,5 +278,32 @@ if __name__ == "__main__":
     analyzer.visit(tree)
 
     #
+    lang1: lc.Language1_Model = lc.Language1_Model()
+    lang1.main_block = analyzer.main_block
+    lang1.model_blocks = analyzer.model_blocks
+
+    #
+    return lang1
+
+
+
+#
+if __name__ == "__main__":
+
+    #
+    if len(sys.argv) != 2:
+        raise UserWarning(f"Error: if you use this script directly, you should use it like that :\n  python {sys.argv[0]} path_to_model_script.py")
+
+    #
+    # TODO: add the support for the main model block argument that specifies which block is the main model block
+    pass
+
+    #
+    path_to_file: str = sys.argv[1]
+
+    #
+    l1_model: lc.Language1_Model = extract_from_file(filepath=path_to_file)
+
+    #
     print("\n" * 2)
-    print(analyzer.model_blocks)
+    print(l1_model.model_blocks)
