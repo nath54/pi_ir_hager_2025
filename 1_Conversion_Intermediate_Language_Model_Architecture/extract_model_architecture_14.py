@@ -13,7 +13,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         self.current_block: Optional[ModelBlock] = None
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        if any(base.id == 'Module' for base in node.bases if isinstance(base, ast.Name)):
+        if any(base.attr == 'Module' and isinstance(base.value, ast.Name) and base.value.id == "nn" for base in node.bases if isinstance(base, ast.Attribute)):
             block = ModelBlock(node.name)
             self.blocks[node.name] = block
             self.current_block = block
@@ -106,5 +106,6 @@ if __name__ == "__main__":
     analyzer = ModelAnalyzer()
     analyzer.visit(tree)
 
+    print(analyzer.blocks)
     for name, block in analyzer.blocks.items():
         print(block)

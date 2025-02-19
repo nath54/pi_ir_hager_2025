@@ -17,6 +17,11 @@ from lib_debug import debug_var  # type: ignore
 
 #
 class ModelAnalyzer(ast.NodeVisitor):
+
+    # --------------------------------------------------------- #
+    # ----               INIT MODEL ANALYZER               ---- #
+    # --------------------------------------------------------- #
+
     #
     def __init__(self) -> None:
         #
@@ -24,59 +29,95 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         self.main_block: str = ""
         #
-        self.current_model_visit: str = ""
+        self.current_model_visit: list[str] = []  # Acess with [-1], a stack formation to manage the sub-blocks correctly and with elegance
+        self.current_function_visit: str = ""
+
+
+    # --------------------------------------------------------- #
+    # ----                  CLASS VISITOR                  ---- #
+    # --------------------------------------------------------- #
+
+    #
+    def _is_torch_module_class(self, node: ast.ClassDef) -> bool:
+        for base in node.bases:
+            if isinstance(base, ast.Attribute) and base.attr == "Module" and isinstance(base.value, ast.Name) and base.value.id == "nn":
+                return True
+        return False
 
     #
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
 
-        #
-        is_module_class: bool = False
-
         # Check if the class inherits from torch.nn.Module
-        for base in node.bases:
-            if isinstance(base, ast.Attribute) and base.attr == "Module" and isinstance(base.value, ast.Name) and base.value.id == "nn":
-                is_module_class = True
-                break
-
-        #
-        if not is_module_class:
+        if not self._is_torch_module_class(node):
             return
 
         #
         block_name: str = node.name
-        self.current_model_visit = block_name
         #
         if block_name in self.model_blocks:
             raise UserWarning(f"ERROR : There are two classes with the same name !!!\nBad name : {block_name}\n")
 
         #
         self.model_blocks[block_name] = lc.ModelBlock(block_name=block_name)
+        self.current_model_visit.append(block_name)
 
         #
         self.generic_visit(node)
 
+
+    # --------------------------------------------------------- #
+    # ----                FUNCTION VISITOR                 ---- #
+    # --------------------------------------------------------- #
 
     #
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        #
         if node.name == "__init__":
-
-            # Analyze the __init__ method to extract layer definitions
-            for item in node.body:
-
-                # TODO
-                pass
-
+            self._analyze_init_method(node)
         #
         elif node.name == "forward":
-
-            # Analyze the forward method to track instructions flow
-            for item in node.body:
-
-                # TODO
-                pass
-
+            self._analyze_forward_method(node)
+        #
+        else:
+            self._analyse_other_method(node)
         #
         self.generic_visit(node)
+
+    #
+    def _analyze_init_method(self, node: ast.FunctionDef) -> None:
+        #
+        self.current_function_visit = "__init__"
+        #
+        # TODO: Get the arguments of the class
+        #
+        # TODO: Get the layers definitions of the class
+        # TODO: Get the variables definitions of the class
+        # TODO: Analyze deeply the ModuleList and Sequential and create sub blocks for theses correctly
+        pass
+
+    #
+    def _analyze_forward_method(self, node: ast.FunctionDef) -> None:
+        #
+        self.current_function_visit = "forward"
+        #
+        # TODO
+        pass
+
+    #
+    def _analyse_other_method(self, node: ast.FunctionDef) -> None:
+        #
+        self.current_function_visit = node.name
+        #
+        # TODO
+        pass
+
+    #
+    def get_layer_type(self, func: ast.Expr) -> str:
+        if isinstance(func, ast.Attribute):
+            return func.attr
+        elif isinstance(func, ast.Name):
+            return func.id
+        return ""
 
     #
     def generic_visit(self, node: ast.AST):
