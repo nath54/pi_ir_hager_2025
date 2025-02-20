@@ -8,9 +8,9 @@ import lib_classes as lc
 
 # FOR DEBUGGING
 # The debug_var displays all the attributes of a variable
-sys.path.insert(0, "../debug/")
-#
-from lib_debug import debug_var  # type: ignore
+# sys.path.insert(0, "../debug/")
+# #
+# from lib_debug import debug_var  # type: ignore
 
 #
 
