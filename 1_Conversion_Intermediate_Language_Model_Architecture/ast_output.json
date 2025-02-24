@@ -1,0 +1,2286 @@
+[
+    {
+        "type": "Module",
+        "fields": {
+            "body": [
+                {
+                    "type": "Import",
+                    "fields": {
+                        "names": [
+                            {
+                                "type": "alias",
+                                "fields": {
+                                    "name": "torch",
+                                    "asname": null
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "Import",
+                    "fields": {
+                        "names": [
+                            {
+                                "type": "alias",
+                                "fields": {
+                                    "name": "torch.nn",
+                                    "asname": "nn"
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "ClassDef",
+                    "fields": {
+                        "name": "SimpleModel",
+                        "bases": [
+                            {
+                                "type": "Attribute",
+                                "fields": {
+                                    "value": {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "nn",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    },
+                                    "attr": "Module",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            }
+                        ],
+                        "keywords": [],
+                        "body": [
+                            {
+                                "type": "FunctionDef",
+                                "fields": {
+                                    "name": "__init__",
+                                    "args": {
+                                        "type": "arguments",
+                                        "fields": {
+                                            "posonlyargs": [],
+                                            "args": [
+                                                {
+                                                    "type": "arg",
+                                                    "fields": {
+                                                        "arg": "self",
+                                                        "annotation": null,
+                                                        "type_comment": null
+                                                    }
+                                                }
+                                            ],
+                                            "vararg": null,
+                                            "kwonlyargs": [],
+                                            "kw_defaults": [],
+                                            "kwarg": null,
+                                            "defaults": []
+                                        }
+                                    },
+                                    "body": [
+                                        {
+                                            "type": "Expr",
+                                            "fields": {
+                                                "value": {
+                                                    "type": "Call",
+                                                    "fields": {
+                                                        "func": {
+                                                            "type": "Attribute",
+                                                            "fields": {
+                                                                "value": {
+                                                                    "type": "Call",
+                                                                    "fields": {
+                                                                        "func": {
+                                                                            "type": "Name",
+                                                                            "fields": {
+                                                                                "id": "super",
+                                                                                "ctx": {
+                                                                                    "type": "Load",
+                                                                                    "fields": {}
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "args": [],
+                                                                        "keywords": []
+                                                                    }
+                                                                },
+                                                                "attr": "__init__",
+                                                                "ctx": {
+                                                                    "type": "Load",
+                                                                    "fields": {}
+                                                                }
+                                                            }
+                                                        },
+                                                        "args": [],
+                                                        "keywords": []
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "Assign",
+                                            "fields": {
+                                                "targets": [
+                                                    {
+                                                        "type": "Attribute",
+                                                        "fields": {
+                                                            "value": {
+                                                                "type": "Name",
+                                                                "fields": {
+                                                                    "id": "self",
+                                                                    "ctx": {
+                                                                        "type": "Load",
+                                                                        "fields": {}
+                                                                    }
+                                                                }
+                                                            },
+                                                            "attr": "fc1",
+                                                            "ctx": {
+                                                                "type": "Store",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "value": {
+                                                    "type": "Call",
+                                                    "fields": {
+                                                        "func": {
+                                                            "type": "Attribute",
+                                                            "fields": {
+                                                                "value": {
+                                                                    "type": "Name",
+                                                                    "fields": {
+                                                                        "id": "nn",
+                                                                        "ctx": {
+                                                                            "type": "Load",
+                                                                            "fields": {}
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "attr": "Linear",
+                                                                "ctx": {
+                                                                    "type": "Load",
+                                                                    "fields": {}
+                                                                }
+                                                            }
+                                                        },
+                                                        "args": [
+                                                            {
+                                                                "type": "Constant",
+                                                                "fields": {
+                                                                    "value": 10,
+                                                                    "kind": null
+                                                                }
+                                                            },
+                                                            {
+                                                                "type": "Constant",
+                                                                "fields": {
+                                                                    "value": 20,
+                                                                    "kind": null
+                                                                }
+                                                            }
+                                                        ],
+                                                        "keywords": []
+                                                    }
+                                                },
+                                                "type_comment": null
+                                            }
+                                        },
+                                        {
+                                            "type": "Assign",
+                                            "fields": {
+                                                "targets": [
+                                                    {
+                                                        "type": "Attribute",
+                                                        "fields": {
+                                                            "value": {
+                                                                "type": "Name",
+                                                                "fields": {
+                                                                    "id": "self",
+                                                                    "ctx": {
+                                                                        "type": "Load",
+                                                                        "fields": {}
+                                                                    }
+                                                                }
+                                                            },
+                                                            "attr": "fc2",
+                                                            "ctx": {
+                                                                "type": "Store",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "value": {
+                                                    "type": "Call",
+                                                    "fields": {
+                                                        "func": {
+                                                            "type": "Attribute",
+                                                            "fields": {
+                                                                "value": {
+                                                                    "type": "Name",
+                                                                    "fields": {
+                                                                        "id": "nn",
+                                                                        "ctx": {
+                                                                            "type": "Load",
+                                                                            "fields": {}
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "attr": "Linear",
+                                                                "ctx": {
+                                                                    "type": "Load",
+                                                                    "fields": {}
+                                                                }
+                                                            }
+                                                        },
+                                                        "args": [
+                                                            {
+                                                                "type": "Constant",
+                                                                "fields": {
+                                                                    "value": 20,
+                                                                    "kind": null
+                                                                }
+                                                            },
+                                                            {
+                                                                "type": "Constant",
+                                                                "fields": {
+                                                                    "value": 30,
+                                                                    "kind": null
+                                                                }
+                                                            }
+                                                        ],
+                                                        "keywords": []
+                                                    }
+                                                },
+                                                "type_comment": null
+                                            }
+                                        }
+                                    ],
+                                    "decorator_list": [],
+                                    "returns": null,
+                                    "type_comment": null,
+                                    "type_params": []
+                                }
+                            },
+                            {
+                                "type": "FunctionDef",
+                                "fields": {
+                                    "name": "forward",
+                                    "args": {
+                                        "type": "arguments",
+                                        "fields": {
+                                            "posonlyargs": [],
+                                            "args": [
+                                                {
+                                                    "type": "arg",
+                                                    "fields": {
+                                                        "arg": "self",
+                                                        "annotation": null,
+                                                        "type_comment": null
+                                                    }
+                                                },
+                                                {
+                                                    "type": "arg",
+                                                    "fields": {
+                                                        "arg": "x",
+                                                        "annotation": null,
+                                                        "type_comment": null
+                                                    }
+                                                }
+                                            ],
+                                            "vararg": null,
+                                            "kwonlyargs": [],
+                                            "kw_defaults": [],
+                                            "kwarg": null,
+                                            "defaults": []
+                                        }
+                                    },
+                                    "body": [
+                                        {
+                                            "type": "Assign",
+                                            "fields": {
+                                                "targets": [
+                                                    {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "x",
+                                                            "ctx": {
+                                                                "type": "Store",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "value": {
+                                                    "type": "Call",
+                                                    "fields": {
+                                                        "func": {
+                                                            "type": "Attribute",
+                                                            "fields": {
+                                                                "value": {
+                                                                    "type": "Name",
+                                                                    "fields": {
+                                                                        "id": "self",
+                                                                        "ctx": {
+                                                                            "type": "Load",
+                                                                            "fields": {}
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "attr": "fc1",
+                                                                "ctx": {
+                                                                    "type": "Load",
+                                                                    "fields": {}
+                                                                }
+                                                            }
+                                                        },
+                                                        "args": [
+                                                            {
+                                                                "type": "Name",
+                                                                "fields": {
+                                                                    "id": "x",
+                                                                    "ctx": {
+                                                                        "type": "Load",
+                                                                        "fields": {}
+                                                                    }
+                                                                }
+                                                            }
+                                                        ],
+                                                        "keywords": []
+                                                    }
+                                                },
+                                                "type_comment": null
+                                            }
+                                        },
+                                        {
+                                            "type": "Assign",
+                                            "fields": {
+                                                "targets": [
+                                                    {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "x",
+                                                            "ctx": {
+                                                                "type": "Store",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    }
+                                                ],
+                                                "value": {
+                                                    "type": "Call",
+                                                    "fields": {
+                                                        "func": {
+                                                            "type": "Attribute",
+                                                            "fields": {
+                                                                "value": {
+                                                                    "type": "Name",
+                                                                    "fields": {
+                                                                        "id": "self",
+                                                                        "ctx": {
+                                                                            "type": "Load",
+                                                                            "fields": {}
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "attr": "fc2",
+                                                                "ctx": {
+                                                                    "type": "Load",
+                                                                    "fields": {}
+                                                                }
+                                                            }
+                                                        },
+                                                        "args": [
+                                                            {
+                                                                "type": "Name",
+                                                                "fields": {
+                                                                    "id": "x",
+                                                                    "ctx": {
+                                                                        "type": "Load",
+                                                                        "fields": {}
+                                                                    }
+                                                                }
+                                                            }
+                                                        ],
+                                                        "keywords": []
+                                                    }
+                                                },
+                                                "type_comment": null
+                                            }
+                                        },
+                                        {
+                                            "type": "Return",
+                                            "fields": {
+                                                "value": {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "x",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "decorator_list": [],
+                                    "returns": null,
+                                    "type_comment": null,
+                                    "type_params": []
+                                }
+                            }
+                        ],
+                        "decorator_list": [],
+                        "type_params": []
+                    }
+                }
+            ],
+            "type_ignores": []
+        }
+    },
+    {
+        "type": "Import",
+        "fields": {
+            "names": [
+                {
+                    "type": "alias",
+                    "fields": {
+                        "name": "torch",
+                        "asname": null
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "alias",
+        "fields": {
+            "name": "torch",
+            "asname": null
+        }
+    },
+    {
+        "type": "Import",
+        "fields": {
+            "names": [
+                {
+                    "type": "alias",
+                    "fields": {
+                        "name": "torch.nn",
+                        "asname": "nn"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "alias",
+        "fields": {
+            "name": "torch.nn",
+            "asname": "nn"
+        }
+    },
+    {
+        "type": "ClassDef",
+        "fields": {
+            "name": "SimpleModel",
+            "bases": [
+                {
+                    "type": "Attribute",
+                    "fields": {
+                        "value": {
+                            "type": "Name",
+                            "fields": {
+                                "id": "nn",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        },
+                        "attr": "Module",
+                        "ctx": {
+                            "type": "Load",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "keywords": [],
+            "body": [
+                {
+                    "type": "FunctionDef",
+                    "fields": {
+                        "name": "__init__",
+                        "args": {
+                            "type": "arguments",
+                            "fields": {
+                                "posonlyargs": [],
+                                "args": [
+                                    {
+                                        "type": "arg",
+                                        "fields": {
+                                            "arg": "self",
+                                            "annotation": null,
+                                            "type_comment": null
+                                        }
+                                    }
+                                ],
+                                "vararg": null,
+                                "kwonlyargs": [],
+                                "kw_defaults": [],
+                                "kwarg": null,
+                                "defaults": []
+                            }
+                        },
+                        "body": [
+                            {
+                                "type": "Expr",
+                                "fields": {
+                                    "value": {
+                                        "type": "Call",
+                                        "fields": {
+                                            "func": {
+                                                "type": "Attribute",
+                                                "fields": {
+                                                    "value": {
+                                                        "type": "Call",
+                                                        "fields": {
+                                                            "func": {
+                                                                "type": "Name",
+                                                                "fields": {
+                                                                    "id": "super",
+                                                                    "ctx": {
+                                                                        "type": "Load",
+                                                                        "fields": {}
+                                                                    }
+                                                                }
+                                                            },
+                                                            "args": [],
+                                                            "keywords": []
+                                                        }
+                                                    },
+                                                    "attr": "__init__",
+                                                    "ctx": {
+                                                        "type": "Load",
+                                                        "fields": {}
+                                                    }
+                                                }
+                                            },
+                                            "args": [],
+                                            "keywords": []
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "type": "Assign",
+                                "fields": {
+                                    "targets": [
+                                        {
+                                            "type": "Attribute",
+                                            "fields": {
+                                                "value": {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "self",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                },
+                                                "attr": "fc1",
+                                                "ctx": {
+                                                    "type": "Store",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value": {
+                                        "type": "Call",
+                                        "fields": {
+                                            "func": {
+                                                "type": "Attribute",
+                                                "fields": {
+                                                    "value": {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "nn",
+                                                            "ctx": {
+                                                                "type": "Load",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    },
+                                                    "attr": "Linear",
+                                                    "ctx": {
+                                                        "type": "Load",
+                                                        "fields": {}
+                                                    }
+                                                }
+                                            },
+                                            "args": [
+                                                {
+                                                    "type": "Constant",
+                                                    "fields": {
+                                                        "value": 10,
+                                                        "kind": null
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Constant",
+                                                    "fields": {
+                                                        "value": 20,
+                                                        "kind": null
+                                                    }
+                                                }
+                                            ],
+                                            "keywords": []
+                                        }
+                                    },
+                                    "type_comment": null
+                                }
+                            },
+                            {
+                                "type": "Assign",
+                                "fields": {
+                                    "targets": [
+                                        {
+                                            "type": "Attribute",
+                                            "fields": {
+                                                "value": {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "self",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                },
+                                                "attr": "fc2",
+                                                "ctx": {
+                                                    "type": "Store",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value": {
+                                        "type": "Call",
+                                        "fields": {
+                                            "func": {
+                                                "type": "Attribute",
+                                                "fields": {
+                                                    "value": {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "nn",
+                                                            "ctx": {
+                                                                "type": "Load",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    },
+                                                    "attr": "Linear",
+                                                    "ctx": {
+                                                        "type": "Load",
+                                                        "fields": {}
+                                                    }
+                                                }
+                                            },
+                                            "args": [
+                                                {
+                                                    "type": "Constant",
+                                                    "fields": {
+                                                        "value": 20,
+                                                        "kind": null
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Constant",
+                                                    "fields": {
+                                                        "value": 30,
+                                                        "kind": null
+                                                    }
+                                                }
+                                            ],
+                                            "keywords": []
+                                        }
+                                    },
+                                    "type_comment": null
+                                }
+                            }
+                        ],
+                        "decorator_list": [],
+                        "returns": null,
+                        "type_comment": null,
+                        "type_params": []
+                    }
+                },
+                {
+                    "type": "FunctionDef",
+                    "fields": {
+                        "name": "forward",
+                        "args": {
+                            "type": "arguments",
+                            "fields": {
+                                "posonlyargs": [],
+                                "args": [
+                                    {
+                                        "type": "arg",
+                                        "fields": {
+                                            "arg": "self",
+                                            "annotation": null,
+                                            "type_comment": null
+                                        }
+                                    },
+                                    {
+                                        "type": "arg",
+                                        "fields": {
+                                            "arg": "x",
+                                            "annotation": null,
+                                            "type_comment": null
+                                        }
+                                    }
+                                ],
+                                "vararg": null,
+                                "kwonlyargs": [],
+                                "kw_defaults": [],
+                                "kwarg": null,
+                                "defaults": []
+                            }
+                        },
+                        "body": [
+                            {
+                                "type": "Assign",
+                                "fields": {
+                                    "targets": [
+                                        {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "x",
+                                                "ctx": {
+                                                    "type": "Store",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value": {
+                                        "type": "Call",
+                                        "fields": {
+                                            "func": {
+                                                "type": "Attribute",
+                                                "fields": {
+                                                    "value": {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "self",
+                                                            "ctx": {
+                                                                "type": "Load",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    },
+                                                    "attr": "fc1",
+                                                    "ctx": {
+                                                        "type": "Load",
+                                                        "fields": {}
+                                                    }
+                                                }
+                                            },
+                                            "args": [
+                                                {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "x",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "keywords": []
+                                        }
+                                    },
+                                    "type_comment": null
+                                }
+                            },
+                            {
+                                "type": "Assign",
+                                "fields": {
+                                    "targets": [
+                                        {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "x",
+                                                "ctx": {
+                                                    "type": "Store",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value": {
+                                        "type": "Call",
+                                        "fields": {
+                                            "func": {
+                                                "type": "Attribute",
+                                                "fields": {
+                                                    "value": {
+                                                        "type": "Name",
+                                                        "fields": {
+                                                            "id": "self",
+                                                            "ctx": {
+                                                                "type": "Load",
+                                                                "fields": {}
+                                                            }
+                                                        }
+                                                    },
+                                                    "attr": "fc2",
+                                                    "ctx": {
+                                                        "type": "Load",
+                                                        "fields": {}
+                                                    }
+                                                }
+                                            },
+                                            "args": [
+                                                {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "x",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "keywords": []
+                                        }
+                                    },
+                                    "type_comment": null
+                                }
+                            },
+                            {
+                                "type": "Return",
+                                "fields": {
+                                    "value": {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "x",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "decorator_list": [],
+                        "returns": null,
+                        "type_comment": null,
+                        "type_params": []
+                    }
+                }
+            ],
+            "decorator_list": [],
+            "type_params": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "nn",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "Module",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "nn",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "FunctionDef",
+        "fields": {
+            "name": "__init__",
+            "args": {
+                "type": "arguments",
+                "fields": {
+                    "posonlyargs": [],
+                    "args": [
+                        {
+                            "type": "arg",
+                            "fields": {
+                                "arg": "self",
+                                "annotation": null,
+                                "type_comment": null
+                            }
+                        }
+                    ],
+                    "vararg": null,
+                    "kwonlyargs": [],
+                    "kw_defaults": [],
+                    "kwarg": null,
+                    "defaults": []
+                }
+            },
+            "body": [
+                {
+                    "type": "Expr",
+                    "fields": {
+                        "value": {
+                            "type": "Call",
+                            "fields": {
+                                "func": {
+                                    "type": "Attribute",
+                                    "fields": {
+                                        "value": {
+                                            "type": "Call",
+                                            "fields": {
+                                                "func": {
+                                                    "type": "Name",
+                                                    "fields": {
+                                                        "id": "super",
+                                                        "ctx": {
+                                                            "type": "Load",
+                                                            "fields": {}
+                                                        }
+                                                    }
+                                                },
+                                                "args": [],
+                                                "keywords": []
+                                            }
+                                        },
+                                        "attr": "__init__",
+                                        "ctx": {
+                                            "type": "Load",
+                                            "fields": {}
+                                        }
+                                    }
+                                },
+                                "args": [],
+                                "keywords": []
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "Assign",
+                    "fields": {
+                        "targets": [
+                            {
+                                "type": "Attribute",
+                                "fields": {
+                                    "value": {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "self",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    },
+                                    "attr": "fc1",
+                                    "ctx": {
+                                        "type": "Store",
+                                        "fields": {}
+                                    }
+                                }
+                            }
+                        ],
+                        "value": {
+                            "type": "Call",
+                            "fields": {
+                                "func": {
+                                    "type": "Attribute",
+                                    "fields": {
+                                        "value": {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "nn",
+                                                "ctx": {
+                                                    "type": "Load",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        },
+                                        "attr": "Linear",
+                                        "ctx": {
+                                            "type": "Load",
+                                            "fields": {}
+                                        }
+                                    }
+                                },
+                                "args": [
+                                    {
+                                        "type": "Constant",
+                                        "fields": {
+                                            "value": 10,
+                                            "kind": null
+                                        }
+                                    },
+                                    {
+                                        "type": "Constant",
+                                        "fields": {
+                                            "value": 20,
+                                            "kind": null
+                                        }
+                                    }
+                                ],
+                                "keywords": []
+                            }
+                        },
+                        "type_comment": null
+                    }
+                },
+                {
+                    "type": "Assign",
+                    "fields": {
+                        "targets": [
+                            {
+                                "type": "Attribute",
+                                "fields": {
+                                    "value": {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "self",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    },
+                                    "attr": "fc2",
+                                    "ctx": {
+                                        "type": "Store",
+                                        "fields": {}
+                                    }
+                                }
+                            }
+                        ],
+                        "value": {
+                            "type": "Call",
+                            "fields": {
+                                "func": {
+                                    "type": "Attribute",
+                                    "fields": {
+                                        "value": {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "nn",
+                                                "ctx": {
+                                                    "type": "Load",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        },
+                                        "attr": "Linear",
+                                        "ctx": {
+                                            "type": "Load",
+                                            "fields": {}
+                                        }
+                                    }
+                                },
+                                "args": [
+                                    {
+                                        "type": "Constant",
+                                        "fields": {
+                                            "value": 20,
+                                            "kind": null
+                                        }
+                                    },
+                                    {
+                                        "type": "Constant",
+                                        "fields": {
+                                            "value": 30,
+                                            "kind": null
+                                        }
+                                    }
+                                ],
+                                "keywords": []
+                            }
+                        },
+                        "type_comment": null
+                    }
+                }
+            ],
+            "decorator_list": [],
+            "returns": null,
+            "type_comment": null,
+            "type_params": []
+        }
+    },
+    {
+        "type": "arguments",
+        "fields": {
+            "posonlyargs": [],
+            "args": [
+                {
+                    "type": "arg",
+                    "fields": {
+                        "arg": "self",
+                        "annotation": null,
+                        "type_comment": null
+                    }
+                }
+            ],
+            "vararg": null,
+            "kwonlyargs": [],
+            "kw_defaults": [],
+            "kwarg": null,
+            "defaults": []
+        }
+    },
+    {
+        "type": "arg",
+        "fields": {
+            "arg": "self",
+            "annotation": null,
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Expr",
+        "fields": {
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Attribute",
+                        "fields": {
+                            "value": {
+                                "type": "Call",
+                                "fields": {
+                                    "func": {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "super",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    },
+                                    "args": [],
+                                    "keywords": []
+                                }
+                            },
+                            "attr": "__init__",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [],
+                    "keywords": []
+                }
+            }
+        }
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Attribute",
+                "fields": {
+                    "value": {
+                        "type": "Call",
+                        "fields": {
+                            "func": {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "super",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            },
+                            "args": [],
+                            "keywords": []
+                        }
+                    },
+                    "attr": "__init__",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Name",
+                        "fields": {
+                            "id": "super",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [],
+                    "keywords": []
+                }
+            },
+            "attr": "__init__",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Name",
+                "fields": {
+                    "id": "super",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "super",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Assign",
+        "fields": {
+            "targets": [
+                {
+                    "type": "Attribute",
+                    "fields": {
+                        "value": {
+                            "type": "Name",
+                            "fields": {
+                                "id": "self",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        },
+                        "attr": "fc1",
+                        "ctx": {
+                            "type": "Store",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Attribute",
+                        "fields": {
+                            "value": {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "nn",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            },
+                            "attr": "Linear",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [
+                        {
+                            "type": "Constant",
+                            "fields": {
+                                "value": 10,
+                                "kind": null
+                            }
+                        },
+                        {
+                            "type": "Constant",
+                            "fields": {
+                                "value": 20,
+                                "kind": null
+                            }
+                        }
+                    ],
+                    "keywords": []
+                }
+            },
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "self",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "fc1",
+            "ctx": {
+                "type": "Store",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "self",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Store",
+        "fields": {}
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Attribute",
+                "fields": {
+                    "value": {
+                        "type": "Name",
+                        "fields": {
+                            "id": "nn",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "attr": "Linear",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [
+                {
+                    "type": "Constant",
+                    "fields": {
+                        "value": 10,
+                        "kind": null
+                    }
+                },
+                {
+                    "type": "Constant",
+                    "fields": {
+                        "value": 20,
+                        "kind": null
+                    }
+                }
+            ],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "nn",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "Linear",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "nn",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Constant",
+        "fields": {
+            "value": 10,
+            "kind": null
+        }
+    },
+    {
+        "type": "Constant",
+        "fields": {
+            "value": 20,
+            "kind": null
+        }
+    },
+    {
+        "type": "Assign",
+        "fields": {
+            "targets": [
+                {
+                    "type": "Attribute",
+                    "fields": {
+                        "value": {
+                            "type": "Name",
+                            "fields": {
+                                "id": "self",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        },
+                        "attr": "fc2",
+                        "ctx": {
+                            "type": "Store",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Attribute",
+                        "fields": {
+                            "value": {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "nn",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            },
+                            "attr": "Linear",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [
+                        {
+                            "type": "Constant",
+                            "fields": {
+                                "value": 20,
+                                "kind": null
+                            }
+                        },
+                        {
+                            "type": "Constant",
+                            "fields": {
+                                "value": 30,
+                                "kind": null
+                            }
+                        }
+                    ],
+                    "keywords": []
+                }
+            },
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "self",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "fc2",
+            "ctx": {
+                "type": "Store",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "self",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Store",
+        "fields": {}
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Attribute",
+                "fields": {
+                    "value": {
+                        "type": "Name",
+                        "fields": {
+                            "id": "nn",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "attr": "Linear",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [
+                {
+                    "type": "Constant",
+                    "fields": {
+                        "value": 20,
+                        "kind": null
+                    }
+                },
+                {
+                    "type": "Constant",
+                    "fields": {
+                        "value": 30,
+                        "kind": null
+                    }
+                }
+            ],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "nn",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "Linear",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "nn",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Constant",
+        "fields": {
+            "value": 20,
+            "kind": null
+        }
+    },
+    {
+        "type": "Constant",
+        "fields": {
+            "value": 30,
+            "kind": null
+        }
+    },
+    {
+        "type": "FunctionDef",
+        "fields": {
+            "name": "forward",
+            "args": {
+                "type": "arguments",
+                "fields": {
+                    "posonlyargs": [],
+                    "args": [
+                        {
+                            "type": "arg",
+                            "fields": {
+                                "arg": "self",
+                                "annotation": null,
+                                "type_comment": null
+                            }
+                        },
+                        {
+                            "type": "arg",
+                            "fields": {
+                                "arg": "x",
+                                "annotation": null,
+                                "type_comment": null
+                            }
+                        }
+                    ],
+                    "vararg": null,
+                    "kwonlyargs": [],
+                    "kw_defaults": [],
+                    "kwarg": null,
+                    "defaults": []
+                }
+            },
+            "body": [
+                {
+                    "type": "Assign",
+                    "fields": {
+                        "targets": [
+                            {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "x",
+                                    "ctx": {
+                                        "type": "Store",
+                                        "fields": {}
+                                    }
+                                }
+                            }
+                        ],
+                        "value": {
+                            "type": "Call",
+                            "fields": {
+                                "func": {
+                                    "type": "Attribute",
+                                    "fields": {
+                                        "value": {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "self",
+                                                "ctx": {
+                                                    "type": "Load",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        },
+                                        "attr": "fc1",
+                                        "ctx": {
+                                            "type": "Load",
+                                            "fields": {}
+                                        }
+                                    }
+                                },
+                                "args": [
+                                    {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "x",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    }
+                                ],
+                                "keywords": []
+                            }
+                        },
+                        "type_comment": null
+                    }
+                },
+                {
+                    "type": "Assign",
+                    "fields": {
+                        "targets": [
+                            {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "x",
+                                    "ctx": {
+                                        "type": "Store",
+                                        "fields": {}
+                                    }
+                                }
+                            }
+                        ],
+                        "value": {
+                            "type": "Call",
+                            "fields": {
+                                "func": {
+                                    "type": "Attribute",
+                                    "fields": {
+                                        "value": {
+                                            "type": "Name",
+                                            "fields": {
+                                                "id": "self",
+                                                "ctx": {
+                                                    "type": "Load",
+                                                    "fields": {}
+                                                }
+                                            }
+                                        },
+                                        "attr": "fc2",
+                                        "ctx": {
+                                            "type": "Load",
+                                            "fields": {}
+                                        }
+                                    }
+                                },
+                                "args": [
+                                    {
+                                        "type": "Name",
+                                        "fields": {
+                                            "id": "x",
+                                            "ctx": {
+                                                "type": "Load",
+                                                "fields": {}
+                                            }
+                                        }
+                                    }
+                                ],
+                                "keywords": []
+                            }
+                        },
+                        "type_comment": null
+                    }
+                },
+                {
+                    "type": "Return",
+                    "fields": {
+                        "value": {
+                            "type": "Name",
+                            "fields": {
+                                "id": "x",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "decorator_list": [],
+            "returns": null,
+            "type_comment": null,
+            "type_params": []
+        }
+    },
+    {
+        "type": "arguments",
+        "fields": {
+            "posonlyargs": [],
+            "args": [
+                {
+                    "type": "arg",
+                    "fields": {
+                        "arg": "self",
+                        "annotation": null,
+                        "type_comment": null
+                    }
+                },
+                {
+                    "type": "arg",
+                    "fields": {
+                        "arg": "x",
+                        "annotation": null,
+                        "type_comment": null
+                    }
+                }
+            ],
+            "vararg": null,
+            "kwonlyargs": [],
+            "kw_defaults": [],
+            "kwarg": null,
+            "defaults": []
+        }
+    },
+    {
+        "type": "arg",
+        "fields": {
+            "arg": "self",
+            "annotation": null,
+            "type_comment": null
+        }
+    },
+    {
+        "type": "arg",
+        "fields": {
+            "arg": "x",
+            "annotation": null,
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Assign",
+        "fields": {
+            "targets": [
+                {
+                    "type": "Name",
+                    "fields": {
+                        "id": "x",
+                        "ctx": {
+                            "type": "Store",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Attribute",
+                        "fields": {
+                            "value": {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "self",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            },
+                            "attr": "fc1",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [
+                        {
+                            "type": "Name",
+                            "fields": {
+                                "id": "x",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        }
+                    ],
+                    "keywords": []
+                }
+            },
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "x",
+            "ctx": {
+                "type": "Store",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Store",
+        "fields": {}
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Attribute",
+                "fields": {
+                    "value": {
+                        "type": "Name",
+                        "fields": {
+                            "id": "self",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "attr": "fc1",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [
+                {
+                    "type": "Name",
+                    "fields": {
+                        "id": "x",
+                        "ctx": {
+                            "type": "Load",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "self",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "fc1",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "self",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "x",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Assign",
+        "fields": {
+            "targets": [
+                {
+                    "type": "Name",
+                    "fields": {
+                        "id": "x",
+                        "ctx": {
+                            "type": "Store",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "value": {
+                "type": "Call",
+                "fields": {
+                    "func": {
+                        "type": "Attribute",
+                        "fields": {
+                            "value": {
+                                "type": "Name",
+                                "fields": {
+                                    "id": "self",
+                                    "ctx": {
+                                        "type": "Load",
+                                        "fields": {}
+                                    }
+                                }
+                            },
+                            "attr": "fc2",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "args": [
+                        {
+                            "type": "Name",
+                            "fields": {
+                                "id": "x",
+                                "ctx": {
+                                    "type": "Load",
+                                    "fields": {}
+                                }
+                            }
+                        }
+                    ],
+                    "keywords": []
+                }
+            },
+            "type_comment": null
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "x",
+            "ctx": {
+                "type": "Store",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Store",
+        "fields": {}
+    },
+    {
+        "type": "Call",
+        "fields": {
+            "func": {
+                "type": "Attribute",
+                "fields": {
+                    "value": {
+                        "type": "Name",
+                        "fields": {
+                            "id": "self",
+                            "ctx": {
+                                "type": "Load",
+                                "fields": {}
+                            }
+                        }
+                    },
+                    "attr": "fc2",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "args": [
+                {
+                    "type": "Name",
+                    "fields": {
+                        "id": "x",
+                        "ctx": {
+                            "type": "Load",
+                            "fields": {}
+                        }
+                    }
+                }
+            ],
+            "keywords": []
+        }
+    },
+    {
+        "type": "Attribute",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "self",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            },
+            "attr": "fc2",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "self",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "x",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    },
+    {
+        "type": "Return",
+        "fields": {
+            "value": {
+                "type": "Name",
+                "fields": {
+                    "id": "x",
+                    "ctx": {
+                        "type": "Load",
+                        "fields": {}
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "Name",
+        "fields": {
+            "id": "x",
+            "ctx": {
+                "type": "Load",
+                "fields": {}
+            }
+        }
+    },
+    {
+        "type": "Load",
+        "fields": {}
+    }
+]
