@@ -17,7 +17,7 @@ def extract_expression(node: ast.AST) -> Optional[lc.Expression]:
         node (ast.AST): The AST node to analyze.
 
     Returns:
-        Union[lc.Expression, None]: The extracted expression or None if not applicable.
+        Optional[lc.Expression]: The extracted expression or None if not applicable.
     """
     #
     if isinstance(node, ast.Name):
@@ -29,11 +29,11 @@ def extract_expression(node: ast.AST) -> Optional[lc.Expression]:
         elif isinstance(node.value, str):
             return lc.ExpressionConstantString(constant=node.value)
         elif isinstance(node.value, list):
-            elements = [ elt for elt in [extract_expression(ast.Constant(value=elt)) for elt in node.value] if isinstance(elt, lc.ExpressionConstant) ]
+            elements = [elt for elt in [extract_expression(ast.Constant(value=elt)) for elt in node.value] if isinstance(elt, lc.ExpressionConstant)]
             return lc.ExpressionConstantList(elements=elements)
     #
     elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "range":
-        args = [ elt.constant for elt in [extract_expression(arg) for arg in node.args] if isinstance(elt, lc.ExpressionConstant) ]
+        args = [elt.constant for elt in [extract_expression(arg) for arg in node.args] if isinstance(elt, lc.ExpressionConstant)]
         return lc.ExpressionConstantRange(end_value=args[1] if len(args) > 1 else args[0], start_value=args[0] if len(args) > 1 else 0, step=args[2] if len(args) > 2 else 1)
     #
     return None
@@ -48,30 +48,26 @@ def extract_condition(node: ast.AST) -> Optional[lc.Condition]:
         node (ast.AST): The AST node to analyze.
 
     Returns:
-        Union[lc.Condition, None]: The extracted condition or None if not applicable.
+        Optional[lc.Condition]: The extracted condition or None if not applicable.
     """
     #
     if isinstance(node, ast.Compare):
         left = extract_expression(node.left)
         #
         if left is None:
-            #
             return None
         #
         ops = [op.__class__.__name__.lower() for op in node.ops]
-        comparators = [ comp for comp in [extract_expression(comp) for comp in node.comparators] if comp is not None]
+        comparators = [comp for comp in [extract_expression(comp) for comp in node.comparators] if comp is not None]
         if len(ops) == 1 and len(comparators) >= 1:
             return lc.ConditionBinary(elt1=left, cond_operator=ops[0], elt2=comparators[0])
     #
     elif isinstance(node, ast.BoolOp):
         values = [elt for elt in [extract_condition(val) or extract_expression(val) for val in node.values] if elt is not None]
         op = "and" if isinstance(node.op, ast.And) else "or"
-        result = values[0]
-        #
         if len(values) < 2:
-            #
             return None
-        #
+        result = values[0]
         for val in values[1:]:
             result = lc.ConditionBinary(elt1=result, cond_operator=op, elt2=val)
         return cast(lc.Condition, result)
@@ -177,7 +173,6 @@ class ModelAnalyzer(ast.NodeVisitor):
             return
 
         #
-        # current_block = self.model_blocks[self.current_model_visit[-1]]
         self.current_function_visit = node.name
 
         #
@@ -250,7 +245,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     #
     def _handle_container(self, var_name: str, container_type: str, call_node: ast.Call, block: lc.ModelBlock) -> None:
         """
-        Handles nn.ModuleList and nn.Sequential by creating sub-blocks.
+        Handles nn.ModuleList and nn.Sequential by creating sub-blocks and defining their forward methods.
 
         Args:
             var_name (str): Name of the container variable.
@@ -258,44 +253,82 @@ class ModelAnalyzer(ast.NodeVisitor):
             call_node (ast.Call): The AST node of the container call.
             block (lc.ModelBlock): The current model block.
         """
-        #
+        # Create a unique sub-block name for this container
         sub_block_name = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
         self.sub_block_counter[self.current_model_visit[-1]] += 1
         sub_block = lc.ModelBlock(block_name=sub_block_name)
 
-        # TODO: complete the forward method
-        sub_block.block_functions["forward"] = lc.BlockFunction(function_name="forward", function_arguments={}, model_block=self.model_blocks[self.current_model_visit[-1]])
-
-        # TODO: get the arguments of sequential blocks for things like that:
-        #
-        #        self.conv = nn.Sequential( nn.Conv2d(in_channels =1 , out_channels =1 , kernel_size = (5,5),  stride=(2)), nn.ReLU())
-        #
-        #        self.net = nn.Sequential( nn.Linear(n_embd, int(n_embd/2)) , nn.ReLU() , nn.Linear(int(n_embd/2) , n_embd) , nn.Dropout(dropout), )
-        #
-        #        self.blocks = nn.Sequential(*(Block(features_after_conv*pos_encode  , n_head = num_heads ) for _ in range(n_layer))) # encode layer
-        #
-        #        self.fc =  nn.Sequential( nn.Linear(hidden_size*time_step, num_outputs), nn.ReLU() )
-        #
-        #        self.heads = nn.ModuleList(Head(head_size) for _ in range ( num_heads)) # head do in parallel
-        #
-        #        self.ConvEncode = nn.ModuleList( ConvEncode(pos_encode) for _ in range(time_step)  )
-        #
-
+        # Store the sub-block in the model blocks dictionary
         self.model_blocks[sub_block_name] = sub_block
 
-        #
-        layers: list[lc.Layer] = []
-        for arg in call_node.args:
-            if isinstance(arg, ast.List):
-                for elt in arg.elts:
+        # Initialize layers list to hold the container's layers
+        layers: List[lc.Layer] = []
+
+        # Handle different argument patterns for Sequential and ModuleList
+        if call_node.args:
+            # Case 1: Arguments are passed directly (e.g., nn.Sequential(nn.Conv2d(...), nn.ReLU()))
+            for arg in call_node.args:
+                if isinstance(arg, ast.Call):
+                    # Extract layer type and parameters from a direct call
+                    layer_type = self.get_layer_type(arg.func)
+                    params = {kw.arg: extract_expression(kw.value) or kw.value for kw in arg.keywords if kw.arg is not None}
+                    layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
+                elif isinstance(arg, ast.GeneratorExp):
+                    # Case 2: Generator expression (e.g., nn.ModuleList(Block(...) for _ in range(n)))
+                    elt = arg.elt
                     if isinstance(elt, ast.Call):
                         layer_type = self.get_layer_type(elt.func)
                         params = {kw.arg: extract_expression(kw.value) or kw.value for kw in elt.keywords if kw.arg is not None}
-                        layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
+                        # Extract the range or iterator from the generator
+                        if arg.generators and isinstance(arg.generators[0].iter, ast.Call) and isinstance(arg.generators[0].iter.func, ast.Name) and arg.generators[0].iter.func.id == "range":
+                            range_args = [expr.constant for expr in [extract_expression(a) for a in arg.generators[0].iter.args] if expr is not None and isinstance(expr, lc.ExpressionConstant)]
+                            #
+                            if len(range_args) >= 1:
+                                #
+                                count = range_args[0] if len(range_args) == 1 else range_args[1] - range_args[0]
+                                # Add the layer multiple times based on the range
+                                for i in range(int(count)):
+                                    layers.append(lc.Layer(f"layer_{i}", layer_type, params.copy()))
 
-        # Add layers to sub-block
+        # Define the forward method for the sub-block
+        forward_func = lc.BlockFunction(
+            function_name="forward",
+            function_arguments={"x": ("Any", None)},  # Input tensor
+            model_block=sub_block
+        )
+        sub_block.block_functions["forward"] = forward_func
+
+        # Populate the forward method based on container type
+        current_input = lc.ExpressionVariable("x")  # Start with the input variable
         for i, layer in enumerate(layers):
-            sub_block.block_layers[f"layer_{i}"] = layer
+            # Add the layer to the sub-block
+            layer_name = f"layer_{i}"
+            sub_block.block_layers[layer_name] = layer
+
+            # Create a layer pass instruction
+            output_var = f"out_{i}"
+            layer_pass = lc.FlowControlLayerPass(
+                output_variables=[output_var],
+                layer_name=layer_name,
+                layer_arguments={"x": current_input}
+            )
+            forward_func.function_flow_control.append(layer_pass)
+
+            # Update the current input for the next layer (Sequential chains outputs, ModuleList does not)
+            if container_type == "Sequential":
+                current_input = lc.ExpressionVariable(output_var)
+            elif container_type == "ModuleList":
+                # ModuleList doesn't chain outputs; we'll assume parallel execution and collect outputs
+                continue
+
+        # Add return statement
+        if container_type == "Sequential":
+            # Return the final output
+            forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=[current_input.var_name]))
+        elif container_type == "ModuleList":
+            # Return a list of outputs (assuming parallel execution)
+            output_vars = [f"out_{i}" for i in range(len(layers))]
+            forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
 
         # Add container layer to parent block
         block.block_layers[var_name] = lc.Layer(
@@ -327,7 +360,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Extract loop details
         iterator = extract_expression(for_node.iter) or for_node.iter.id
         iterable_var = for_node.target.id
-        layers: list[lc.Layer] = []
+        layers: List[lc.Layer] = []
         for stmt in for_node.body:
             if isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Call):
                 layer_type = self.get_layer_type(stmt.value.func)
@@ -337,6 +370,26 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Add layers to sub-block
         for i, layer in enumerate(layers):
             sub_block.block_layers[f"layer_{i}"] = layer
+
+        # Define forward method for ModuleList (assuming parallel execution)
+        forward_func = lc.BlockFunction(
+            function_name="forward",
+            function_arguments={"x": ("Any", None)},
+            model_block=sub_block
+        )
+        sub_block.block_functions["forward"] = forward_func
+        output_vars = []
+        for i in range(len(layers)):
+            output_var = f"out_{i}"
+            forward_func.function_flow_control.append(
+                lc.FlowControlLayerPass(
+                    output_variables=[output_var],
+                    layer_name=f"layer_{i}",
+                    layer_arguments={"x": lc.ExpressionVariable("x")}
+                )
+            )
+            output_vars.append(output_var)
+        forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
 
         # Add to parent block with loop info
         block.block_layers[var_name] = lc.Layer(
@@ -392,27 +445,20 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         elif isinstance(stmt, ast.For):
-
             #
             if not isinstance(stmt.target, ast.Name):
-                #
                 return
-
             #
             iterator = extract_expression(stmt.iter) or (stmt.iter.id if isinstance(stmt.iter, ast.Name) else None)
-
             #
             if iterator is None:
-                #
                 return
-
             #
             flow_control_loop: lc.FlowControlForLoop = lc.FlowControlForLoop(
                 iterable_var_name=stmt.target.id,
                 iterator=iterator,
                 flow_control_instructions=[]
             )
-
             #
             flow_control.append(flow_control_loop)
             for sub_stmt in stmt.body:
@@ -420,25 +466,18 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         elif isinstance(stmt, ast.While):
-
             #
             condition = extract_condition(stmt.test)
-
             #
             if condition is None:
-                #
                 return
-
             #
             flow_control_while: lc.FlowControlWhileLoop = lc.FlowControlWhileLoop(
                 condition=condition,
                 flow_control_instructions=[]
             )
-
             #
             flow_control.append(flow_control_while)
-
-            #
             for sub_stmt in stmt.body:
                 self._process_statement(sub_stmt, flow_control_while.flow_control_instructions)
 
@@ -454,14 +493,12 @@ class ModelAnalyzer(ast.NodeVisitor):
             self.model_blocks[self.current_model_visit[-1]].block_functions[sub_func_name] = sub_func
             for sub_stmt in stmt.body:
                 self._process_statement(sub_stmt, sub_func.function_flow_control)
-
             #
             flow_control_subcall: lc.FlowControlSubBlockFunctionCall = lc.FlowControlSubBlockFunctionCall(
                 output_variables=["output"],
                 function_called=sub_func_name,
                 function_arguments={"input": "x"}
             )
-
             #
             flow_control.append(flow_control_subcall)
             self.model_blocks[self.current_model_visit[-1]].block_layers[sub_func_name] = lc.LayerCondition(
@@ -473,31 +510,20 @@ class ModelAnalyzer(ast.NodeVisitor):
         elif isinstance(stmt, ast.Return):
             #
             expr: Optional[lc.Expression]
-            #
-            returns: list[str] = []
-
+            returns: List[str] = []
             #
             if isinstance(stmt.value, ast.Tuple):
-                #
                 for val in stmt.value.elts:
-
-                    #
                     expr = extract_expression(val)
-
-                    #
                     if expr is None:
                         continue
                     elif isinstance(expr, lc.ExpressionVariable):
-                        returns.append( expr.var_name )
-                    #
+                        returns.append(expr.var_name)
                     elif isinstance(val, ast.Name):
-                        #
-                        returns.append( val.id )
-
+                        returns.append(val.id)
             #
             elif isinstance(stmt.value, ast.Name):
-                returns.append( stmt.value.id )
-
+                returns.append(stmt.value.id)
             #
             flow_control.append(lc.FlowControlReturn(return_variables=returns))
 
