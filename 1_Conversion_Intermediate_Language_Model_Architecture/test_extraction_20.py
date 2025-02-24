@@ -60,6 +60,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         self.current_model_visit: list[str] = []  # Acess with [-1], a stack formation to manage the sub-blocks correctly and with elegance
         self.current_function_visit: str = ""
+        self.global_constants: dict[str, tuple[str, Any]] = {}  # key is name of constant, tuple[str, Any] is for type, value
 
 
     # --------------------------------------------------------- #
@@ -285,7 +286,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+        # TODO: Assignments for global constants, or assignments inside functions of blocks
         pass
 
         #
@@ -306,7 +307,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+        # TODO: Assignments for global constants, or assignments inside functions of blocks
         pass
 
         #
@@ -327,7 +328,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+        # TODO: Assignments for global constants, or assignments inside functions of blocks
         pass
 
         #
@@ -341,7 +342,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     #
     def visit_AssignStmt(self, node: ast.AST) -> None:
         """
-        Annoted Assignment like `x: int = 0`.
+        Don't know if this visit_ function is useful.
 
         Args:
             node (ast.AST): _description_
@@ -353,7 +354,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         debug_var(var=node, txt_sup="\t")
 
         #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+        # TODO: Assignments for global constants, or assignments inside functions of blocks
         pass
 
         #

@@ -10,6 +10,7 @@ from typing import Any, Optional
 ####################################################################
 
 
+#
 class Expression:
     #
     def __init__(self) -> None:
@@ -109,6 +110,7 @@ class ExpressionConstantString(Expression):
         #
         return f"{self.constant}"
 
+
 #
 class ExpressionConstantList(Expression):
     #
@@ -162,6 +164,7 @@ class ExpressionConstantRange(ExpressionConstantList):
 ####################################################################
 
 
+#
 class Condition:
     #
     def __init__(self) -> None:
@@ -208,6 +211,7 @@ class ConditionBinary(Condition):
     def __str__(self) -> str:
         #
         return f"{self.elt1} {self.cond_operator} {self.elt2}"
+
 
 #
 class ConditionUnary(Condition):
@@ -264,7 +268,7 @@ class Layer:
     #
     def __str__(self) -> str:
         #
-        return f"\n\t* Layer {self.layer_var_name} = {self.layer_type}({self.layer_parameters_kwargs})\n"
+        return f"* Layer {self.layer_var_name} = {self.layer_type}({self.layer_parameters_kwargs})"
 
 
 #
@@ -324,7 +328,7 @@ class FlowControlInstruction:
     #
     def __str__(self) -> str:
         #
-        return "\n\t * [FLOW CONTROL PLACEHOLDER]\n"
+        return "\n\t * [FLOW CONTROL PLACEHOLDER]"
 
 
 #
@@ -347,7 +351,7 @@ class FlowControlVariableInit(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.var_name}: {self.var_type} = {self.var_value}\n"
+        return f"\t\t * {self.var_name}: {self.var_type} = {self.var_value}"
 
 
 #
@@ -369,7 +373,8 @@ class FlowControlVariableAssignment(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.var_name} = {self.var_value}\n"
+        return f"\t\t * {self.var_name} = {self.var_value}"
+
 
 #
 class FlowControlBasicBinaryOperation(FlowControlInstruction):
@@ -397,6 +402,7 @@ class FlowControlBasicBinaryOperation(FlowControlInstruction):
     def __str__(self) -> str:
         #
         return f"\t\t * {self.output_var_name} = {self.input1_var_name} {self.operation} {self.input2_var_name}"
+
 
 #
 class FlowControlBasicUnaryOperation(FlowControlInstruction):
@@ -491,7 +497,7 @@ class FlowControlFunctionCall(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})\n"
+        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})"
 
 
 #
@@ -514,7 +520,7 @@ class FlowControlSubBlockFunctionCall(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})\n"
+        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})"
 
 
 #
@@ -537,7 +543,7 @@ class FlowControlLayerPass(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.output_variables} = {self.layer_name}({self.layer_arguments})\n"
+        return f"\t\t * {self.output_variables} = {self.layer_name}({self.layer_arguments})"
 
 
 #
@@ -597,7 +603,7 @@ class BlockFunction:
     #
     def __str__(self) -> str:
         #
-        return f"\t * Function {self.function_name} ( {self.function_arguments} ) : \n{"\n".join([ffc.__str__() for ffc in self.function_flow_control])}"
+        return f"\t * Function {self.function_name} ( {self.function_arguments} ) :\n{"\n".join([ffc.__str__() for ffc in self.function_flow_control])}"
 
 
 #
@@ -623,7 +629,7 @@ class ModelBlock:
         self.block_layers: dict[str, Layer] = {}
         #
         self.block_functions: dict[str, BlockFunction] = {
-            # TO ADD: the foward pass
+            # TO ADD: the foward pass (during the code analysis)
         }
         #
         self.block_variables: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable value)
@@ -636,7 +642,7 @@ class ModelBlock:
     #
     def __str__(self) -> str:
         #
-        return f"\n\nModelBlock:\n\t-block_name: {self.block_name}\n\t-block_parameters: {self.block_parameters}\n\t-block_layers: \n{"\n".join([self.block_layers[layer].__str__() for layer in self.block_layers])}\n\t-Functions:\n\n{"\n\n".join([fn_name + " = " + self.block_functions[fn_name].__str__() for fn_name in self.block_functions])}\n"
+        return f"\n\nModelBlock {self.block_name}:\n\t-block_parameters: {self.block_parameters}\n\t-block_layers:\n\t\t{"\n\t\t".join([self.block_layers[layer].__str__() for layer in self.block_layers])}\n\n\t-Functions:\n\n{"\n\n".join([self.block_functions[fn_name].__str__() for fn_name in self.block_functions])}\n"
 
 
 
@@ -660,3 +666,28 @@ class Language1_Model:
         self.model_blocks: dict[str, ModelBlock] = {}
         #
         self.main_block: str = ""
+        #
+        self.global_constants: dict[str, tuple[str, Any]] = {}
+
+    #
+    def __repr__(self) -> str:
+        #
+        return self.__str__()
+
+    #
+    def __str__(self) -> str:
+        #
+        text: str = "\n\n" + "-" * 26 + "\n -- Model Architecture --\n" + "-" * 26 + "\n\n"
+        text += "Global constants:\n"
+        #
+        constant_name: str
+        for constant_name in self.global_constants:
+            #
+            text += f"  - {constant_name} = {self.global_constants[constant_name]}\n"
+
+        #
+        for block_name, block in self.model_blocks.items():
+            text += block.__str__()
+
+        #
+        return text
