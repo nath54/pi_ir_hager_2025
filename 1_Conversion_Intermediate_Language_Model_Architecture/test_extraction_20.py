@@ -1,4 +1,6 @@
 #
+from typing import Any
+#
 import ast
 import sys
 import os
@@ -12,8 +14,14 @@ sys.path.insert(0, "../debug/")
 #
 from lib_debug import debug_var  # type: ignore
 
-#
 
+
+#
+def custom_visit_elt(ast_node: ast.AST) -> Any:
+    #
+    pass
+    #
+    return None
 
 
 #
@@ -477,25 +485,25 @@ class ModelAnalyzer(ast.NodeVisitor):
         ast.NodeVisitor.generic_visit(self, node)
 
     #
-    def visit_Condition(self, node: ast.AST) -> None:
-        """
+    # def visit_Condition(self, node: ast.AST) -> None:
+    #     """
 
 
-        Args:
-            node (ast.AST): _description_
-        """
+    #     Args:
+    #         node (ast.AST): _description_
+    #     """
 
-        #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
-        pass
+    #     #
+    #     # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+    #     pass
 
-        #
-        print(f"\n\n----\n @@@ Condition | inside_class: {self.current_model_visit} | inside_func: {self.current_function_visit} | visitor : {node}\n\n----\n")
-        #
-        debug_var(var=node, txt_sup="\t")
+    #     #
+    #     print(f"\n\n----\n @@@ Condition | inside_class: {self.current_model_visit} | inside_func: {self.current_function_visit} | visitor : {node}\n\n----\n")
+    #     #
+    #     debug_var(var=node, txt_sup="\t")
 
-        #
-        ast.NodeVisitor.generic_visit(self, node)
+    #     #
+    #     ast.NodeVisitor.generic_visit(self, node)
 
     #
     def visit_Match(self, node: ast.AST) -> None:
@@ -582,25 +590,25 @@ class ModelAnalyzer(ast.NodeVisitor):
         ast.NodeVisitor.generic_visit(self, node)
 
     #
-    def visit_Lambda(self, node: ast.AST) -> None:
-        """
+    # def visit_Lambda(self, node: ast.AST) -> None:
+    #     """
 
 
-        Args:
-            node (ast.AST): _description_
-        """
+    #     Args:
+    #         node (ast.AST): _description_
+    #     """
 
-        #
-        # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
-        pass
+    #     #
+    #     # TODO: is there other things to check here ? (for instance function calls, or arithmetic operations / variable manipulation and other ?, maybe create other visit_... methods ?)
+    #     pass
 
-        #
-        print(f"\n\n----\n @@@ Lambda | inside_class: {self.current_model_visit} | inside_func: {self.current_function_visit} | visitor : {node}\n\n----\n")
-        #
-        debug_var(var=node, txt_sup="\t")
+    #     #
+    #     print(f"\n\n----\n @@@ Lambda | inside_class: {self.current_model_visit} | inside_func: {self.current_function_visit} | visitor : {node}\n\n----\n")
+    #     #
+    #     debug_var(var=node, txt_sup="\t")
 
-        #
-        ast.NodeVisitor.generic_visit(self, node)
+    #     #
+    #     ast.NodeVisitor.generic_visit(self, node)
 
 
 
