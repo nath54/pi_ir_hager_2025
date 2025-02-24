@@ -15,9 +15,17 @@ sys.path.insert(0, "../debug/")
 from lib_debug import debug_var  # type: ignore
 
 
-
 #
 def custom_visit_elt(ast_node: ast.AST) -> Any:
+    """
+    _summary_
+
+    Args:
+        ast_node (ast.AST): _description_
+
+    Returns:
+        Any: _description_
+    """
 
     # Check for Call, Condition, Lambda, ...
     # Low level elements

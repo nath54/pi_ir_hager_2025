@@ -426,7 +426,7 @@ class FlowControlBasicUnaryOperation(FlowControlInstruction):
 #
 class FlowControlForLoop(FlowControlInstruction):
     #
-    def __init__(self, iterable_var_name: str, iterator: str, flow_control_instructions: list[FlowControlInstruction]) -> None:
+    def __init__(self, iterable_var_name: str, iterator: str | Expression, flow_control_instructions: list[FlowControlInstruction]) -> None:
         """
         Represents a foor loop.
 
@@ -439,7 +439,7 @@ class FlowControlForLoop(FlowControlInstruction):
         """
         #
         self.iterable_var_name: str = iterable_var_name
-        self.iterator: str = iterator
+        self.iterator: str | Expression = iterator
         self.flow_control_instructions: list[FlowControlInstruction] = flow_control_instructions
 
     #
