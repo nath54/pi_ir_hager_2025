@@ -31,17 +31,17 @@ model, norm_coeff = load_trained_model(model_name,norm_coeff )
 
 
 
-trainset = CustomDataset_onRAM_dmp('./database/')
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0, drop_last=True)
+# trainset = CustomDataset_onRAM_dmp('./database/')
+# trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0, drop_last=True)
 
 
 
-for batch, label in trainloader:
+# for batch, label in trainloader:
 
-    prob,loss = model(batch.squeeze(0),label.squeeze(0))
-    np.set_printoptions(precision=3)
-    print('label', label.numpy())
-    print('prob',prob.detach().numpy())
+#     prob,loss = model(batch.squeeze(0),label.squeeze(0))
+#     np.set_printoptions(precision=3)
+#     print('label', label.numpy())
+#     print('prob',prob.detach().numpy())
 
 
 

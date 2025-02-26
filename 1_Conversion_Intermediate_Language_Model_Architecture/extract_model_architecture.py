@@ -2,7 +2,12 @@
 import ast
 import sys
 import os
-from typing import Optional, Dict, List, cast, Any
+from typing import Optional, Dict, List, cast, Any, Callable
+
+#
+import inspect
+import importlib.util
+import importlib.machinery
 
 #
 import lib_classes as lc
@@ -210,6 +215,13 @@ class ModelAnalyzer(ast.NodeVisitor):
         block_name: str = node.name
         if block_name in self.model_blocks:
             raise NameError(f"ERROR: Duplicate class name detected: {block_name}")
+
+        #
+        if self.main_block == "":
+            #
+            if block_name in ["MainModel", "MainNet", "Model", "Net"]:
+                #
+                self.main_block = block_name
 
         #
         self.model_blocks[block_name] = lc.ModelBlock(block_name=block_name)
@@ -779,10 +791,47 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
 
 
 #
+def list_classes(module):
+    """List all the classes defined inside a module."""
+    classes = [m[1] for m in inspect.getmembers(module, inspect.isclass)]
+    return classes
+
+
+#
+def import_module_from_filepath(filepath):
+    """Imports a Python module from a filepath."""
+    module_name = os.path.splitext(os.path.basename(filepath))[0]
+    spec = importlib.util.spec_from_file_location(module_name, filepath)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+#
+def get_pytorch_main_model(model_arch: lc.Language1_Model, filepath: str) -> Callable:
+
+    #
+    if model_arch.main_block == "":
+        #
+        raise UserWarning("Error: No main blocks detected in the model architecture !")
+
+    #
+    net_module = import_module_from_filepath(filepath)
+
+    #
+    if not hasattr(net_module, model_arch.main_block):
+        #
+        raise UserWarning("Error: The given python script does not have the specified main block !")
+
+    #
+    return getattr(net_module, model_arch.main_block)
+
+
+#
 if __name__ == "__main__":
     #
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        raise UserWarning(f"Error: Usage: python {sys.argv[0]} path_to_model_script.py [--main-block <MainBlockName>]")
+        raise UserWarning(f"Error: Usage: python {sys.argv[0]} path_to_model_script.py [--main-block=<MainBlockName>]")
 
     #
     path_to_file: str = sys.argv[1]
@@ -795,3 +844,7 @@ if __name__ == "__main__":
 
     #
     print(l1_model)
+
+    #
+    main_model_class =  get_pytorch_main_model(model_arch=l1_model, filepath=path_to_file)
+    print(main_model_class)
