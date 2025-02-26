@@ -13,6 +13,38 @@ import importlib.machinery
 import lib_classes as lc
 
 
+# --------------------------------------------------------- #
+# ----        EXTRACT NAME OR ATTRIBUTE TO STR         ---- #
+# --------------------------------------------------------- #
+
+#
+def extract_name_or_attribute(node: ast.AST) -> str:
+    """
+    _summary_
+
+    Args:
+        node (ast.Node): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    #
+    if isinstance(node, ast.Name):
+        return node.id
+
+    #
+    elif isinstance(node, ast.Attribute):
+        return extract_name_or_attribute(node.value)
+
+    #
+    return str(node)
+
+
+# --------------------------------------------------------- #
+# ----               EXTRACT EXPRESSION                ---- #
+# --------------------------------------------------------- #
+
 #
 def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.Expression]:
     """
@@ -53,6 +85,10 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
     return None
 
 
+# --------------------------------------------------------- #
+# ----                EXTRACT CONDITION                ---- #
+# --------------------------------------------------------- #
+
 #
 def extract_condition(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.Condition]:
     """
@@ -92,6 +128,101 @@ def extract_condition(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.C
     #
     return None
 
+
+# --------------------------------------------------------- #
+# ----                   EXTRACT CALL                  ---- #
+# --------------------------------------------------------- #
+
+
+#
+def extract_call_arg_value(node: ast.AST, analyzer: "ModelAnalyzer") -> lc.Expression:
+    """
+    _summary_
+
+    Args:
+        node (ast.AST): _description_
+        analyzer (ModelAnalyzer): _description_
+
+    Returns:
+        lc.Expression: _description_
+    """
+
+    #
+    expr: Optional[lc.Expression]
+    arg_value: lc.Expression
+    #
+    expr = extract_expression(node=node, analyzer=analyzer)
+    #
+    arg_value = lc.Expression()  # Error / Default value
+    #
+    if expr is not None:
+        #
+        arg_value = expr
+
+    # TODO: other things can appen here too
+
+    #
+    return arg_value
+
+
+#
+def extract_call(node: ast.Call, analyzer: "ModelAnalyzer") -> tuple[str, list[lc.Expression], dict[str, lc.Expression], list[lc.FlowControlInstruction]]:
+    """
+    ast.Call:
+        func (ast.Name | ast.Attribute)
+        args (list[ast.AST])
+        keywords (list[ast.keyword])
+
+    ast.keyword:
+        arg (str)
+        value (ast.Node)
+
+    Args:
+        node (ast.AST): _description_
+        analyzer (ModelAnalyzer): _description_
+
+    Returns:
+        tuple[str, list[lc.Expression], dict[lc.Expression]]: _description_
+    """
+
+    # Get function name
+    func_name: str = extract_name_or_attribute(node=node.func)
+
+    # Init instructions to do before
+    instructions_to_do_before: list[lc.FlowControlInstruction] = []
+
+    # init func call args
+    func_call_args: list[lc.Expression] = []
+
+    # init func call keywords
+    func_call_keywords: dict[str, lc.Expression] = {}
+
+    # Extract simple arguments
+    arg: ast.AST
+    for arg in node.args:
+        #
+        func_call_args.append( extract_call_arg_value(node=arg, analyzer=analyzer) )
+
+    # Extract keyword arguments
+    kw: ast.keyword
+    for kw in node.keywords:
+        #
+        if kw.arg is None:
+            print(f"Error, arg is None : {kw}")
+            continue
+        #
+        keyword_name: str = kw.arg
+
+        #
+        func_call_keywords[keyword_name] = extract_call_arg_value(node=kw.value, analyzer=analyzer)
+
+    #
+    return func_name, func_call_args, func_call_keywords, instructions_to_do_before
+
+
+# --------------------------------------------------------- #
+# ----               PROCESS EXPRESSION                ---- #
+# --------------------------------------------------------- #
 
 #
 def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstruction], analyzer: "ModelAnalyzer") -> str:
@@ -147,8 +278,14 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
     return ""
 
 
+
+# --------------------------------------------------------- #
+# ----              CLASS  MODEL ANALYZER              ---- #
+# --------------------------------------------------------- #
+
 #
 class ModelAnalyzer(ast.NodeVisitor):
+
 
     # --------------------------------------------------------- #
     # ----               INIT MODEL ANALYZER               ---- #
@@ -161,19 +298,31 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         Attributes:
             model_blocks (dict[str, lc.ModelBlock]): List of all blocks analyzed, indexed by their block ID (e.g., name).
-            main_block (str): ID of the main block, given in sys.argv with `--main-block <MainBlockName>`.
+            main_block (str): ID of the main block, given in sys.argv with `--main-block=<MainBlockName>`.
             current_model_visit (list[str]): Stack of current blocks being visited, access top with [-1].
             current_function_visit (str): Name of the current visited function.
             sub_block_counter (dict[str, int]): Counter for naming sub-blocks (e.g., ModuleList, Sequential).
             global_constants (dict[str, tuple[str, Any]]): Global constants defined outside classes.
         """
-        #
+
+        # List of all blocks analyzed, indexed by their block ID (e.g., name).
         self.model_blocks: Dict[str, lc.ModelBlock] = {}
+
+        # ID of the main block, given in sys.argv with `--main-block <MainBlockName>`.
         self.main_block: str = ""
+
+        # Stack of current blocks being visited, access top with [-1].
         self.current_model_visit: List[str] = []
+
+        # Name of the current visited function.
         self.current_function_visit: str = ""
+
+        # Counter for naming sub-blocks (e.g., ModuleList, Sequential).
         self.sub_block_counter: Dict[str, int] = {}
+
+        # Global constants defined outside classes.
         self.global_constants: Dict[str, tuple[str, Any]] = {}
+
 
     # --------------------------------------------------------- #
     # ----                  CLASS VISITOR                  ---- #
@@ -190,10 +339,13 @@ class ModelAnalyzer(ast.NodeVisitor):
         Returns:
             bool: True if subclass of nn.Module, else False.
         """
-        #
+
+        # Searching for `nn.Module`
         for base in node.bases:
             if isinstance(base, ast.Attribute) and base.attr == "Module" and isinstance(base.value, ast.Name) and base.value.id == "nn":
                 return True
+
+        # Not foud `nn.Module`
         return False
 
     #
@@ -207,30 +359,38 @@ class ModelAnalyzer(ast.NodeVisitor):
         Raises:
             NameError: If two classes have the same name.
         """
-        #
+
+        # We will ignore non pytorch module classes
         if not self._is_torch_module_class(node):
             return
 
-        #
+        # Get the name of the module block class
         block_name: str = node.name
         if block_name in self.model_blocks:
             raise NameError(f"ERROR: Duplicate class name detected: {block_name}")
 
-        #
+        # Checking if it can be a Main Block, along with basic Main block name, if --main-block wasn't used.
         if self.main_block == "":
             #
             if block_name in ["MainModel", "MainNet", "Model", "Net"]:
                 #
                 self.main_block = block_name
 
-        #
+        # Adding the discovered block to the list of all blocks
         self.model_blocks[block_name] = lc.ModelBlock(block_name=block_name)
+
+        # Indicates that we are currently visiting this block
         self.current_model_visit.append(block_name)
+
+        # Initialy, no models have direct sub-blocks for them, so init to 0
         self.sub_block_counter[block_name] = 0
 
-        #
+        # Continue the visit
         self.generic_visit(node)
+
+        # After the recursive visit, indicate that we are done with this block
         self.current_model_visit.pop()
+
 
     # --------------------------------------------------------- #
     # ----                FUNCTION VISITOR                 ---- #
@@ -244,24 +404,51 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.FunctionDef): The function node to visit.
         """
-        #
+
+        # We will ignore standalone functions, that are not inside a Pytorch Module Block Class
         if not self.current_model_visit:
             return
 
-        #
+        # Indicates that we are visiting this function
         self.current_function_visit = node.name
 
-        #
+        # Different
         if node.name == "__init__":
             self._analyze_init_method(node)
-        elif node.name == "forward":
-            self._analyze_forward_method(node)
         else:
             self._analyse_other_method(node)
 
         #
         self.current_function_visit = ""
         self.generic_visit(node)
+
+
+    #
+    def _analyse_other_method(self, node: ast.FunctionDef) -> None:
+        """
+        Analyzes other methods in the class.
+
+        Args:
+            node (ast.FunctionDef): The function node.
+        """
+
+        # Getting the current block
+        current_block: lc.ModelBlock = self.model_blocks[self.current_model_visit[-1]]
+
+        # Creating the function container
+        func = lc.BlockFunction(
+            function_name=node.name,
+            function_arguments=self._get_node_arguments(node=node),
+            model_block=current_block
+        )
+
+        # Adding the function to the current block
+        current_block.block_functions[node.name] = func
+
+        # Process all the control flow instructions of the function body
+        for stmt in node.body:
+            self._process_statement(stmt, func.function_flow_control)
+
 
     #
     def _analyze_init_method(self, node: ast.FunctionDef) -> None:
@@ -274,43 +461,92 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         current_block = self.model_blocks[self.current_model_visit[-1]]
 
-        # Extract function arguments
-        args = {}
-        for arg in node.args.args[1:]:  # Skip 'self'
-            #
+        # Extract block arguments
+        current_block.block_parameters = self._get_node_arguments(node=node)
+
+        # Process body for layers and variables
+        for stmt in node.body:
+            self._process_stmt_block_init(stmt=stmt, current_block=current_block)
+
+    #
+    def _process_stmt_block_init(self, stmt: ast.AST, current_block: lc.ModelBlock) -> None:
+        """
+        _summary_
+
+        Args:
+            stmt (ast.AST): _description_
+        """
+
+        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
+            target = stmt.targets[0]
+            if isinstance(target.value, ast.Name) and target.value.id == "self":
+                var_name = target.attr
+                if isinstance(stmt.value, ast.Call):
+                    layer_type = self.get_layer_type(stmt.value.func)
+                    params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
+                    if layer_type in {"ModuleList", "Sequential"}:
+                        self._handle_container(var_name, layer_type, stmt.value, current_block)
+                    else:
+                        current_block.block_layers[var_name] = lc.Layer(
+                            layer_var_name=var_name,
+                            layer_type=layer_type,
+                            layer_parameters_kwargs=params
+                        )
+                elif isinstance(stmt.value, ast.For):
+                    self._handle_loop_init(var_name=var_name, for_node=stmt.value, block=current_block)
+
+
+    #
+    def _get_node_arguments(self, node: ast.FunctionDef) -> dict[str, tuple[str, Any]]:
+        """
+        Extract a function arguments inside of a class.
+
+        Args:
+            node (ast.FunctionDef): _description_
+
+        Returns:
+            dict[str, tuple[str, Any]]: _description_
+        """
+
+        # Extract function arguments:
+
+        # Preparing the argument dict
+        args: dict[str, tuple[str, Any]] = {}
+
+        # Preparing var types
+        arg_name: str
+        arg_type: str
+        default: Any
+
+        # browse the function arguments
+        for arg in node.args.args:
+
+            # Get thet argument name
             arg_name = arg.arg
+
+            # Skip 'self'
+            if arg_name == "self":
+                continue
+
+            # Checking the argument type annotation
             if isinstance(arg.annotation, ast.Name):
                 arg_type = arg.annotation.id
             elif arg.annotation is not None:
                 arg_type = ast.dump(arg.annotation)
             else:
                 arg_type = "Any"
-            #
+
+            # Trying to get argument default value
             default = None
             if arg_name in node.args.defaults:
                 default = extract_expression(node.args.defaults[node.args.args.index(arg) - len(node.args.defaults)], self)
-            args[arg_name] = (arg_type, default)
-        current_block.block_parameters = args
 
-        # Process body for layers and variables
-        for stmt in node.body:
-            if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
-                target = stmt.targets[0]
-                if isinstance(target.value, ast.Name) and target.value.id == "self":
-                    var_name = target.attr
-                    if isinstance(stmt.value, ast.Call):
-                        layer_type = self.get_layer_type(stmt.value.func)
-                        params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
-                        if layer_type in {"ModuleList", "Sequential"}:
-                            self._handle_container(var_name, layer_type, stmt.value, current_block)
-                        else:
-                            current_block.block_layers[var_name] = lc.Layer(
-                                layer_var_name=var_name,
-                                layer_type=layer_type,
-                                layer_parameters_kwargs=params
-                            )
-                    elif isinstance(stmt.value, ast.For):
-                        self._handle_loop_init(var_name=var_name, for_node=stmt.value, block=current_block)
+            # Adding the argument to the argument dict
+            args[arg_name] = (arg_type, default)
+
+        #
+        return args
+
 
     #
     def _handle_container(self, var_name: str, container_type: str, call_node: ast.Call, block: lc.ModelBlock) -> None:
@@ -323,6 +559,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             call_node (ast.Call): The AST node of the container call.
             block (lc.ModelBlock): The current model block.
         """
+
         # Create a unique sub-block name
         sub_block_name = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
         self.sub_block_counter[self.current_model_visit[-1]] += 1
@@ -335,11 +572,18 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Handle arguments
         if call_node.args:
             for arg in call_node.args:
+
+                # Call: A call expression, such as func(...)
+
                 if isinstance(arg, ast.Call):
                     layer_type = self.get_layer_type(arg.func)
                     params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in arg.keywords if kw.arg is not None}
                     layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
+
+                # GeneratorExp: A generator expression, such as (var for var in iterable)
+
                 elif isinstance(arg, ast.GeneratorExp):
+
                     elt = arg.elt
                     if isinstance(elt, ast.Call):
                         layer_type = self.get_layer_type(elt.func)
@@ -434,26 +678,6 @@ class ModelAnalyzer(ast.NodeVisitor):
             layer_parameters_kwargs={"sub_block": sub_block_name, "iterator": iterator, "iterable_var": iterable_var}
         )
 
-    #
-    def _analyze_forward_method(self, node: ast.FunctionDef) -> None:
-        """
-        Analyzes the forward method to extract control flow.
-
-        Args:
-            node (ast.FunctionDef): The forward function node.
-        """
-        #
-        current_block = self.model_blocks[self.current_model_visit[-1]]
-        forward_func = lc.BlockFunction(
-            function_name="forward",
-            function_arguments={arg.arg: ("Any", None) for arg in node.args.args},
-            model_block=current_block
-        )
-        current_block.block_functions["forward"] = forward_func
-
-        #
-        for stmt in node.body:
-            self._process_statement(stmt, forward_func.function_flow_control)
 
     #
     def _process_statement(self, stmt: ast.AST, flow_control: List[lc.FlowControlInstruction]) -> None:
@@ -549,25 +773,6 @@ class ModelAnalyzer(ast.NodeVisitor):
             elif isinstance(stmt.value, ast.Name):
                 returns.append(stmt.value.id)
             flow_control.append(lc.FlowControlReturn(return_variables=returns))
-
-    #
-    def _analyse_other_method(self, node: ast.FunctionDef) -> None:
-        """
-        Analyzes other methods in the class.
-
-        Args:
-            node (ast.FunctionDef): The function node.
-        """
-        #
-        current_block = self.model_blocks[self.current_model_visit[-1]]
-        func = lc.BlockFunction(
-            function_name=node.name,
-            function_arguments={arg.arg: ("Any", None) for arg in node.args.args},
-            model_block=current_block
-        )
-        current_block.block_functions[node.name] = func
-        for stmt in node.body:
-            self._process_statement(stmt, func.function_flow_control)
 
     #
     def get_layer_type(self, func: ast.AST) -> str:

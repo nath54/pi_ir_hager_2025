@@ -47,7 +47,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(filepath_to_weights, weights_only=True))
 
     #
-    print(f"Model loaded and architecture extracted !\n\n{l1_model}\n\n{model}")
+    print(f"Model loaded and architecture extracted !\n\nExtracted architecture :\n\n{l1_model}\n\nArchitecture from direct pytorch module loaded:\n\n{model}\n")
 
 
 
