@@ -220,6 +220,43 @@ def extract_call(node: ast.Call, analyzer: "ModelAnalyzer") -> tuple[str, list[l
     return func_name, func_call_args, func_call_keywords, instructions_to_do_before
 
 
+#
+def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer: "ModelAnalyzer") -> lc.Layer:
+    """
+    _summary_
+
+    Args:
+        node (ast.Call): _description_
+        var_name (str): _description_
+        layer_type (str): _description_
+        analyzer (ModelAnalyzer): _description_
+
+    Returns:
+        lc.Layer: _description_
+    """
+
+    # On recup les infos du call
+    layer_name: str
+    layer_call_args: list[lc.Expression]
+    layer_call_keywords: dict[str, lc.Expression]
+    instructions_to_do_before: list[lc.FlowControlInstruction]
+    layer_name, layer_call_args, layer_call_keywords, instructions_to_do_before = extract_call(node=node, analyzer=analyzer)
+
+    # On ajoute le layer à la liste des layers du block
+    layer: lc.Layer = lc.Layer(
+        layer_var_name=var_name,
+        layer_type=layer_type,
+        layer_parameters_kwargs={}  # TODO: to complete after complete analysis -> check layer type (Block / Base layer)
+    )
+
+    #
+    analyzer.layers_arguments_todo[ layer ] = ( layer_call_args, layer_call_keywords )
+
+    #
+    return layer
+
+
+
 # --------------------------------------------------------- #
 # ----               PROCESS EXPRESSION                ---- #
 # --------------------------------------------------------- #
@@ -322,6 +359,9 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         # Global constants defined outside classes.
         self.global_constants: Dict[str, tuple[str, Any]] = {}
+
+        # Layer arguments first extractions
+        self.layers_arguments_todo: dict[lc.Layer | lc.FlowControlFunctionCall, tuple[list[lc.Expression], dict[str, lc.Expression]]] = {}
 
 
     # --------------------------------------------------------- #
@@ -477,23 +517,47 @@ class ModelAnalyzer(ast.NodeVisitor):
             stmt (ast.AST): _description_
         """
 
+        # Assign, layer preparation
         if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
+
+            # Get the target of the assignment
             target = stmt.targets[0]
+
+            # If it is a self target
             if isinstance(target.value, ast.Name) and target.value.id == "self":
+
+                #
                 var_name = target.attr
+
+                # If the value is a call
                 if isinstance(stmt.value, ast.Call):
+
+                    # Get the layer type
                     layer_type = self.get_layer_type(stmt.value.func)
-                    params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
+
+                    # Manages ModuleList & Sequential
                     if layer_type in {"ModuleList", "Sequential"}:
                         self._handle_container(var_name, layer_type, stmt.value, current_block)
+
+                    # Sinon, on a notre layer
                     else:
-                        current_block.block_layers[var_name] = lc.Layer(
-                            layer_var_name=var_name,
-                            layer_type=layer_type,
-                            layer_parameters_kwargs=params
-                        )
-                elif isinstance(stmt.value, ast.For):
-                    self._handle_loop_init(var_name=var_name, for_node=stmt.value, block=current_block)
+
+                        # On récupère le layer
+                        layer: lc.Layer = extract_layer_call(node=stmt.value, var_name=var_name, layer_type=layer_type, analyzer=self)
+
+                        # On ajoute le layer à la liste des layers du block
+                        current_block.block_layers[var_name] = layer
+
+                #
+                # elif isinstance(stmt.value, ast.For):
+                #     self._handle_loop_init(var_name=var_name, for_node=stmt.value, block=current_block)
+
+
+        # For the moment, we will not support all the "dynamic blocks"
+        # Meaning, that all the dimensions and all the important parameters have to be fixed.
+
+        # Same, no class variables, we will only work with global variables for now
+
 
 
     #
@@ -563,6 +627,8 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Create a unique sub-block name
         sub_block_name = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
         self.sub_block_counter[self.current_model_visit[-1]] += 1
+
+        # Creating the sub-block
         sub_block = lc.ModelBlock(block_name=sub_block_name)
         self.model_blocks[sub_block_name] = sub_block
 
@@ -577,8 +643,8 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                 if isinstance(arg, ast.Call):
                     layer_type = self.get_layer_type(arg.func)
-                    params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in arg.keywords if kw.arg is not None}
-                    layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
+                    layer: lc.Layer = extract_layer_call(node=arg, var_name="#TODO", layer_type=layer_type, analyzer=self)
+                    layers.append( layer )
 
                 # GeneratorExp: A generator expression, such as (var for var in iterable)
 
