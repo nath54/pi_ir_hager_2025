@@ -639,21 +639,46 @@ class ModelAnalyzer(ast.NodeVisitor):
         if call_node.args:
             for arg in call_node.args:
 
+                #
                 # Call: A call expression, such as func(...)
-
+                #
                 if isinstance(arg, ast.Call):
+
+                    # Get the layer type
                     layer_type = self.get_layer_type(arg.func)
+
+                    # Extract the layer and add it to the layers list
                     layer: lc.Layer = extract_layer_call(node=arg, var_name="#TODO", layer_type=layer_type, analyzer=self)
                     layers.append( layer )
 
+                #
                 # GeneratorExp: A generator expression, such as (var for var in iterable)
-
+                #
+                # GeneartorExp:
+                #   elt: (ast.AST)
+                #   generators: (list[ast.comprehension])
+                #
+                # comprehension:
+                #    target: (ast.AST)
+                #    iter: (ast.AST)
+                #    ifs: (_)
+                #    is_async: (_)
+                #
                 elif isinstance(arg, ast.GeneratorExp):
 
+                    # On récupère l'element
                     elt = arg.elt
+
+                    # Si on a un appel (on suppose que c'est un Layer, on ne suppose pas des appels à des functions custom de code qui pourraient renvoyer des layer)
                     if isinstance(elt, ast.Call):
+
+                        # On récupère le type du layer
                         layer_type = self.get_layer_type(elt.func)
+
+                        #
                         params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in elt.keywords if kw.arg is not None}
+
+                        # On ne supporte que des ranges simples
                         if arg.generators and isinstance(arg.generators[0].iter, ast.Call) and isinstance(arg.generators[0].iter.func, ast.Name) and arg.generators[0].iter.func.id == "range":
                             range_args = [expr.constant for expr in [extract_expression(a, self) for a in arg.generators[0].iter.args] if expr is not None and isinstance(expr, lc.ExpressionConstant)]
                             if len(range_args) >= 1:
