@@ -766,9 +766,14 @@ class ModelAnalyzer(ast.NodeVisitor):
             for_node (ast.For): The for loop node.
             block (lc.ModelBlock): The current model block.
         """
+
         #
         sub_block_name = f"BlockModuleList_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
+
+        #
         self.sub_block_counter[self.current_model_visit[-1]] += 1
+
+        #
         sub_block = lc.ModelBlock(block_name=sub_block_name)
         self.model_blocks[sub_block_name] = sub_block
 
@@ -778,11 +783,23 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         # Extract loop details
         iterator = extract_expression(for_node.iter, self) or for_node.iter.id
+
+        #
         iterable_var = for_node.target.id
+
+        #
         layers: List[lc.Layer] = []
+
+        #
         for stmt in for_node.body:
+
+            #
             if isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Call):
+
+                #
                 layer_type = self.get_layer_type(stmt.value.func)
+
+                #
                 params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
                 layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
 
@@ -792,10 +809,18 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         # Define forward method
         forward_func = lc.BlockFunction(function_name="forward", function_arguments={"x": ("Any", None)}, model_block=sub_block)
+
+        # Add forward method
         sub_block.block_functions["forward"] = forward_func
+
+        #
         output_vars = []
         for i in range(len(layers)):
+
+            #
             output_var = f"out_{i}"
+
+            #
             forward_func.function_flow_control.append(
                 lc.FlowControlLayerPass(
                     output_variables=[output_var],
@@ -803,7 +828,11 @@ class ModelAnalyzer(ast.NodeVisitor):
                     layer_arguments={"x": lc.ExpressionVariable("x")}
                 )
             )
+
+            #
             output_vars.append(output_var)
+
+        #
         forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
 
         # Add to parent block
@@ -823,70 +852,131 @@ class ModelAnalyzer(ast.NodeVisitor):
             stmt (ast.AST): The statement to process.
             flow_control (list[lc.FlowControlInstruction]): The flow control list to append to.
         """
+
         #
         if isinstance(stmt, ast.Assign):
+
+            #
             target = stmt.targets[0].id if isinstance(stmt.targets[0], ast.Name) else None
+
+            #
             value = extract_expression(stmt.value, self)
+
+            #
             if target and value:
+
+                #
                 flow_control.append(lc.FlowControlVariableAssignment(var_name=target, var_value=value))
+
+            #
             elif isinstance(stmt.value, ast.Call):
+
+                #
                 outputs = [t.id for t in stmt.targets if isinstance(t, ast.Name)]
+
+                #
                 func_name = self.get_layer_type(stmt.value.func)
+
+                #
                 args = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
+
+                #
                 if func_name in self.model_blocks[self.current_model_visit[-1]].block_layers:
+
+                    #
                     flow_control.append(lc.FlowControlLayerPass(outputs, func_name, args))
                 else:
+
+                    #
                     flow_control.append(lc.FlowControlFunctionCall(outputs, func_name, args))
 
         #
         elif isinstance(stmt, ast.AugAssign):
+
+            #
             self.visit_AugAssign(stmt)
 
         #
         elif isinstance(stmt, ast.For):
+
+            #
             if not isinstance(stmt.target, ast.Name):
                 return
+
+            #
             iterator = extract_expression(stmt.iter, self) or (stmt.iter.id if isinstance(stmt.iter, ast.Name) else None)
             if iterator is None:
                 return
+
+            #
             flow_control_loop: lc.FlowControlForLoop = lc.FlowControlForLoop(
                 iterable_var_name=stmt.target.id,
                 iterator=iterator,
                 flow_control_instructions=[]
             )
+
+            #
             flow_control.append(flow_control_loop)
+
+            #
             for sub_stmt in stmt.body:
+
+                #
                 self._process_statement(sub_stmt, flow_control_loop.flow_control_instructions)
 
         #
         elif isinstance(stmt, ast.While):
+
+            #
             condition = extract_condition(stmt.test, self)
             if condition is None:
                 return
+
+            #
             flow_control_while: lc.FlowControlWhileLoop = lc.FlowControlWhileLoop(
                 condition=condition,
                 flow_control_instructions=[]
             )
+
+            #
             flow_control.append(flow_control_while)
             for sub_stmt in stmt.body:
+
+                #
                 self._process_statement(sub_stmt, flow_control_while.flow_control_instructions)
 
         #
         elif isinstance(stmt, ast.If):
+
+            #
             condition = extract_condition(stmt.test, self)
             if condition is None:
                 return
+
+            #
             sub_func_name = f"cond_{len(self.model_blocks[self.current_model_visit[-1]].block_functions)}"
+
+            #
             sub_func = lc.BlockFunction(sub_func_name, {"input": ("Any", None)}, self.model_blocks[self.current_model_visit[-1]])
+
+            #
             self.model_blocks[self.current_model_visit[-1]].block_functions[sub_func_name] = sub_func
+
+            #
             for sub_stmt in stmt.body:
                 self._process_statement(sub_stmt, sub_func.function_flow_control)
+
+            #
             flow_control_subcall: lc.FlowControlSubBlockFunctionCall = lc.FlowControlSubBlockFunctionCall(
                 output_variables=["output"],
                 function_called=sub_func_name,
                 function_arguments={"input": "x"}
             )
+
+            #
             flow_control.append(flow_control_subcall)
+
+            #
             self.model_blocks[self.current_model_visit[-1]].block_layers[sub_func_name] = lc.LayerCondition(
                 layer_var_name=sub_func_name,
                 layer_conditions_blocks={condition: flow_control_subcall}
@@ -894,19 +984,39 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         elif isinstance(stmt, ast.Return):
+
+            #
             expr: Optional[lc.Expression]
+
+            #
             returns: List[str] = []
+
+            #
             if isinstance(stmt.value, ast.Tuple):
+
+                #
                 for val in stmt.value.elts:
+
+                    #
                     expr = extract_expression(val, self)
+
+                    #
                     if expr is None:
                         continue
+
+                    #
                     elif isinstance(expr, lc.ExpressionVariable):
                         returns.append(expr.var_name)
+
+                    #
                     elif isinstance(val, ast.Name):
                         returns.append(val.id)
+
+            #
             elif isinstance(stmt.value, ast.Name):
                 returns.append(stmt.value.id)
+
+            #
             flow_control.append(lc.FlowControlReturn(return_variables=returns))
 
     #
@@ -920,11 +1030,16 @@ class ModelAnalyzer(ast.NodeVisitor):
         Returns:
             str: The type or name of the function/layer.
         """
+
         #
         if isinstance(func, ast.Attribute):
             return func.attr
+
+        #
         elif isinstance(func, ast.Name):
             return func.id
+
+        #
         return ""
 
     # --------------------------------------------------------- #
@@ -939,15 +1054,19 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.Assign): The assignment node to visit.
         """
+
         #
         if len(node.targets) != 1:
             return
 
+        #
         target = node.targets[0]
         value = extract_expression(node.value, self)
 
         # Global constant
         if not self.current_model_visit and not self.current_function_visit and isinstance(target, ast.Name) and value:
+
+            #
             type_str = "int" if isinstance(value, lc.ExpressionConstantNumeric) and isinstance(value.constant, int) else "float" if isinstance(value, lc.ExpressionConstantNumeric) else "str" if isinstance(value, lc.ExpressionConstantString) else "list"
             self.global_constants[target.id] = (type_str, value)
             return
