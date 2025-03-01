@@ -221,7 +221,7 @@ def extract_call(node: ast.Call, analyzer: "ModelAnalyzer") -> tuple[str, list[l
 
 
 #
-def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer: "ModelAnalyzer") -> lc.Layer:
+def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer: "ModelAnalyzer", add_arguments_todo: bool = True) -> lc.Layer:
     """
     _summary_
 
@@ -250,7 +250,8 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     )
 
     #
-    analyzer.layers_arguments_todo[ layer ] = ( layer_call_args, layer_call_keywords )
+    if add_arguments_todo:
+        analyzer.layers_arguments_todo[ layer ] = ( layer_call_args, layer_call_keywords )
 
     #
     return layer
@@ -635,6 +636,10 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Initialize layers list
         layers: List[lc.Layer] = []
 
+        # Init loop & layer variables
+        i: int
+        layer: lc.Layer
+
         # Handle arguments
         if call_node.args:
             for arg in call_node.args:
@@ -648,7 +653,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                     layer_type = self.get_layer_type(arg.func)
 
                     # Extract the layer and add it to the layers list
-                    layer: lc.Layer = extract_layer_call(node=arg, var_name="#TODO", layer_type=layer_type, analyzer=self)
+                    layer = extract_layer_call(node=arg, var_name="#TODO", layer_type=layer_type, analyzer=self)
                     layers.append( layer )
 
                 #
@@ -675,34 +680,73 @@ class ModelAnalyzer(ast.NodeVisitor):
                         # On récupère le type du layer
                         layer_type = self.get_layer_type(elt.func)
 
-                        #
-                        params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in elt.keywords if kw.arg is not None}
-
                         # On ne supporte que des ranges simples
                         if arg.generators and isinstance(arg.generators[0].iter, ast.Call) and isinstance(arg.generators[0].iter.func, ast.Name) and arg.generators[0].iter.func.id == "range":
+
+                            # On récupère les arguments du range
                             range_args = [expr.constant for expr in [extract_expression(a, self) for a in arg.generators[0].iter.args] if expr is not None and isinstance(expr, lc.ExpressionConstant)]
+
+                            # Si pas de problèmes au niveau des arguments
                             if len(range_args) >= 1:
+
+                                # On décompte la taille du range
                                 count = range_args[0] if len(range_args) == 1 else range_args[1] - range_args[0]
+
+                                # Pour chaque élément du range, on va créer un layer
                                 for i in range(int(count)):
-                                    layers.append(lc.Layer(f"layer_{i}", layer_type, params.copy()))
+
+                                    #
+                                    layer_range: lc.Layer = extract_layer_call(node=elt, var_name=f"{var_name}[{i}]", layer_type=layer_type, analyzer=self)
+
+                                    #
+                                    layers.append(layer_range)
 
         # Define forward method
-        forward_func = lc.BlockFunction(function_name="forward", function_arguments={"x": ("Any", None)}, model_block=sub_block)
+        forward_func = lc.BlockFunction(
+                            function_name="forward",
+                            function_arguments={"x": ("Any", None)},
+                            model_block=sub_block
+        )
+
+        # Add the forward function to the sub-block
         sub_block.block_functions["forward"] = forward_func
-        current_input = lc.ExpressionVariable("x")
+
+        # As you can see in the forward function arguments, the input is the variable 'x'
+        current_input: lc.ExpressionVariable = lc.ExpressionVariable("x")
+
+        # For each layers
         for i, layer in enumerate(layers):
-            layer_name = f"layer_{i}"
-            sub_block.block_layers[layer_name] = layer
+
+            #
+            sub_block.block_layers[layer.layer_var_name] = layer
+
+            #
             output_var = f"out_{i}"
+
+            #
             forward_func.function_flow_control.append(
-                lc.FlowControlLayerPass(output_variables=[output_var], layer_name=layer_name, layer_arguments={"x": current_input})
+                lc.FlowControlLayerPass(output_variables=[output_var], layer_name=layer.layer_var_name, layer_arguments={"x": current_input})
             )
+
+            #
             if container_type == "Sequential":
+
+                #
                 current_input = lc.ExpressionVariable(output_var)
+
+        #
         if container_type == "Sequential":
+
+            #
             forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=[current_input.var_name]))
+
+        #
         elif container_type == "ModuleList":
+
+            #
             output_vars = [f"out_{i}" for i in range(len(layers))]
+
+            #
             forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
 
         # Add to parent block
