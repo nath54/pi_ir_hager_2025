@@ -364,8 +364,66 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Global constants defined outside classes.
         self.global_constants: Dict[str, tuple[str, Any]] = {}
 
-        # Layer arguments first extractions
+        # Layer / Function Call arguments first extractions
+        #   layer or function call -> ( args, kwargs )
         self.layers_arguments_todo: dict[lc.Layer | lc.FlowControlFunctionCall, tuple[list[lc.Expression], dict[str, lc.Expression]]] = {}
+
+
+    # --------------------------------------------------------- #
+    # ----                 ARGUMENTS APPLY                 ---- #
+    # --------------------------------------------------------- #
+
+
+    #
+    def _apply_layer_argument(self, layer: lc.Layer, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
+        """
+        _summary_
+        """
+
+        # TODO
+        pass
+
+
+    #
+    def _apply_fn_call_argument(self, fn_call: lc.FlowControlFunctionCall, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
+        """
+        _summary_
+        """
+
+        # TODO
+        pass
+
+
+    #
+    def _apply_layers_or_fn_call_arguments(self) -> None:
+        """
+        _summary_
+        """
+
+        #
+        layer_or_fcall: lc.Layer | lc.FlowControlFunctionCall
+        for layer_or_fcall in self.layers_arguments_todo:
+
+            #
+            if isinstance(layer_or_fcall, lc.Layer):
+
+                #
+                self._apply_layer_argument(
+                        layer=layer_or_fcall,
+                        args=self.layers_arguments_todo[layer_or_fcall][0],
+                        kwargs=self.layers_arguments_todo[layer_or_fcall][1]
+                )
+
+            #
+            elif isinstance(layer_or_fcall, lc.FlowControlFunctionCall):
+
+                #
+                self._apply_fn_call_argument(
+                        fn_call=layer_or_fcall,
+                        args=self.layers_arguments_todo[layer_or_fcall][0],
+                        kwargs=self.layers_arguments_todo[layer_or_fcall][1]
+                )
+
 
 
     # --------------------------------------------------------- #
