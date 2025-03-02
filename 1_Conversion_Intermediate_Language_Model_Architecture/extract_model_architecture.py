@@ -57,6 +57,7 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
     Returns:
         Optional[lc.Expression]: The extracted expression or None if not applicable.
     """
+
     #
     if isinstance(node, ast.Name):
         if analyzer and node.id in analyzer.global_constants:
@@ -101,6 +102,7 @@ def extract_condition(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.C
     Returns:
         Optional[lc.Condition]: The extracted condition or None if not applicable.
     """
+
     #
     if isinstance(node, ast.Compare):
         left = extract_expression(node.left, analyzer)
@@ -275,6 +277,7 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
     Returns:
         str: The variable name holding the expression's result.
     """
+
     #
     if isinstance(node, ast.BinOp):
         # Handle binary operations like `y * RANDOM_CONSTANT2`
@@ -499,6 +502,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.FunctionDef): The __init__ function node.
         """
+
         #
         current_block = self.model_blocks[self.current_model_visit[-1]]
 
@@ -1068,20 +1072,37 @@ class ModelAnalyzer(ast.NodeVisitor):
 
             #
             type_str = "int" if isinstance(value, lc.ExpressionConstantNumeric) and isinstance(value.constant, int) else "float" if isinstance(value, lc.ExpressionConstantNumeric) else "str" if isinstance(value, lc.ExpressionConstantString) else "list"
+
+            #
             self.global_constants[target.id] = (type_str, value)
+
+            #
             return
 
         # Inside function
         if self.current_model_visit and self.current_function_visit:
+
+            #
             current_block = self.model_blocks[self.current_model_visit[-1]]
+
+            #
             if self.current_function_visit in current_block.block_functions:
+
+                #
                 func = current_block.block_functions[self.current_function_visit]
+
+                #
                 if isinstance(target, ast.Name) and value:
+
+                    #
                     func.function_flow_control.append(
                         lc.FlowControlVariableAssignment(var_name=target.id, var_value=value)
                     )
+
+            #
             return
 
+        #
         ast.NodeVisitor.generic_visit(self, node)
 
     #
@@ -1092,6 +1113,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.AugAssign): The augmented assignment node to visit.
         """
+
         #
         target = node.target
         if not isinstance(target, ast.Name):
@@ -1136,6 +1158,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.AnnAssign): The annotated assignment node to visit.
         """
+
         #
         target = node.target
         value = extract_expression(node.value, self) if node.value else None
@@ -1143,25 +1166,46 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         # Global constant
         if not self.current_model_visit and not self.current_function_visit and isinstance(target, ast.Name):
+
+            #
             if value:
                 self.global_constants[target.id] = (annotation, value)
+
+            # There is nothing more to analyse in this ast tree path
             return
 
         # Inside function
         if self.current_model_visit and self.current_function_visit and isinstance(target, ast.Name):
+
+            #
             current_block = self.model_blocks[self.current_model_visit[-1]]
+
+            #
             if self.current_function_visit in current_block.block_functions:
+
+                #
                 func = current_block.block_functions[self.current_function_visit]
+
+                #
                 if value:
+
+                    #
                     func.function_flow_control.append(
                         lc.FlowControlVariableInit(var_name=target.id, var_type=annotation, var_value=value)
                     )
+
+                #
                 else:
+
+                    #
                     func.function_flow_control.append(
                         lc.FlowControlVariableInit(var_name=target.id, var_type=annotation)
                     )
+
+            #
             return
 
+        #
         ast.NodeVisitor.generic_visit(self, node)
 
     #
@@ -1172,6 +1216,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.AST): The node to visit.
         """
+
         # No standard AssignStmt in Python ast
         ast.NodeVisitor.generic_visit(self, node)
 
@@ -1187,7 +1232,8 @@ class ModelAnalyzer(ast.NodeVisitor):
         Args:
             node (ast.AST): The node to visit.
         """
-        #
+
+        # Generic visit
         ast.NodeVisitor.generic_visit(self, node)
 
     # --------------------------------------------------------- #
@@ -1199,16 +1245,34 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
         Cleans unused functions and detects errors in the model blocks.
         """
+
         #
         for block_name, block in list(self.model_blocks.items()):
+
+            # Check for forward
             if "forward" not in block.block_functions:
                 raise ValueError(f"ERROR: Block {block_name} has no forward method.")
+
+            #
             used_funcs = {"forward"}
+
+            #
             for func in block.block_functions.values():
+
+                #
                 for instr in func.function_flow_control:
+
+                    #
                     if isinstance(instr, lc.FlowControlSubBlockFunctionCall):
                         used_funcs.add(instr.function_called)
-            block.block_functions = {k: v for k, v in block.block_functions.items() if k in used_funcs}
+
+            #
+            # block.block_functions = {k: v for k, v in block.block_functions.items() if k in used_funcs}
+            #
+            # For the moment, we will just warn for unused functions
+            # TODO
+            pass
+
 
 
 #
@@ -1226,6 +1290,7 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
     Returns:
         lc.Language1_Model: The extracted model architecture.
     """
+
     #
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Error: file not found: `{filepath}`")
@@ -1250,19 +1315,62 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
 
 
 #
-def list_classes(module):
-    """List all the classes defined inside a module."""
-    classes = [m[1] for m in inspect.getmembers(module, inspect.isclass)]
+def list_classes(module: object) -> list[type]:
+    """
+    List all the classes defined inside a module.
+
+    Args:
+        module (object): The module to inspect.
+
+    Returns:
+        List[type]: A list of class objects found in the module.
+    """
+
+    # Initialize a list to store class objects, with type hint as List[type]
+    classes: list[type] = [
+
+        # m is a tuple of precise type :  tuple[str, type] , correponding to (name, value)
+
+        # Extract the second element of the tuple 'm', which is the class object itself
+        m[1]
+
+        # Iterate through members of the module that are classes, using inspect.getmembers with inspect.isclass filter
+        for m in inspect.getmembers(module, inspect.isclass)
+    ]
+
+    # Return the list of class objects
     return classes
 
 
 #
-def import_module_from_filepath(filepath):
-    """Imports a Python module from a filepath."""
-    module_name = os.path.splitext(os.path.basename(filepath))[0]
-    spec = importlib.util.spec_from_file_location(module_name, filepath)
-    module = importlib.util.module_from_spec(spec)
+def import_module_from_filepath(filepath: str) -> object:
+    """
+    Imports a Python module from a filepath.
+
+    Args:
+        filepath (str): The path to the Python file to import as a module.
+
+    Returns:
+        object: The imported module object.
+    """
+
+    # Extract the module name from the filepath by removing the extension and path
+    module_name: str = os.path.splitext(os.path.basename(filepath))[0]
+
+    # Create a module specification using the module name and filepath, spec is of type ModuleSpec
+    spec: Optional[importlib.machinery.ModuleSpec] = importlib.util.spec_from_file_location(module_name, filepath)
+
+    # Check for errors
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Error : can't load module from file : {filepath}")
+
+    # Create a module object from the specification, module type is dynamically determined so using Any
+    module: Any = importlib.util.module_from_spec(spec)
+
+    # Execute the module code in the module object's namespace, populating the module
     spec.loader.exec_module(module)
+
+    # Return the imported module object
     return module
 
 
@@ -1288,6 +1396,7 @@ def get_pytorch_main_model(model_arch: lc.Language1_Model, filepath: str) -> Cal
 
 #
 if __name__ == "__main__":
+
     #
     if len(sys.argv) < 2 or len(sys.argv) > 3:
         raise UserWarning(f"Error: Usage: python {sys.argv[0]} path_to_model_script.py [--main-block=<MainBlockName>]")
