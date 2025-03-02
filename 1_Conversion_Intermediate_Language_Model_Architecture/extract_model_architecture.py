@@ -522,22 +522,36 @@ class ModelAnalyzer(ast.NodeVisitor):
             stmt (ast.AST): _description_
         """
 
-        print(f"DEBUG | stmt = {stmt}")
-
-        if isinstance(stmt, ast.Assign):
-            print(f"DEBUG | stmt = {stmt} | len(stmt.targets) = {len(stmt.targets)} | stmt.targets[0] = {stmt.targets[0]}")
-
-        elif isinstance(stmt, ast.AnnAssign):
-            print(f"DEBUG | stmt = {stmt} | stmt.target = {stmt.target}v")
-
         # Assign, layer preparation
-        if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
+        # if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
+        if isinstance(stmt, ast.Assign) or isinstance(stmt, ast.AnnAssign):
 
             #
-            print(f"DEBUG | statement : {stmt} -> is simple assign")
+            target: ast.Attribute
 
-            # Get the target of the assignment
-            target = stmt.targets[0]
+            #
+            if isinstance(stmt, ast.Assign):
+
+                #
+                if len(stmt.targets) != 1 or not isinstance(stmt.targets[0], ast.Attribute):
+
+                    # Not supported
+                    return
+
+                # Get the target of the assignment
+                target = stmt.targets[0]
+
+            #
+            elif isinstance(stmt, ast.AnnAssign):
+
+                #
+                if not isinstance(stmt.target, ast.Attribute):
+
+                    # Not supported
+                    return
+
+                #
+                target = stmt.target
 
             # If it is a self target
             if isinstance(target.value, ast.Name) and target.value.id == "self":
