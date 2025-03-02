@@ -11,8 +11,9 @@ class SimpleModel(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self.fc1: nn.Linear = nn.Linear(10, 20)
-        self.fc2: nn.Linear = nn.Linear(20, 30)
+        self.i: int = 20
+        self.fc1: nn.Linear = nn.Linear(10, self.i)
+        self.fc2: nn.Linear = nn.Linear(self.i, 30)
 
     def forward(self, x: Tensor):
         y: Tensor = RANDOM_CONSTANT1

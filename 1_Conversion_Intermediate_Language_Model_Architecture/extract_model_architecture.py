@@ -522,8 +522,19 @@ class ModelAnalyzer(ast.NodeVisitor):
             stmt (ast.AST): _description_
         """
 
+        print(f"DEBUG | stmt = {stmt}")
+
+        if isinstance(stmt, ast.Assign):
+            print(f"DEBUG | stmt = {stmt} | len(stmt.targets) = {len(stmt.targets)} | stmt.targets[0] = {stmt.targets[0]}")
+
+        elif isinstance(stmt, ast.AnnAssign):
+            print(f"DEBUG | stmt = {stmt} | stmt.target = {stmt.target}v")
+
         # Assign, layer preparation
         if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Attribute):
+
+            #
+            print(f"DEBUG | statement : {stmt} -> is simple assign")
 
             # Get the target of the assignment
             target = stmt.targets[0]
