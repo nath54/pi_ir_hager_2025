@@ -2,6 +2,7 @@
 import ast
 import sys
 import os
+import json
 from typing import Optional, Dict, List, cast, Any, Callable
 
 #
@@ -11,6 +12,7 @@ import importlib.machinery
 
 #
 import lib_classes as lc
+import lib_layers as ll
 
 
 # --------------------------------------------------------- #
@@ -333,7 +335,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     # --------------------------------------------------------- #
 
     #
-    def __init__(self) -> None:
+    def __init__(self, layers_filepath: str = "layers.json") -> None:
         """
         Initializer of the ModelAnalyzer class.
 
@@ -367,6 +369,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Layer / Function Call arguments first extractions
         #   layer or function call -> ( args, kwargs )
         self.layers_arguments_todo: dict[lc.Layer | lc.FlowControlFunctionCall, tuple[list[lc.Expression], dict[str, lc.Expression]]] = {}
+
+        #
+        self.layers: dict[str, ll.BaseLayerInfo] = ll.load_layers_dict(filepath=layers_filepath)
 
 
     # --------------------------------------------------------- #
