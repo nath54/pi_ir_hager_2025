@@ -2715,7 +2715,7 @@
         ],
         "tensor_output_shape": "[*output_size]",
         "with": {
-            "output_size": "input_size[:dim] + unflattened_size + input_size[[dim+1]:]"
+            "output_size": "input_size[:dim] + unflattened_size + input_size[(dim+1):]"
         },
         "parameters": {
             "dim": [
@@ -2736,7 +2736,7 @@
         ],
         "tensor_output_shape": "[*output_size]",
         "with": {
-            "output_size": "input_size[:start_dim] + [sum[input_size[start_dim:end_dim]] + input_size[[end_dim]:]"
+            "output_size": "input_size[:start_dim] + [sum[input_size[start_dim:end_dim]] + input_size[end_dim:]"
         },
         "parameters": {
             "start_dim": [

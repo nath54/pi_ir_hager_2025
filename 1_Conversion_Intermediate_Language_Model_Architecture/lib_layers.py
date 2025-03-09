@@ -84,12 +84,14 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
     #
     layer_key: str
     attr: str
+    value: dict | str | list
     for layer_key in data:
 
         #
-        print(f"DEBUG |  *** layer_detection : {layer_key}")
+        # print(f"DEBUG |  *** layer_detection : {layer_key}")
+
         #
-        for attr in data[layer_key]:
+        for attr, value in data[layer_key].items():
 
             #
             layer_dict: dict = data[layer_key]
@@ -102,6 +104,30 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
             #
             if "tensor_inputs_shapes" in layer_dict:
 
+                #
+                if isinstance(layer_dict["tensor_inputs_shapes"], dict):
+
+                    #
+                    pass
+
+                #
+                elif isinstance(layer_dict["tensor_inputs_shapes"], list):
+
+                    #
+                    pass
+
+                #
+                elif isinstance(layer_dict["tensor_inputs_shapes"], str):
+
+                    #
+                    pass
+
+                #
+                else:
+
+                    #
+                    raise TypeError(f"Error: `tensor_inputs_shapes` is not of type list or dicts !\n\ntensor_inputs_shapes = {layer_dict["layer_dict"]}")
+
                 # TODO
                 pass
 
@@ -111,12 +137,11 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
                 #
                 raise KeyError(f"Error: no key for tensor input(s) shape(s) in layers dict of dict {layer_dict}")
 
-
             #
             layer_name = layer_dict["layer_name"]
 
             #
-            print(f"DEBUG |  ***   -- attr {attr} : {data[layer_key][attr]}")
+            # print(f"DEBUG |  ***   -- attr {attr} : {value}")
 
     #
     return res

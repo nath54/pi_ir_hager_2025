@@ -661,6 +661,7 @@ class Language1_Model:
         Attributes:
             - model_blocks (dict[str, lc.ModelBlock]): list of all the blocks analyzed here, indexed by their blocks id (e.g. their name)
             - main_block (str): id of the main block, given in sys.argv with `--main-block <MainBlockName>`
+            - global constants (dict[str, tuple[str, Any]])
         """
         #
         self.model_blocks: dict[str, ModelBlock] = {}
