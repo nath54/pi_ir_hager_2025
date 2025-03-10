@@ -24,6 +24,15 @@ class TensorShapeOpt(TensorShapeElt):
         self.shape: TensorShapeElt = shape
 
 
+#
+class TensorShapeVariableLengthDimsVar(TensorShapeElt):
+
+    #
+    def __init__(self, name: str) -> None:
+
+        #
+        self.name: str = name
+
 
 #
 class TensorShapeVar(TensorShapeElt):
@@ -34,6 +43,15 @@ class TensorShapeVar(TensorShapeElt):
         #
         self.name: str = name
 
+
+#
+class TensorShapeVarList(TensorShapeElt):
+
+    #
+    def __init__(self, name: str) -> None:
+
+        #
+        self.name: str = name
 
 
 #
@@ -79,13 +97,72 @@ class BaseLayerInfo:
 
 
 #
-def parse_tensor_shape_str(txt: str) -> TensorShape:
+def parse_tensor_shape_str(base_txt: str) -> TensorShape:
 
     #
     dims: list[TensorShapeElt] = []
 
-    # TODO
-    pass
+    #
+    txt: str = base_txt.strip()
+
+    #
+    if not txt.startswith("[") or not txt.endswith("]"):
+
+        #
+        raise SyntaxError(f"Error: not a valid tensor shape syntax !\nbase_txt = {base_txt}")
+
+    #
+    txt = txt[1:-1].strip()
+
+    #
+    elts: list[str] = txt.split(",")
+
+    #
+    nb_variable_length: int = 0
+    nb_opt: int = 0
+
+    #
+    elt: str
+    for elt in elts:
+
+        #
+        elt = elt.strip()
+
+        #
+        if elt.startswith("**"):
+
+            #
+            dims.append( TensorShapeVarList(name=elt[2:]) )
+
+        #
+        elif elt.startswith("*"):
+
+            #
+            dims.append( TensorShapeVariableLengthDimsVar(name=elt[1:]) )
+
+            #
+            nb_variable_length += 1
+
+        #
+        elif elt.endswith("?"):
+
+            #
+            dims.append( TensorShapeOpt(TensorShapeVar(name=elt[:-1])) )
+
+            #
+            nb_opt += 1
+
+        #
+        else:
+
+            #
+            dims.append( TensorShapeVar(name=elt) )
+
+    #
+    if nb_opt + nb_variable_length > 1:
+
+        #
+        raise ValueError(f"Error : Cannot have more than one optional variable or list of variable length in tensor shape value !\nbase_txt = {base_txt}")
 
     #
     return TensorShape(dims=dims)
@@ -108,8 +185,6 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
     layer_name: str
     #
     layer_key: str
-    attr: str
-    value: dict | str | list
     for layer_key in data:
 
         #

@@ -348,12 +348,12 @@
         },
         "pytorch_layer_name": "ConvTranspose3d"
     },
-    "Unfold": {
-        "layer_name": "Unfold",
+    "Batched_Unfold": {
+        "layer_name": "Batched_Unfold",
         "tensor_inputs_shapes": [
-            "[N?, C, *spatial_size]"
+            "[N, C, *spatial_size]"
         ],
-        "tensor_output_shape": "[N?, C_mult_k, L]",
+        "tensor_output_shape": "[N, C_mult_k, L]",
         "with": {
             "d": "len[spatial_size]",
             "C_mult_k": "C * prod[kernel_size]",
@@ -379,12 +379,78 @@
         },
         "pytorch_layer_name": "Unfold"
     },
-    "Fold": {
-        "layer_name": "Fold",
+    "Batched_Fold": {
+        "layer_name": "Batched_Fold",
         "tensor_inputs_shapes": [
-            "[N?, C_mult_k, L]"
+            "[N, C_mult_k, L]"
         ],
-        "tensor_output_shape": "[N?, C, *output_size]",
+        "tensor_output_shape": "[N, C, *output_size]",
+        "with": {
+            "d": "len[output_size]",
+            "C_mult_k": "C * prod[kernel_size]",
+            "L": "prod[i, range[output_size], floor[[[output_size[i] + 2 * padding[i] - dilatation[i] * [kernel_size[i] - 1] - 1] / stride[i]] + 1]]"
+        },
+        "parameters": {
+            "output_size": [
+                "tuple[d * int]",
+                null
+            ],
+            "kernel_size": [
+                "tuple[d * int]",
+                null
+            ],
+            "dilation": [
+                "tuple[d * int]",
+                "d * [1]"
+            ],
+            "padding": [
+                "tuple[d * int]",
+                "d * [0]"
+            ],
+            "stride": [
+                "tuple[d * int]",
+                "d * [1]"
+            ]
+        },
+        "pytorch_layer_name": "Fold"
+    },
+    "Unbatched_Unfold": {
+        "layer_name": "Unbatched_Unfold",
+        "tensor_inputs_shapes": [
+            "[C, *spatial_size]"
+        ],
+        "tensor_output_shape": "[C_mult_k, L]",
+        "with": {
+            "d": "len[spatial_size]",
+            "C_mult_k": "C * prod[kernel_size]",
+            "L": "prod_for[i, range[d], floor[ [ [spatial_size[i] + 2 * padding[i] - dilatation[d] * [kernel_size[i] - 1] - 1] / stride[i] ] + 1 ] ]"
+        },
+        "parameters": {
+            "kernel_size": [
+                "tuple[d * int]",
+                null
+            ],
+            "dilation": [
+                "tuple[d * int]",
+                "d * [1]"
+            ],
+            "padding": [
+                "tuple[d * int]",
+                "d * [0]"
+            ],
+            "stride": [
+                "tuple[d * int]",
+                "d * [1]"
+            ]
+        },
+        "pytorch_layer_name": "Unfold"
+    },
+    "Unbatched_Fold": {
+        "layer_name": "Unbatched_Fold",
+        "tensor_inputs_shapes": [
+            "[C_mult_k, L]"
+        ],
+        "tensor_output_shape": "[C, *output_size]",
         "with": {
             "d": "len[output_size]",
             "C_mult_k": "C * prod[kernel_size]",
@@ -913,7 +979,7 @@
         "tensor_inputs_shapes": [
             "[N?,C, H_in, W_in]"
         ],
-        "tensor_output_shape": "[N?, C, *output_size]",
+        "tensor_output_shape": "[N?, C, **output_size]",
         "with": {},
         "parameters": {
             "output_size": [
@@ -932,7 +998,7 @@
         "tensor_inputs_shapes": [
             "[N?,C, D_in, H_in, W_in]"
         ],
-        "tensor_output_shape": "[N?, C, *output_size]",
+        "tensor_output_shape": "[N?, C, **output_size]",
         "with": {},
         "parameters": {
             "output_size": [
@@ -966,7 +1032,7 @@
         "tensor_inputs_shapes": [
             "[N?, C, H_in, W_in]"
         ],
-        "tensor_output_shape": "[N?, C, *output_size]",
+        "tensor_output_shape": "[N?, C, **output_size]",
         "with": {},
         "parameters": {
             "output_size": [
@@ -981,7 +1047,7 @@
         "tensor_inputs_shapes": [
             "[N?, C, D_in, H_in, W_in]"
         ],
-        "tensor_output_shape": "[N?, C, *output_size]",
+        "tensor_output_shape": "[N?, C, **output_size]",
         "with": {},
         "parameters": {
             "output_size": [
@@ -1942,33 +2008,6 @@
             ]
         },
         "pytorch_layer_name": "LayerNorm"
-    },
-    "LocalResponseNorm": {
-        "layer_name": "LocalResponseNorm",
-        "tensor_inputs_shapes": [
-            "[N?, C, *inout_size]"
-        ],
-        "tensor_output_shape": "[N?, C, *inout_size]",
-        "with": {},
-        "parameters": {
-            "size": [
-                "int",
-                null
-            ],
-            "alpha": [
-                "float",
-                0.0001
-            ],
-            "beta": [
-                "float",
-                0.75
-            ],
-            "k": [
-                "float",
-                1
-            ]
-        },
-        "pytorch_layer_name": "LocalResponseNorm"
     },
     "RMSNorm": {
         "layer_name": "RMSNorm",
