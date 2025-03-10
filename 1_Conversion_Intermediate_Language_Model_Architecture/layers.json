@@ -4,7 +4,7 @@
         "tensor_inputs_shapes": [
             "[N?, in_channels, L_in]"
         ],
-        "tensor_output_shape": "[N?, out_channels, L_out",
+        "tensor_output_shape": "[N?, out_channels, L_out]",
         "with": {
             "L_out": "floor[[ [L_in + 2 * padding - dilatation * [kernel_size - 1] - 1] / stride ] + 1]"
         },
@@ -670,7 +670,7 @@
             "H_out": "floor[[[H_in + 2 * padding[0] - kernel_size[0]] / stride[0]] + 1]",
             "W_out": "floor[[[W_in + 2 * padding[1] - kernel_size[1]] / stride[1]] + 1]"
         },
-        "paramaters": {
+        "parameters": {
             "kernel_size": [
                 "tuple[int, int]",
                 null
@@ -712,7 +712,7 @@
             "H_out": "floor[[[H_in + 2 * padding[1] - kernel_size[1]] / stride[1]] + 1]",
             "W_out": "floor[[[W_in + 2 * padding[2] - kernel_size[2]] / stride[2]] + 1]"
         },
-        "paramaters": {
+        "parameters": {
             "kernel_size": [
                 "tuple[int, int]",
                 null
@@ -1358,74 +1358,6 @@
         "parameters": {},
         "pytorch_layer_name": "LogSigmoid"
     },
-    "MultiHeadAttention": {
-        "layer_name": "MultiHeadAttention",
-        "tensor_inputs_shapes": {
-            "query": {
-                "batch_first == False": "[L, N?, embed_dim]",
-                "batch_first == True": "[N?, L, embed_dim]"
-            },
-            "key": {
-                "batch_first == False": "[S, N?, kdim]",
-                "batch_first == True": "[N?, S, kdim]"
-            },
-            "value": {
-                "batch_first == False": "[S, N?, vdim]",
-                "batch_first == True": "[N?, S, vdim]"
-            },
-            "key_padding_mask?": "[N?, S]",
-            "need_weights?": "[bool, true]",
-            "attn_mask?": "[N_nh?, L, S]",
-            "average_attn_weights": "[bool, true]",
-            "is_causal": "[bool, false]"
-        },
-        "tensor_output_shape": {
-            "attn_output": "[L, N?, embed_dim]",
-            "attn_output_weights?": "[N?, num_heads?, L, S]"
-        },
-        "with": {
-            "N_nh": "N * num_heads"
-        },
-        "parameters": {
-            "embed_dim": [
-                "int",
-                null
-            ],
-            "num_heads": [
-                "int",
-                null
-            ],
-            "dropout": [
-                "float",
-                0.0
-            ],
-            "bias": [
-                "bool",
-                true
-            ],
-            "add_bias_kv": [
-                "bool",
-                false
-            ],
-            "add_zero_attn": [
-                "bool",
-                false
-            ],
-            "kdim": [
-                "int",
-                "embed_dim"
-            ],
-            "vdim": [
-                "int",
-                "embed_dim"
-            ],
-            "batch_first": [
-                "bool",
-                false
-            ]
-        },
-        "pytorch_layer_name": "MultiheadAttention"
-    },
     "PReLU": {
         "layer_name": "PReLU",
         "tensor_inputs_shapes": [
@@ -2060,258 +1992,6 @@
             ]
         },
         "pytorch_layer_name": "RMSNorm"
-    },
-    "RNN": {
-        "layer_name": "RNN",
-        "tensor_inputs_shapes": {
-            "input": {
-                "batch_first == False": "[L, N?, input_size]",
-                "batch_first == True": "[N?, L, input_size]"
-            },
-            "hx?": "[D_nl, N?, hidden_size]"
-        },
-        "tensor_outputs_shapes": [
-            {
-                "batch_first == False": "[L, N?, HD_out]",
-                "batch_first == True": "[N?, L, HD_out]"
-            },
-            "[D_nl, N?, hidden_size]"
-        ],
-        "with": {
-            "D": "2 if bidirectional else 1",
-            "D_nl": "D * num_layers",
-            "HD_out": "D * hidden_size"
-        },
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "hidden_size": [
-                "int",
-                null
-            ],
-            "num_layers": [
-                "int",
-                1
-            ],
-            "nonlinearity": [
-                "str",
-                "tanh"
-            ],
-            "bias": [
-                "bool",
-                true
-            ],
-            "batch_first": [
-                "bool",
-                false
-            ],
-            "dropout": [
-                "float",
-                0.0
-            ],
-            "bidirectional": [
-                "bool",
-                false
-            ]
-        },
-        "tensor_output_shape": "[n1, n2, n4]",
-        "pytorch_layer_name": "RNN"
-    },
-    "LSTM": {
-        "layer_name": "LSTM",
-        "tensor_inputs_shapes": {
-            "input": {
-                "batch_first == False": "[L, N?, input_size]",
-                "batch_first == True": "[N?, L, input_size]"
-            },
-            "h_0?": "[D_nl, N?, H_out]",
-            "c_0?": "[D_nl, N?, hidden_size]"
-        },
-        "tensor_outputs_shapes": [
-            {
-                "batch_first == False": "[L, N?, DH_out]",
-                "batch_first == True": "[N?, L, DH_out]"
-            },
-            "[D_nl, N?, H_out]",
-            "[D_nl, hidden_size]"
-        ],
-        "with": {
-            "H_out": "proj_size if proj_size > 0 else hidden_size",
-            "D": "2 if bidirectional else 1",
-            "DH_out": "D * H_out",
-            "D_nl": "D * num_layers"
-        },
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "output_size": [
-                "int",
-                null
-            ],
-            "num_layers": [
-                "int",
-                1
-            ],
-            "bias": [
-                "bool",
-                true
-            ],
-            "batch_first": [
-                "bool",
-                false
-            ],
-            "dropout": [
-                "float",
-                0
-            ],
-            "bidirectional": [
-                "bool",
-                false
-            ],
-            "proj_size": [
-                "int",
-                0
-            ]
-        },
-        "pytorch_layer_name": "LSTM"
-    },
-    "GRU": {
-        "layer_name": "GRU",
-        "tensor_inputs_shapes": {
-            "input": {
-                "batch_first == False": "[L, N?, input_size]",
-                "batch_first == True": "[N?, L, input_size]"
-            },
-            "h_0": "[D_nl, N?, hidden_size]"
-        },
-        "tensor_outputs_shapes": [
-            {
-                "batch_first == False": "[L, N?, DH_out]",
-                "batch_first == True": "[N?, L, DH_out]"
-            },
-            "[D_nl, N?, hidden_size]"
-        ],
-        "with": {
-            "D": "2 if bidirectional else 1",
-            "D_nl": "D * num_layers",
-            "DH_out": "D * hidden_size"
-        },
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "hidden_size": [
-                "int",
-                null
-            ],
-            "num_layers": [
-                "int",
-                1
-            ],
-            "bias": [
-                "bool",
-                true
-            ],
-            "batch_first": [
-                "bool",
-                false
-            ],
-            "dropout": [
-                "float",
-                0
-            ],
-            "bidirectional": [
-                "bool",
-                false
-            ]
-        },
-        "pytorch_layer_name": "GRU"
-    },
-    "RNNCell": {
-        "layer_name": "RNNCell",
-        "tensor_inputs_shapes": {
-            "input": "[N?, input_size]",
-            "hidden?": "[N?, hidden_size]"
-        },
-        "tensor_output_shape": "[N?, hidden_size]",
-        "with": {},
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "hidden_size": [
-                "int",
-                null
-            ],
-            "bias": [
-                "bool",
-                true
-            ],
-            "nonlinearity": [
-                "str",
-                "tanh"
-            ]
-        },
-        "pytorch_layer_name": "RNNCell"
-    },
-    "LSTMCell": {
-        "layer_name": "LSTMCell",
-        "tensor_inputs_shapes": {
-            "input": "[N?, input_size]",
-            "h_0": "[N?, hidden_size]",
-            "c_0": "[N?, hidden_size]"
-        },
-        "tensor_outputs_shapes": [
-            "[N?, hidden_size]",
-            "[N?, hidden_size]"
-        ],
-        "with": {},
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "hidden_size": [
-                "int",
-                null
-            ],
-            "bias": [
-                "bool",
-                true
-            ]
-        },
-        "tensor_output_shape": "[n1, n3]",
-        "pytorch_layer_name": "LSTMCell"
-    },
-    "GRUCell": {
-        "layer_name": "GRUCell",
-        "tensor_inputs_shapes": {
-            "input": "[N?, input_size]",
-            "hidden": "[N?, hidden_size]"
-        },
-        "tensor_output_shape": "[N?, hidden_size]",
-        "with": {},
-        "parameters": {
-            "input_size": [
-                "int",
-                null
-            ],
-            "hidden_size": [
-                "int",
-                null
-            ],
-            "bias": [
-                "bool",
-                true
-            ]
-        },
-        "pytorch_layer_name": "GRUCell"
     },
     "Identity": {
         "layer_name": "Identity",
