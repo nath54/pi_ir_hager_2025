@@ -1,8 +1,10 @@
 #
 from typing import Any, Optional
+#
+import numpy as np  # type: ignore
+
 
 # NOTE: when saying variable type, if there is an iterable or a tensor, the shape must be indicated
-
 
 
 ####################################################################
@@ -259,6 +261,7 @@ class Layer:
         self.layer_var_name: str = layer_var_name  # name of the variable to be called from the model block
         self.layer_type: str = layer_type
         self.layer_parameters_kwargs: dict[str, Any] = layer_parameters_kwargs  # the dict[str, Any] is for variable name -> variable value
+        self.layer_weights: dict[str, np.ndarray] = {}  # Will contain all the weights of the layer to init & forward
 
     #
     def __repr__(self) -> str:
@@ -669,6 +672,15 @@ class Language1_Model:
         self.main_block: str = ""
         #
         self.global_constants: dict[str, tuple[str, Any]] = {}
+
+    #
+    def export_to_cpp(self) -> str:
+
+        #
+        res: str = ""
+
+        #
+        return res
 
     #
     def __repr__(self) -> str:
