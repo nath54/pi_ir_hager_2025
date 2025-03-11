@@ -254,6 +254,9 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     )
 
     #
+    # print(f"DEBUG | extract_layer_call = {node} | layer = {layer} | add_argument_todo = {add_arguments_todo}")
+
+    #
     if add_arguments_todo:
         analyzer.layers_arguments_todo[ layer ] = ( layer_call_args, layer_call_keywords )
 
@@ -409,20 +412,31 @@ class ModelAnalyzer(ast.NodeVisitor):
         _summary_
         """
 
+        args_lst: list[tuple[str, tuple[str, lc.Expression]]]
+
         #
         if layer.layer_type not in self.layers:
 
             #
-            raise NotImplementedError(f"Error: Unsupported layer type : {layer.layer_type} !")
+            if layer.layer_type not in self.model_blocks:
+
+                #
+                raise NotImplementedError(f"Error: Unsupported layer type : {layer.layer_type} !")
+
+            # liste de (nom de l'argument, (type, valeur par défaut))
+            args_lst = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in self.model_blocks[layer.layer_type].block_parameters.items() ]
+
+        else:
+
+            #
+            layer_info: ll.BaseLayerInfo = self.layers[layer.layer_type]
+
+            # liste de (nom de l'argument, (type, valeur par défaut))
+            args_lst = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in layer_info.parameters.items() ]
 
         #
         res_args: dict[str, lc.Expression] = {}
 
-        #
-        layer_info: ll.BaseLayerInfo = self.layers[layer.layer_type]
-
-        # liste de (nom de l'argument, (type, valeur par défaut))
-        args_lst: list[tuple[str, tuple[str, lc.Expression]]] = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in layer_info.parameters.items() ]
 
         #
         arg: str
@@ -468,7 +482,14 @@ class ModelAnalyzer(ast.NodeVisitor):
                 #
                 raise IndexError(f"Error: argument {args_lst[i][0]} of layer ")
 
+            #
+            res_args[args_lst[i][0]] = args_lst[i][1][1]
 
+        #
+        # print(f"DEBUG args layers | {layer} -> {res_args}")
+
+        #
+        layer.layer_parameters_kwargs = res_args
 
     #
     def _apply_fn_call_argument(self, fn_call: lc.FlowControlFunctionCall, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
@@ -489,6 +510,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         layer_or_fcall: lc.Layer | lc.FlowControlFunctionCall
         for layer_or_fcall in self.layers_arguments_todo:
+
+            #
+            # print(f"DEBUG | {layer_or_fcall}")
 
             #
             if isinstance(layer_or_fcall, lc.Layer):
@@ -1471,6 +1495,7 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
     #
     analyzer = ModelAnalyzer()
     analyzer.visit(tree)
+    analyzer._apply_layers_or_fn_call_arguments()
     analyzer.cleaning_and_error_detections()
 
     #
