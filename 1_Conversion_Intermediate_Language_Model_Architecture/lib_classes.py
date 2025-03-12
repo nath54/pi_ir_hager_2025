@@ -1,8 +1,10 @@
 #
 from typing import Any, Optional
+#
+import numpy as np  # type: ignore
+
 
 # NOTE: when saying variable type, if there is an iterable or a tensor, the shape must be indicated
-
 
 
 ####################################################################
@@ -169,7 +171,7 @@ class Condition:
     #
     def __init__(self) -> None:
         """
-        Generic Abstract class for representing Conditions (for ControlFlowLoopWhile or LayerCondition)
+        Generic Abstract class for representing Conditions (for FlowControlWhileLoop or FlowControlCondition )
         """
         # ABSTRACT CLASS
         pass
@@ -238,6 +240,24 @@ class ConditionUnary(Condition):
         return f"{self.cond_operator} {self.elt}"
 
 
+#
+class ConditionElse(Condition):
+
+    #
+    def __init__(self) -> None:
+        """
+        _summary_
+        """
+
+        #
+        pass
+
+    #
+    def __str__(self) -> str:
+        #
+        return "Else"
+
+
 ##############################################################
 #######################     LAYERS     #######################
 ##############################################################
@@ -259,6 +279,7 @@ class Layer:
         self.layer_var_name: str = layer_var_name  # name of the variable to be called from the model block
         self.layer_type: str = layer_type
         self.layer_parameters_kwargs: dict[str, Any] = layer_parameters_kwargs  # the dict[str, Any] is for variable name -> variable value
+        self.layer_weights: dict[str, np.ndarray] = {}  # Will contain all the weights of the layer to init & forward
 
     #
     def __repr__(self) -> str:
@@ -269,38 +290,6 @@ class Layer:
     def __str__(self) -> str:
         #
         return f"* Layer {self.layer_var_name} = {self.layer_type}({self.layer_parameters_kwargs})"
-
-
-#
-class LayerCondition(Layer):
-    #
-    def __init__(self, layer_var_name: str, layer_conditions_blocks: dict[Condition, "FlowControlSubBlockFunctionCall"]) -> None:
-        """
-        Represents a condition of the control flow of a function (forward or other of a model block).
-        Each of the paths in the conditions will be moved inside a sub-function (aside the foward function) of the model block, and this layer will be created and added into the current model block.
-
-        Args:
-            layer_var_name (str): Name of the variable in the current model block that is containing this layer.
-            layer_conditions_blocks (dict[Condition, FlowControlSubBlockFunctionCall]): Dictionnary of couples (Condition, FlowControlSubBlockFunctionCall), where intuitively, each FlowControlSubBlockFunctionCall is associated to its corresponding Condition.
-        """
-        #
-        self.layer_var_name: str = layer_var_name
-        self.layer_conditions_blocks: dict[Condition, FlowControlSubBlockFunctionCall] = layer_conditions_blocks  # The idea is that each str will be a condition (ex: fn(X) < 0.4), and this block will do an if, elif, elif, else, and returns the execution of the block corresponding to the validated condition.
-        # The idea of this layer / block, is to simplify the conditions in the forward pass
-        # So there are constraints, like the fact that each of theses layers must have the same input shapes and same output shapes
-        # The idea is to create the blocks when we see an if in a forward pass (so link to the layers that are used in the main block)
-        # Okay, so, finally, there is no need to create completely new blocks, just sub block functions `BlockFunction`, so there is no issues of weights / layers duplications.
-
-    #
-    def __str__(self) -> str:
-        #
-        res: str = "\n\t* Layer Condition:\n"
-        #
-        for condition in self.layer_conditions_blocks:
-            #
-            res += f"\t\t- {condition} : {self.layer_conditions_blocks[condition]}"
-        #
-        return res
 
 
 ####################################################################
@@ -478,7 +467,7 @@ class FlowControlWhileLoop(FlowControlInstruction):
 #
 class FlowControlFunctionCall(FlowControlInstruction):
     #
-    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Any]) -> None:
+    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Expression]) -> None:
         """
         Represents a function call. (of a custom function (like a function of pytorch library)).
 
@@ -492,7 +481,7 @@ class FlowControlFunctionCall(FlowControlInstruction):
         #
         self.output_variables: list[str] = output_variables
         self.function_called: str = function_called
-        self.function_arguments: dict[str, Any] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+        self.function_arguments: dict[str, Expression] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
 
     #
     def __str__(self) -> str:
@@ -503,7 +492,7 @@ class FlowControlFunctionCall(FlowControlInstruction):
 #
 class FlowControlSubBlockFunctionCall(FlowControlInstruction):
     #
-    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Any]) -> None:
+    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Expression]) -> None:
         """
         Represents a function call of a function that is defined inside a model class block.
 
@@ -515,7 +504,7 @@ class FlowControlSubBlockFunctionCall(FlowControlInstruction):
         #
         self.output_variables: list[str] = output_variables
         self.function_called: str = function_called
-        self.function_arguments: dict[str, Any] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+        self.function_arguments: dict[str, Expression] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
 
     #
     def __str__(self) -> str:
@@ -526,7 +515,7 @@ class FlowControlSubBlockFunctionCall(FlowControlInstruction):
 #
 class FlowControlLayerPass(FlowControlInstruction):
     #
-    def __init__(self, output_variables: list[str], layer_name: str, layer_arguments: dict[str, Any]) -> None:
+    def __init__(self, output_variables: list[str], layer_name: str, layer_arguments: dict[str, Expression]) -> None:
         """
         Represents a call to a layer of the model block.
 
@@ -538,7 +527,7 @@ class FlowControlLayerPass(FlowControlInstruction):
         #
         self.output_variables: list[str] = output_variables
         self.layer_name: str = layer_name
-        self.layer_arguments: dict[str, Any] = layer_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+        self.layer_arguments: dict[str, Expression] = layer_arguments  # the tuple[str, Any] is for (variable type, variable default value)
 
     #
     def __str__(self) -> str:
@@ -565,6 +554,28 @@ class FlowControlReturn(FlowControlInstruction):
         return f"\t\t * return {self.return_variables}"
 
 
+#
+class FlowControlCondition(FlowControlInstruction):
+    #
+    def __init__(self, conditions_fn_call: dict[Condition, FlowControlSubBlockFunctionCall]) -> None:
+        """
+        Represents a condition of the control flow of a function (forward or other of a model block).
+        Each of the paths in the conditions will be moved inside a sub-function (aside the foward function) of the model block, and this layer will be created and added into the current model block.
+
+        Args:
+            conditions_fn_call (dict[Condition, FlowControlSubBlockFunctionCall]): Dictionnary of couples (Condition, FlowControlSubBlockFunctionCall), where intuitively, each FlowControlSubBlockFunctionCall is associated to its corresponding Condition.
+        """
+
+        #
+        self.conditions_fn_call: dict[Condition, FlowControlSubBlockFunctionCall] = conditions_fn_call
+
+    #
+    def __str__(self) -> str:
+
+        #
+        return f"\t\t * Conditions: {self.conditions_fn_call}"
+
+
 ##############################################################
 #######################     BLOCKS     #######################
 ##############################################################
@@ -573,7 +584,7 @@ class FlowControlReturn(FlowControlInstruction):
 #
 class BlockFunction:
     #
-    def __init__(self, function_name: str, function_arguments: dict[str, tuple[str, Any]], model_block: "ModelBlock") -> None:
+    def __init__(self, function_name: str, function_arguments: dict[str, tuple[str, Expression]], model_block: "ModelBlock") -> None:
         """
         Represents a function of a model block.
         Can be the traditional forward function, or another function.
@@ -591,7 +602,7 @@ class BlockFunction:
         self.model_block: ModelBlock = model_block  # TO access the block variables / layers
         #
         self.function_name: str = function_name
-        self.function_arguments: dict[str, tuple[str, Any]] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+        self.function_arguments: dict[str, tuple[str, Expression]] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
         #
         self.function_flow_control: list[FlowControlInstruction] = []  # To complete while analysis
 
@@ -626,6 +637,9 @@ class ModelBlock:
         #
         self.block_name: str = block_name
         self.block_parameters: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
+        #
+        self.block_weights: dict[str, list[int | str]] = {}  # indicate the weights of this model block, with its dimensions; indexed by the variable name of the weights.
+        #
         self.block_layers: dict[str, Layer] = {}
         #
         self.block_functions: dict[str, BlockFunction] = {
@@ -669,6 +683,15 @@ class Language1_Model:
         self.main_block: str = ""
         #
         self.global_constants: dict[str, tuple[str, Any]] = {}
+
+    #
+    def export_to_cpp(self) -> str:
+
+        #
+        res: str = ""
+
+        #
+        return res
 
     #
     def __repr__(self) -> str:

@@ -1982,8 +1982,8 @@
         },
         "pytorch_layer_name": "InstanceNorm3d"
     },
-    "LayerNormalization": {
-        "layer_name": "LayerNormalization",
+    "LayerNorm": {
+        "layer_name": "LayerNorm",
         "tensor_inputs_shapes": [
             "[N, *inout_shape]"
         ],

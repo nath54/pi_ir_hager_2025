@@ -254,6 +254,9 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     )
 
     #
+    # print(f"DEBUG | extract_layer_call = {node} | var_name = {var_name} | layer = {layer} | add_argument_todo = {add_arguments_todo}")
+
+    #
     if add_arguments_todo:
         analyzer.layers_arguments_todo[ layer ] = ( layer_call_args, layer_call_keywords )
 
@@ -321,6 +324,14 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
     return ""
 
 
+#
+def check_expression_type(expr: lc.Expression, type: str) -> None:
+
+    # TODO: raise error if expression isn't compatible with given type
+
+    #
+    pass
+
 
 # --------------------------------------------------------- #
 # ----              CLASS  MODEL ANALYZER              ---- #
@@ -378,6 +389,22 @@ class ModelAnalyzer(ast.NodeVisitor):
     # ----                 ARGUMENTS APPLY                 ---- #
     # --------------------------------------------------------- #
 
+    #
+    def found_arg_idx(self, arg_name: str, arg_lst: list[tuple[str, tuple[str, Any]]], layer_type: str) -> int:
+
+        #
+        i: int
+        for i in range(len(arg_lst)):
+
+            #
+            if arg_lst[i][0] == arg_name:
+
+                #
+                return i
+
+        #
+        raise KeyError(f"Error: Argument `{arg_name}` not found in arg_lst : {arg_lst} of layer type {layer_type} !")
+
 
     #
     def _apply_layer_argument(self, layer: lc.Layer, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
@@ -385,9 +412,85 @@ class ModelAnalyzer(ast.NodeVisitor):
         _summary_
         """
 
-        # TODO
-        pass
+        #
+        args_lst: list[tuple[str, tuple[str, lc.Expression]]]
 
+        #
+        if layer.layer_type not in self.layers:
+
+            #
+            if layer.layer_type not in self.model_blocks:
+
+                #
+                raise NotImplementedError(f"Error: Unsupported layer type : {layer.layer_type} !")
+
+            # liste de (nom de l'argument, (type, valeur par défaut))
+            args_lst = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in self.model_blocks[layer.layer_type].block_parameters.items() ]
+
+        #
+        else:
+
+            #
+            layer_info: ll.BaseLayerInfo = self.layers[layer.layer_type]
+
+            # liste de (nom de l'argument, (type, valeur par défaut))
+            args_lst = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in layer_info.parameters.items() ]
+
+        #
+        res_args: dict[str, lc.Expression] = {}
+
+        #
+        arg: str
+        for arg in kwargs:
+
+            #
+            arg_idx: int = self.found_arg_idx(arg, args_lst, layer.layer_type)
+
+            #
+            check_expression_type(kwargs[arg], args_lst[arg_idx][1][0])
+
+            #
+            res_args[arg] = kwargs[arg]
+
+            #
+            args_lst.pop(arg_idx)
+
+        #
+        arg_value: lc.Expression
+        for arg_value in args:
+
+            #
+            if not args_lst:
+
+                #
+                raise IndexError(f"Error: too much arguments given for layer parameters of layer type = {layer.layer_type} :\nargs = {args}\nkwargs = {kwargs}")
+
+            #
+            check_expression_type(arg_value, args_lst[0][1][0])
+
+            #
+            res_args[args_lst[0][0]] = arg_value
+
+            #
+            args_lst.pop(0)
+
+        #
+        for i in range(len(args_lst)):
+
+            #
+            if args_lst[i][1][1] is None:
+
+                #
+                raise IndexError(f"Error: argument {args_lst[i][0]} of layer ")
+
+            #
+            res_args[args_lst[i][0]] = args_lst[i][1][1]
+
+        #
+        # print(f"DEBUG args layers | {layer} -> {res_args}")
+
+        #
+        layer.layer_parameters_kwargs = res_args
 
     #
     def _apply_fn_call_argument(self, fn_call: lc.FlowControlFunctionCall, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
@@ -408,6 +511,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         layer_or_fcall: lc.Layer | lc.FlowControlFunctionCall
         for layer_or_fcall in self.layers_arguments_todo:
+
+            #
+            # print(f"DEBUG | {layer_or_fcall}")
 
             #
             if isinstance(layer_or_fcall, lc.Layer):
@@ -640,6 +746,12 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                         # On ajoute le layer à la liste des layers du block
                         current_block.block_layers[var_name] = layer
+
+                # If the value is a variable
+                elif isinstance(stmt.value, ast.Name) or isinstance(stmt.value, ast.Attribute):
+
+                    #
+                    print(f"DEBUG | var_name = {var_name} | model_block = {current_block.block_name} | stmt.value = {stmt.value}")
 
                 #
                 # elif isinstance(stmt.value, ast.For):
@@ -1390,6 +1502,7 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
     #
     analyzer = ModelAnalyzer()
     analyzer.visit(tree)
+    analyzer._apply_layers_or_fn_call_arguments()
     analyzer.cleaning_and_error_detections()
 
     #
