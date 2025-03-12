@@ -3,24 +3,34 @@ Everything is typed.
 
 
 # Variables
-Lower-case with underscore as separator
+Names lower-case with underscore as separator, type with spaces
 Examples :
-- layer_nb
-- global_counter
+- example_layer : Layer
+- global_counter : int
 
 # Classes
-Lower-case with capital letter, with capital letter as separators
+Names are ower-case with capital letter, with capital letter as separators
 Examples :
 - ModelBlock
 - Langage1Model
 
-# Functions and methods
-Lower-case with undescore as separator. Arguments: No space except after commas.
-Examples :
-- add_matrixes(matrix_a : Matrix, matrix_b : Matrix)
+Documentation with python docstrings, with the following format :
+    """
+    Class's summary.
 
-# Commentary
-We are using python docstrings, with the following format :
+    Attributes:
+        attr1 (type1): description
+        attr2 (type2): description
+        ...
+
+The class's methods have their own documentation
+
+# Functions and methods
+Lower-case with undescore as separator. Arguments: Spaces after commas. Return is typed.
+Examples :
+- def add_matrixes(matrix_a : Matrix, matrix_b : Matrix) -> return_type:
+
+Documentation with python docstrings, with the following format :
     """
     Function's summary.
 
