@@ -11,7 +11,7 @@ ReLU_forward: lc.BlockFunction = lc.BlockFunction(
     function_name = "forward", 
     function_arguments = {
         "X": ("Tensor[*dims, input_dim]", None)
-    }
+    },
     model_block = ReLU
 )
 
