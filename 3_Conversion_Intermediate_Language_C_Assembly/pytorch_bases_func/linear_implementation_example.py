@@ -1,7 +1,7 @@
 #
 import sys
 #
-sys.path.append( "../1_Conversion_Intermediate_Language_Model_Architecture/" )
+sys.path.append( "../../1_Conversion_Intermediate_Language_Model_Architecture/" )
 #
 import lib_classes as lc  # type: ignore
 

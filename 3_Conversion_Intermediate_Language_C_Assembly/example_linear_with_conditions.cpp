@@ -22,10 +22,10 @@ class Linear{
 
             Tensor Y;
             if(bias){
-                Y = with_block(X1);
+                Y = with_bias(X1);
             }
             else{
-                Y = without_block(X1);
+                Y = without_bias(X1);
             }
 
             return Y;
