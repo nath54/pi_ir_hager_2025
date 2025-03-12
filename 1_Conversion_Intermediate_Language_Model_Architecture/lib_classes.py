@@ -629,6 +629,9 @@ class ModelBlock:
         #
         self.block_name: str = block_name
         self.block_parameters: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
+        #
+        self.block_weights: dict[str, list[int | str]] = {}  # indicate the weights of this model block, with its dimensions; indexed by the variable name of the weights.
+        #
         self.block_layers: dict[str, Layer] = {}
         #
         self.block_functions: dict[str, BlockFunction] = {

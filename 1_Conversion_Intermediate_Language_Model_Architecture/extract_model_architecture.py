@@ -412,6 +412,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         _summary_
         """
 
+        #
         args_lst: list[tuple[str, tuple[str, lc.Expression]]]
 
         #
@@ -426,6 +427,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             # liste de (nom de l'argument, (type, valeur par défaut))
             args_lst = [ (arg_name, arg_type_and_default_value) for arg_name, arg_type_and_default_value in self.model_blocks[layer.layer_type].block_parameters.items() ]
 
+        #
         else:
 
             #
@@ -436,7 +438,6 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         res_args: dict[str, lc.Expression] = {}
-
 
         #
         arg: str

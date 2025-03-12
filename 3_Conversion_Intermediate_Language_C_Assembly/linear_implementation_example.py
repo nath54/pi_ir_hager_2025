@@ -9,11 +9,13 @@ import lib_classes as lc  # type: ignore
 #
 linear: lc.ModelBlock = lc.ModelBlock(block_name="Linear")
 linear.block_parameters = {
-    "input_dim": ("int", None),
-    "output_dim": ("int", None),
-    "biais": ("int", 1),
-    "A": ("Tensor[input_dim, output_dim]", None),
-    "b": ("Tensor[1, output_dim]", None)
+    "in_features": ("int", None),
+    "out_features": ("int", None),
+    "bias": ("int", 1)
+}
+linear.block_weights = {
+    "A": ["in_features", "out_features"],
+    "b": [1, "out_features"]
 }
 #
 linear_forward: lc.BlockFunction = lc.BlockFunction(
@@ -30,7 +32,7 @@ linear_forward.function_flow_control = [
         output_var_name="X1", input1_var_name="X", operation="*", input2_var_name="A" ),
     #
     lc.FlowControlBasicBinaryOperation(
-        output_var_name="B", input1_var_name="biais", operation="*", input2_var_name="b" ),
+        output_var_name="B", input1_var_name="bias", operation="*", input2_var_name="b" ),
     #
     lc.FlowControlBasicBinaryOperation(
         output_var_name="Y", input1_var_name="X1", operation="+", input2_var_name="B" ),
