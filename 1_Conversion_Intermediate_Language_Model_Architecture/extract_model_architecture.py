@@ -254,7 +254,7 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     )
 
     #
-    # print(f"DEBUG | extract_layer_call = {node} | layer = {layer} | add_argument_todo = {add_arguments_todo}")
+    # print(f"DEBUG | extract_layer_call = {node} | var_name = {var_name} | layer = {layer} | add_argument_todo = {add_arguments_todo}")
 
     #
     if add_arguments_todo:
@@ -746,6 +746,12 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                         # On ajoute le layer à la liste des layers du block
                         current_block.block_layers[var_name] = layer
+
+                # If the value is a variable
+                elif isinstance(stmt.value, ast.Name) or isinstance(stmt.value, ast.Attribute):
+
+                    #
+                    print(f"DEBUG | var_name = {var_name} | model_block = {current_block.block_name} | stmt.value = {stmt.value}")
 
                 #
                 # elif isinstance(stmt.value, ast.For):
