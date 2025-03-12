@@ -155,6 +155,42 @@ class ExpressionConstantRange(ExpressionConstantList):
         return f"Range({self.start_value}, {self.end_value}, {self.step})"
 
 
+#
+class ExpressionNone(ExpressionConstant):
+    #
+    def __init__(self) -> None:
+        """
+        _summary_
+        """
+
+        #
+        pass
+
+    #
+    def __str__(self) -> str:
+        #
+        return "None"
+
+
+
+
+#
+class ExpressionNoDefaultArguments(ExpressionConstant):
+    #
+    def __init__(self) -> None:
+        """
+        _summary_
+        """
+
+        #
+        pass
+
+    #
+    def __str__(self) -> str:
+        #
+        return "None"
+
+
 # Normally, with the following FlowControlInstructions basic instructions, there is no need to have anything else than ExpressionVariable and ExpressionConstant, because we can decompose any complex instructions in a sequence of basic instructions (we may have to create temporary variables, but aside that, it is good)
 
 # We will constraint the models to not use other types of constants and variables, (like dictionaries or custom objects), and we can convert the tuples into lists.

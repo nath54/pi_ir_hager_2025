@@ -908,7 +908,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Define forward method
         forward_func = lc.BlockFunction(
                             function_name="forward",
-                            function_arguments={"x": ("Any", None)},
+                            function_arguments={"x": ("Tensor", lc.ExpressionNoDefaultArguments())},
                             model_block=sub_block
         )
 
@@ -1012,7 +1012,11 @@ class ModelAnalyzer(ast.NodeVisitor):
             sub_block.block_layers[f"layer_{i}"] = layer
 
         # Define forward method
-        forward_func = lc.BlockFunction(function_name="forward", function_arguments={"x": ("Any", None)}, model_block=sub_block)
+        forward_func = lc.BlockFunction(
+            function_name="forward",
+            function_arguments={ "x": ("Tensor", lc.ExpressionNoDefaultArguments()) },
+            model_block=sub_block
+        )
 
         # Add forward method
         sub_block.block_functions["forward"] = forward_func
@@ -1082,7 +1086,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 func_name = self.get_layer_type(stmt.value.func)
 
                 #
-                args = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
+                args: dict[str, lc.Expression] = {keyword: expression for keyword, expression in {kw.arg: extract_expression(kw.value, self) for kw in stmt.value.keywords if kw.arg is not None}.items() if expression is not None }
 
                 #
                 if func_name in self.model_blocks[self.current_model_visit[-1]].block_layers:
@@ -1161,7 +1165,11 @@ class ModelAnalyzer(ast.NodeVisitor):
             sub_func_name = f"cond_{len(self.model_blocks[self.current_model_visit[-1]].block_functions)}"
 
             #
-            sub_func = lc.BlockFunction(sub_func_name, {"input": ("Any", None)}, self.model_blocks[self.current_model_visit[-1]])
+            sub_func = lc.BlockFunction(
+                function_name=sub_func_name,
+                function_arguments={"input": ("Any", lc.ExpressionNoDefaultArguments())},
+                model_block=self.model_blocks[self.current_model_visit[-1]]
+        )
 
             #
             self.model_blocks[self.current_model_visit[-1]].block_functions[sub_func_name] = sub_func
@@ -1174,7 +1182,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             flow_control_subcall: lc.FlowControlSubBlockFunctionCall = lc.FlowControlSubBlockFunctionCall(
                 output_variables=["output"],
                 function_called=sub_func_name,
-                function_arguments={"input": "x"}
+                function_arguments={"input": lc.ExpressionVariable("x")}
             )
 
             #
@@ -1615,5 +1623,18 @@ if __name__ == "__main__":
     print(l1_model)
 
     #
-    main_model_class =  get_pytorch_main_model(model_arch=l1_model, filepath=path_to_file)
+    main_model_class = get_pytorch_main_model(model_arch=l1_model, filepath=path_to_file)
     print(main_model_class)
+
+    #
+    main_model = main_model_class()
+
+    #
+    print(main_model)
+
+    #
+    for name, param in main_model.named_parameters():
+
+        #
+        print(f"DEBUG | name = {name} | param = {param.data.shape}")
+
