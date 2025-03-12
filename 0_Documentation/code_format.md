@@ -9,18 +9,28 @@ Examples :
 - global_counter
 
 # Classes
-Lower-case with capital letter, with capital letter as separators
+Names are ower-case with capital letter, with capital letter as separators
 Examples :
 - ModelBlock
 - Langage1Model
+
+Documentation with python docstrings, with the following format :
+    """
+    Class's summary.
+
+    Attributes:
+        attr1 (type1): description
+        attr2 (type2): description
+        ...
+
+The class's methods have their own documentation
 
 # Functions and methods
 Lower-case with undescore as separator. Arguments: No space except after commas.
 Examples :
 - add_matrixes(matrix_a : Matrix, matrix_b : Matrix)
 
-# Commentary
-We are using python docstrings, with the following format :
+Documentation with python docstrings, with the following format :
     """
     Function's summary.
 
