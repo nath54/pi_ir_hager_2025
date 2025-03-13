@@ -1,3 +1,9 @@
+"""
+    An object used to translate the intermediate langage and write the result in a .cpp file.
+    To import, use
+    from c_writer import c_writer
+    Then, call methods directly on the cwriter object
+"""
 OUTPUT_PATH = "output.cpp"
 """
     Temporary, needs to be retrieved from the config file
@@ -25,4 +31,4 @@ class CWriter:
     def __del__(self):
         self.output_file.close()
 
-cwriter = CWriter(OUTPUT_PATH)
+c_writer = CWriter(OUTPUT_PATH)
