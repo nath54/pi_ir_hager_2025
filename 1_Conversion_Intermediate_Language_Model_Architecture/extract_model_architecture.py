@@ -1189,10 +1189,10 @@ class ModelAnalyzer(ast.NodeVisitor):
             flow_control.append(flow_control_subcall)
 
             #
-            self.model_blocks[self.current_model_visit[-1]].block_layers[sub_func_name] = lc.LayerCondition(
-                layer_var_name=sub_func_name,
-                layer_conditions_blocks={condition: flow_control_subcall}
-            )
+            # self.model_blocks[self.current_model_visit[-1]].block_layers[sub_func_name] = lc.LayerCondition(
+            #     layer_var_name=sub_func_name,
+            #     layer_conditions_blocks={condition: flow_control_subcall}
+            # )
 
         #
         elif isinstance(stmt, ast.Return):

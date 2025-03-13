@@ -7,6 +7,68 @@ import numpy as np  # type: ignore
 # NOTE: when saying variable type, if there is an iterable or a tensor, the shape must be indicated
 
 
+##############################################################
+#######################     TYPES      #######################
+##############################################################
+
+
+#
+class VarType:
+
+    #
+    def __init__(self, type_name: str) -> None:
+
+        #
+        self.type_name: str = type_name
+
+    #
+    def __repr__(self) -> str:
+
+        #
+        return self.__str__()
+
+    #
+    def __str__(self) -> str:
+
+        #
+        return f"Type({self.type_name})"
+
+
+#
+class VarTypeContainer(VarType):
+
+    #
+    def __init__(self, type_name: str, contained_type: VarType) -> None:
+
+        #
+        super().__init__(type_name=type_name)
+
+        #
+        self.contained_type: VarType = contained_type
+
+
+#
+class VarTypeTensor(VarType):
+
+    #
+    def __init__(self, tensor_type: str, tensor_dims: list[str | int]) -> None:
+
+        #
+        super().__init__(type_name = "Tensor")
+
+        #
+        self.tensor_type: str = tensor_type
+        #
+        self.tensor_dims: list[str | int] = tensor_dims
+
+    #
+    def __str__(self) -> str:
+
+        #
+        return f"Tensor({self.tensor_dims}, {self.tensor_type})"
+
+
+
 ####################################################################
 #######################     EXPRESSIONS      #######################
 ####################################################################
@@ -75,7 +137,7 @@ class ExpressionConstant(Expression):
 
 
 #
-class ExpressionConstantNumeric(Expression):
+class ExpressionConstantNumeric(ExpressionConstant):
     #
     def __init__(self, constant: int | float) -> None:
         """
@@ -95,7 +157,7 @@ class ExpressionConstantNumeric(Expression):
 
 
 #
-class ExpressionConstantString(Expression):
+class ExpressionConstantString(ExpressionConstant):
     #
     def __init__(self, constant: str) -> None:
         """
@@ -114,7 +176,7 @@ class ExpressionConstantString(Expression):
 
 
 #
-class ExpressionConstantList(Expression):
+class ExpressionConstantList(ExpressionConstant):
     #
     def __init__(self, elements: list[ExpressionConstant]) -> None:
         """
@@ -172,8 +234,6 @@ class ExpressionNone(ExpressionConstant):
         return "None"
 
 
-
-
 #
 class ExpressionNoDefaultArguments(ExpressionConstant):
     #
@@ -189,6 +249,16 @@ class ExpressionNoDefaultArguments(ExpressionConstant):
     def __str__(self) -> str:
         #
         return "None"
+
+
+#
+class ExpressionToEvaluate(Expression):
+
+    #
+    def __init__(self, expr_to_evaluate: str) -> None:
+
+        #
+        self.expr_to_evaluate: str = expr_to_evaluate
 
 
 # Normally, with the following FlowControlInstructions basic instructions, there is no need to have anything else than ExpressionVariable and ExpressionConstant, because we can decompose any complex instructions in a sequence of basic instructions (we may have to create temporary variables, but aside that, it is good)
@@ -302,19 +372,19 @@ class ConditionElse(Condition):
 #
 class Layer:
     #
-    def __init__(self, layer_var_name: str, layer_type: str, layer_parameters_kwargs: dict[str, Any]) -> None:
+    def __init__(self, layer_var_name: str, layer_type: str, layer_parameters_kwargs: dict[str, Expression]) -> None:
         """
         Can represents a basic Neural Network Layer (from the list `layers.json`), or a block of a model.
 
         Args:
             layer_var_name (str): Name of the variable in the current model block that is containing this layer.
             layer_type (str): Name of the layer or the model block.
-            layer_parameters_kwargs (dict[str, Any]): Parameters of the layer.
+            layer_parameters_kwargs (dict[str, Expression]): Parameters of the layer.
         """
         #
         self.layer_var_name: str = layer_var_name  # name of the variable to be called from the model block
         self.layer_type: str = layer_type
-        self.layer_parameters_kwargs: dict[str, Any] = layer_parameters_kwargs  # the dict[str, Any] is for variable name -> variable value
+        self.layer_parameters_kwargs: dict[str, Expression] = layer_parameters_kwargs  # the dict[str, Expression] is for variable name -> variable value
         self.layer_weights: dict[str, np.ndarray] = {}  # Will contain all the weights of the layer to init & forward
 
     #
@@ -359,7 +429,7 @@ class FlowControlInstruction:
 #
 class FlowControlVariableInit(FlowControlInstruction):
     #
-    def __init__(self, var_name: str, var_type: str, var_value: Optional[Expression] = None) -> None:
+    def __init__(self, var_name: str, var_type: VarType, var_value: Optional[Expression] = None) -> None:
         """
         Represents a Variable Initialisation.
 
@@ -370,7 +440,7 @@ class FlowControlVariableInit(FlowControlInstruction):
         """
         #
         self.var_name: str = var_name
-        self.var_type: str = var_type
+        self.var_type: VarType = var_type
         self.var_value: Optional[Expression] = var_value
 
     #
@@ -620,14 +690,14 @@ class FlowControlCondition(FlowControlInstruction):
 #
 class BlockFunction:
     #
-    def __init__(self, function_name: str, function_arguments: dict[str, tuple[str, Expression]], model_block: "ModelBlock") -> None:
+    def __init__(self, function_name: str, function_arguments: dict[str, tuple[VarType, Expression]], model_block: "ModelBlock") -> None:
         """
         Represents a function of a model block.
         Can be the traditional forward function, or another function.
 
         Args:
             function_name (str): Name of the function
-            function_arguments (dict[str, tuple[str, Any]]): Arguments of the function. tuple[str, Any] means the type of the variable (the 1st str part), and the optional default value of it (the 2nd Any part).
+            function_arguments (dict[str, tuple[VarType, Expression]]): Arguments of the function. tuple[str, Any] means the type of the variable (the 1st str part), and the optional default value of it (the 2nd Any part).
             model_block (ModelBlock): Link to the model block that contains this function.
 
         Attributes:
@@ -638,7 +708,7 @@ class BlockFunction:
         self.model_block: ModelBlock = model_block  # TO access the block variables / layers
         #
         self.function_name: str = function_name
-        self.function_arguments: dict[str, tuple[str, Expression]] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+        self.function_arguments: dict[str, tuple[VarType, Expression]] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
         #
         self.function_flow_control: list[FlowControlInstruction] = []  # To complete while analysis
 
@@ -672,7 +742,7 @@ class ModelBlock:
 
         #
         self.block_name: str = block_name
-        self.block_parameters: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
+        self.block_parameters: dict[str, tuple[VarType, Expression]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
         #
         self.block_weights: dict[str, list[int | str]] = {}  # indicate the weights of this model block, with its dimensions; indexed by the variable name of the weights.
         #
@@ -682,7 +752,7 @@ class ModelBlock:
             # TO ADD: the foward pass (during the code analysis)
         }
         #
-        self.block_variables: dict[str, tuple[str, Any]] = {}  # the tuple[str, Any] is for (variable type, variable value)
+        self.block_variables: dict[str, tuple[VarType, Expression]] = {}  # the tuple[str, Any] is for (variable type, variable value)
 
     #
     def __repr__(self) -> str:
@@ -718,7 +788,7 @@ class Language1_Model:
         #
         self.main_block: str = ""
         #
-        self.global_constants: dict[str, tuple[str, Any]] = {}
+        self.global_constants: dict[str, tuple[VarType, Expression]] = {}
 
     #
     def export_to_cpp(self) -> str:
