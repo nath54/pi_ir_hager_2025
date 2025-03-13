@@ -3,6 +3,7 @@
 *.tch
 *.pkl
 *.bin
+*.zip
 *venv
 **/__pycache__
 **/.mypy_cache

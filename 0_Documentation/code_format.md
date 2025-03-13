@@ -41,3 +41,6 @@ Documentation with python docstrings, with the following format :
 
     Returns:
     type: description
+
+# Modules
+A docstring at describing the intended way of using and importing the module. Don't describe all functions and variables.
