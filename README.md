@@ -1,64 +1,45 @@
-# Projet Hager - Implémentation et Optimisation des Réseaux de Neurones pour Microcontrôleurs
+# Hager Project
 
 ## Introduction
 
-### Contacts de l’entreprise Hager:
+### Hager Company Contacts
+Hien Duc VU: hienduc.vu@hagergroup.com
+Nicolas BRITSCH: nicolas.britsch@hagergroup.com
 
-- Hien Duc VU: hienduc.vu@hagergroup.com
-- Nicolas BRITSCH: nicolas.britsch@hagergroup.com
+### Project Title
+Implementation and Optimization of Neural Networks for Microcontrollers
 
-### Titre du sujet:
+### Group Members
+Cerisara Nathan: nathan.cerisara@etu.unistra.fr
+Desberg Clement: clement.desberg@etu.unistra.fr
+Levy Lucas: lucas.levy2@etu.unistra.fr
+Jadi Ahmed Amine: ahmed-amine.jadi@etu.unistra.fr
+Lamole Etienne (uncertain): etienne.lamole@etu.unistra.fr
 
-Implémentation et Optimisation des Réseaux de Neurones pour Microcontrôleurs
+### Project Summary
+This project explores and implements different types and architectures of neural networks on microcontrollers, with a focus on optimization and embedded code generation. The goal is to transform Python models developed using frameworks like TensorFlow or PyTorch into efficient code for microcontrollers, while leveraging hardware accelerators provided by manufacturers. The project will also address simulation to test models before hardware deployment, as well as evaluating the performance, costs, and energy consumption of the deployed solutions.
 
-### Membres du Groupe:
+### Project Objectives
+- Study of platforms and code generation tools
+  - Exploration of conversion tools (such as TensorFlow Lite, PyTorch Mobile...).
+  - Understanding deployment libraries specific to manufacturers.
 
-- Cerisara Nathan : nathan.cerisara@etu.unistra.fr
-- Desberg Clement : clement.desberg@etu.unistra.fr
-- Levy Lucas : lucas.levy2@etu.unistra.fr
-- Jadi Ahmed Amine : ahmed-amine.jadi@etu.unistra.fr
-- Lamole Etienne (incertain) : etienne.lamole@etu.unistra.fr
+- Transformation of Python models into embedded code
+  - Converting machine learning models into optimized code for microcontrollers.
+  - Managing specific constraints (quantization, limited memory).
 
-### Résumé du sujet:
+- Implementation and optimization of models
+  - Implementing models like CNN, RNN, MLP, and Transformers.
+  - Compression and optimization for performance and energy constraints.
 
-Ce projet explore et implémente différents types et architectures de réseaux de neurones sur des microcontrôleurs, avec une attention particulière à l'optimisation et à la génération de code embarqué. L’objectif est de transformer des modèles Python développés sur des frameworks comme TensorFlow ou PyTorch en un code efficace pour des microcontrôleurs, tout en exploitant les accélérateurs matériels fournis par les fabricants. Le projet abordera également la simulation pour tester les modèles avant leur déploiement matériel, ainsi que l’évaluation des performances, des coûts et de la consommation énergétique des solutions déployées.
+- Simulation of embedded models
+  - Using hardware simulators to predict performance before deployment.
+  - Functional validation of models on virtual test benches.
 
-### Objectifs du projet:
+- Evaluation and deployment
+  - Performance analysis (accuracy, latency, energy consumption).
+  - Comparison of results on different hardware architectures.
 
-* Étude des plateformes et outils de génération de code :
-
-    * Exploration des outils de conversion (comme TensorFlow Lite, PyTorch Mobile...).
-
-    * Compréhension des bibliothèques de déploiement spécifiques aux fabricants
-
-* Transformation des modèles Python en code embarqué :
-
-    * Conversion des modèles d’apprentissage automatique en code optimisé pour
-microcontrôleurs.
-
-    * Gestion des contraintes spécifiques (quantification, mémoire limitée).
-
-* Implémentation et optimisation de modèles :
-
-    * Implémentation de modèles comme CNN, RNN, MLP et Transformers.
-
-    * Compression et optimisation pour les contraintes de performance et d’énergie.
-
-* Simulation des modèles embarqués :
-
-    * Utilisation de simulateurs matériels pour prédire les performances avant déploiement.
-
-    * Validation fonctionnelle des modèles sur des bancs de test virtuels.
-
-* Évaluation et déploiement :
-
-    * Analyse des performances (précision, latence, consommation d’énergie).
-
-    * Comparaison des résultats sur différentes architectures matérielles.
-
-* Reporting détaillé et recommandations :
-
-    * Documentation des étapes, des outils utilisés, des résultats obtenus et des limitations.
-
-    * Recommandations pour des améliorations futures.
-
+- Detailed reporting and recommendations
+  - Documentation of steps, tools used, results obtained, and limitations.
+  - Recommendations for future improvements.
