@@ -5,6 +5,8 @@ from dataclasses import dataclass
 #
 import json
 #
+import lib_classes as lc
+#
 
 
 #
@@ -76,7 +78,7 @@ class BaseLayerInfo:
             name: str,
             tensor_input_shapes: dict[str, TensorShape],
             tensor_output_shapes: list[TensorShape],
-            parameters: dict[str, tuple[str, Any]],
+            parameters: dict[str, tuple[lc.VarType, lc.Expression]],
             with_exec: dict[str, str]
     ) -> None:
 
@@ -90,7 +92,7 @@ class BaseLayerInfo:
         self.tensor_output_shapes: list[TensorShape] = tensor_output_shapes
 
         #
-        self.parameters: dict[str, tuple[str, Any]] = parameters
+        self.parameters: dict[str, tuple[lc.VarType, lc.Expression]] = parameters
 
         #
         self.with_exec: dict[str, str] = with_exec
@@ -317,7 +319,7 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
             with_exec = layer_dict["with"]
 
         #
-        parameters: dict[str, tuple[str, Any]] = {}
+        parameters: dict[str, tuple[lc.VarType, lc.Expression]] = {}
 
         #
         if "parameters" not in layer_dict:
@@ -342,9 +344,96 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
                 #
                 raise TypeError(f"Error: param_value is not tuple ! (= {parameters[param_key]})\nlayer_dict = {layer_dict}")
 
+            #
+            if len(param_value) != 2:
+
+                #
+                raise TypeError(f"Error: param_value doesn't have a lenght of 2 ! (= {parameters[param_key]})\nlayer_dict = {layer_dict}")
+
 
             #
-            parameters[param_key] = tuple(param_value)
+            param_type: lc.VarType
+            param_default_value: lc.Expression
+
+            #
+            if "[" in param_value[0]:
+
+                # TODO
+                pass
+
+                #
+                tensor_dims: list[int | str] = []
+
+                #
+                param_type = lc.VarTypeTensor(tensor_type="", tensor_dims=tensor_dims)
+
+            #
+            else:
+
+                #
+                param_type = lc.VarType(type_name=param_value[0])
+
+            #
+            if param_value[1] is None:
+
+                #
+                param_default_value = lc.ExpressionNoDefaultArguments()
+
+            #
+            elif isinstance(param_value[1], int) or isinstance(param_value[1], float):
+
+                #
+                param_default_value = lc.ExpressionConstantNumeric(constant=param_value[1])
+
+            #
+            elif isinstance(param_value[1], str):
+
+                #
+                if param_value[1] == "None":
+
+                    #
+                    param_default_value = lc.ExpressionNone()
+
+                #
+                else:
+
+                    #
+                    param_default_value = lc.ExpressionToEvaluate(expr_to_evaluate=param_value[1])
+
+            #
+            elif isinstance(param_value[1], list):
+
+                #
+                elements: list[lc.ExpressionConstant] = []
+
+                #
+                val: Any
+                for val in param_value[1]:
+
+                    #
+                    if isinstance(val, int) or isinstance(val, float):
+
+                        #
+                        elements.append( lc.ExpressionConstantNumeric(val) )
+
+                    #
+                    else:
+
+                        #
+                        raise TypeError(f"Error: List of this kind of values are not supported : {val} !")
+
+                #
+                param_default_value = lc.ExpressionConstantList(elements=elements)
+
+            #
+            else:
+
+                #
+                raise SyntaxError(f"Unknown default value, can't extract it : {param_value[1]}")
+
+
+            #
+            parameters[param_key] = (param_type, param_default_value)
 
             #
 
@@ -354,10 +443,10 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
                 raise TypeError(f"Error: parameters[{param_key}] is not tuple of length 2 ! (= {parameters[param_key]})\nlayer_dict = {layer_dict}")
 
             #
-            if not isinstance(parameters[param_key][0], str):
+            if not isinstance(parameters[param_key][0], lc.VarType):
 
                 #
-                raise TypeError(f"Error: parameters[{param_key}] first value of tuple is not str ! (= {parameters[param_key]})\nlayer_dict = {layer_dict}")
+                raise TypeError(f"Error: parameters[{param_key}] first value of tuple is not VarType ! (= {parameters[param_key]})\nlayer_dict = {layer_dict}")
 
         #
         res[layer_key] = BaseLayerInfo(
