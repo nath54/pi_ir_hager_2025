@@ -22,7 +22,6 @@ Documentation with python docstrings, with the following format :
         attr1 (type1): description
         attr2 (type2): description
         ...
-
 The class's methods have their own documentation
 
 # Functions and methods

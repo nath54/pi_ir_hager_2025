@@ -25,10 +25,9 @@ class CWriter:
             to_write (str): the string to write to the output file.
         """
         self.output_file.write(to_write)
-    
-    
         
     def __del__(self):
         self.output_file.close()
+    
 
 c_writer = CWriter(OUTPUT_PATH)
