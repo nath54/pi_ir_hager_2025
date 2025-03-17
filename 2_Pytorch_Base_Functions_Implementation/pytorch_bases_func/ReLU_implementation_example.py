@@ -1,6 +1,6 @@
 import sys
 #
-sys.path.append( "../../1_Conversion_Intermediate_Language_Model_Architecture/" )
+sys.path.append( "../../1_Extraction/" )
 import lib_classes as lc  # type: ignore
 
 ReLU: lc.ModelBlock = lc.ModelBlock(block_name="ReLU")
