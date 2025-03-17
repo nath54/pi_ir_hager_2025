@@ -11,10 +11,10 @@ Examples :
 
 ```py
 #
-example_layer : Layer = Layer()
+example_layer: Layer = Layer()
 
 #
-global_counter : int = 0
+global_counter: int = 0
 ```
 
 ## Classes
@@ -51,14 +51,6 @@ class MyClass():
         attr1 (type1): description
         attr2 (type2): description
         ...
-<<<<<<< HEAD
-=======
-
-    """
-
-```
-
->>>>>>> 1caf8b8cbf0c7b0cb2691d2a38477a68e6f339e7
 The class's methods have their own documentation
 
 ## Functions and methods
