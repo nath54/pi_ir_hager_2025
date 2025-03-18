@@ -16,5 +16,5 @@ Softmax_forward = lc.BlockFunction = lc.BlockFunction(
 )
 
 Softmax_forward.function_flow_control = [
-    
-]
+    lc.FlowControlSubBlockFunctionCall(output_variables=["Y"], function_called="Softmax", function_arguments={"X": lc.ExpressionVariable("X"), "dim": lc.ExpressionVariable("dim")}),
+    lc.FlowControlReturn( return_variables=["Y"])]
