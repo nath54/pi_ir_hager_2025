@@ -107,6 +107,10 @@ class ExpressionVariable(Expression):
         Args:
             var_name (str): Name of the variable this expression is representing
         """
+
+        #
+        super().__init__()
+
         #
         self.var_name: str = var_name
 
@@ -119,7 +123,7 @@ class ExpressionVariable(Expression):
 #
 class ExpressionConstant(Expression):
     #
-    def __init__(self, constant: Any) -> None:
+    def __init__(self, constant: Optional[Any] = None) -> None:
         """
         Represents a constant expression.
         Abstract Class, should not be used because of type imprecisions.
@@ -127,6 +131,10 @@ class ExpressionConstant(Expression):
         Args:
             constant (str): Constant value
         """
+
+        #
+        super().__init__()
+
         #
         self.constant: Any = constant
 
@@ -147,6 +155,10 @@ class ExpressionConstantNumeric(ExpressionConstant):
         Args:
             constant (int | float): Constant numerical value
         """
+
+        #
+        super().__init__()
+
         #
         self.constant: int | float = constant
 
@@ -166,6 +178,10 @@ class ExpressionConstantString(ExpressionConstant):
         Args:
             constant (str): Constant string value
         """
+
+        #
+        super().__init__()
+
         #
         self.constant: str = constant
 
@@ -178,13 +194,17 @@ class ExpressionConstantString(ExpressionConstant):
 #
 class ExpressionConstantList(ExpressionConstant):
     #
-    def __init__(self, elements: list[ExpressionConstant]) -> None:
+    def __init__(self, elements: list[ExpressionConstant] = []) -> None:
         """
         Represents a constant list expression.
 
         Args:
             elements (list[ExpressionConstant]): list of the values
         """
+
+        #
+        super().__init__()
+
         #
         self.elements: list[ExpressionConstant] = elements
 
@@ -197,19 +217,23 @@ class ExpressionConstantList(ExpressionConstant):
 #
 class ExpressionConstantRange(ExpressionConstantList):
     #
-    def __init__(self, end_value: int | float, start_value: int | float = 0, step: int | float = 1) -> None:
+    def __init__(self, end_value: int, start_value: int = 0, step: int = 1) -> None:
         """
         Represents a constant range expression (a list).
 
         Args:
-            end_value (int | float): End value of the range.
-            start_value (int | float, optional): Start value of the range. Defaults to 0.
-            step (int | float, optional): Step of the range. Defaults to 1. (Warning: the step can't be 0 because it generates an infinite constant list).
+            end_value (int): End value of the range.
+            start_value (int, optional): Start value of the range. Defaults to 0.
+            step (int, optional): Step of the range. Defaults to 1. (Warning: the step can't be 0 because it generates an infinite constant list).
         """
 
-        self.end_value: int | float = end_value
-        self.start_value: int | float = start_value
-        self.step: int | float = step
+        #
+        super().__init__()
+
+        #
+        self.end_value: int = end_value
+        self.start_value: int = start_value
+        self.step: int = step
 
     #
     def __str__(self) -> str:
@@ -224,6 +248,9 @@ class ExpressionNone(ExpressionConstant):
         """
         _summary_
         """
+
+        #
+        super().__init__(constant=None)
 
         #
         pass
@@ -243,12 +270,15 @@ class ExpressionNoDefaultArguments(ExpressionConstant):
         """
 
         #
+        super().__init__(constant=None)
+
+        #
         pass
 
     #
     def __str__(self) -> str:
         #
-        return "None"
+        return "NoDefaultArgument"
 
 
 #
@@ -256,6 +286,9 @@ class ExpressionToEvaluate(Expression):
 
     #
     def __init__(self, expr_to_evaluate: str) -> None:
+
+        #
+        super().__init__()
 
         #
         self.expr_to_evaluate: str = expr_to_evaluate

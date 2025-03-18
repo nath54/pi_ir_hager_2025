@@ -16,6 +16,9 @@ class Block1(nn.Module):
     def __init__(self, i: int, j: int) -> None:
 
         #
+        super().__init__()
+
+        #
         self.lin1: nn.Linear = nn.Linear(i, j)
         self.activ: nn.GLU = nn.GLU()
         self.lin2: nn.Linear = nn.Linear(j, i)
@@ -34,7 +37,7 @@ class Block1(nn.Module):
 
 
 #
-class SimpleModel(nn.Module):
+class Model(nn.Module):
 
     #
     def __init__(self) -> None:

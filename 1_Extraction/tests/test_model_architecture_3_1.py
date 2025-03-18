@@ -8,7 +8,7 @@ RANDOM_CONSTANT1: int = 1
 RANDOM_CONSTANT2: float = 0.1
 
 #
-class SimpleModel(nn.Module):
+class Model(nn.Module):
 
     def __init__(self) -> None:
 
