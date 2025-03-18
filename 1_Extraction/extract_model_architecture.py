@@ -586,6 +586,8 @@ class ModelAnalyzer(ast.NodeVisitor):
             #
             if block_name in ["MainModel", "MainNet", "Model", "Net"]:
                 #
+                print(f"DEBUG | main_block = {block_name}")
+                #
                 self.main_block = block_name
 
         # Adding the discovered block to the list of all blocks
@@ -1515,13 +1517,14 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
 
     #
     analyzer = ModelAnalyzer()
+    analyzer.main_block = main_block_name
     analyzer.visit(tree)
     analyzer._apply_layers_or_fn_call_arguments()
     analyzer.cleaning_and_error_detections()
 
     #
     lang1: lc.Language1_Model = lc.Language1_Model()
-    lang1.main_block = main_block_name or list(analyzer.model_blocks.keys())[0]
+    lang1.main_block = analyzer.main_block
     lang1.model_blocks = analyzer.model_blocks
     lang1.global_constants = analyzer.global_constants
 
@@ -1591,6 +1594,9 @@ def import_module_from_filepath(filepath: str) -> object:
 
 #
 def get_pytorch_main_model(model_arch: lc.Language1_Model, filepath: str) -> Callable:
+
+    #
+    print(f"DEBUG 2 | model_arch.main_block = { model_arch.main_block }")
 
     #
     if model_arch.main_block == "":
