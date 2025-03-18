@@ -3,12 +3,12 @@ Fonction de bases Pytorch à convertir pour le langage intermédiaire:
     Première implémentation faites:
         - ReLU
         - Linear
+        - Softmax
 
     Fonctions prioritaires (utilisées dans test_model_architecture_2) :
         - Conv2d
         - Dropout
         - LayerNorm
-        - Softmax
 
     Fonction Secondaires:
         - Conv1d

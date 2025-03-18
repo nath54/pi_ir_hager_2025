@@ -17,7 +17,7 @@ ReLU_forward: lc.BlockFunction = lc.BlockFunction(
 
 ReLU_forward.function_flow_control = [
     lc.FlowControlFunctionCall(
-        output_variables=["X1"], function_called="max_tensor_scal", function_arguments={
+        output_variables=["Y"], function_called="max_tensor_scal", function_arguments={
             "elt1": lc.ExpressionVariable("X"),
             "elt2": lc.ExpressionConstant(0)
         }
