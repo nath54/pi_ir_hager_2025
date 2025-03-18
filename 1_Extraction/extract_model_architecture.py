@@ -65,11 +65,11 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
         if analyzer and node.id in analyzer.global_constants:
             type_str, value = analyzer.global_constants[node.id]
             if type_str in ("int", "float"):
-                return lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+                return value # lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
             elif type_str == "str":
-                return lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+                return value # lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
             elif type_str == "list":
-                return lc.ExpressionConstantList(elements=value.elements if isinstance(value, lc.ExpressionConstantList) else value)
+                return value # lc.ExpressionConstantList(elements=value.elements if isinstance(value, lc.ExpressionConstantList) else value)
         return lc.ExpressionVariable(var_name=node.id)
     #
     elif isinstance(node, ast.Constant):
@@ -311,7 +311,7 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
             return expr.var_name
         # For constants, create a temporary variable
         temp_var = f"temp_{id(node)}"
-        type_str = "int" if isinstance(expr, lc.ExpressionConstantNumeric) and isinstance(expr.constant, int) else "float" if isinstance(expr, lc.ExpressionConstantNumeric) else "str" if isinstance(expr, lc.ExpressionConstantString) else "list"
+        type_str = lc.VarType("int") if isinstance(expr, lc.ExpressionConstantNumeric) and isinstance(expr.constant, int) else lc.VarType("float") if isinstance(expr, lc.ExpressionConstantNumeric) else lc.VarType("str") if isinstance(expr, lc.ExpressionConstantString) else lc.VarTypeContainer("list", lc.VarType("Any"))
         flow_control.append(
             lc.FlowControlVariableInit(
                 var_name=temp_var,
@@ -325,7 +325,7 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
 
 
 #
-def check_expression_type(expr: lc.Expression, type: str) -> None:
+def check_expression_type(expr: lc.Expression, type: lc.VarType) -> None:
 
     # TODO: raise error if expression isn't compatible with given type
 
@@ -375,7 +375,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         self.sub_block_counter: Dict[str, int] = {}
 
         # Global constants defined outside classes.
-        self.global_constants: Dict[str, tuple[str, Any]] = {}
+        self.global_constants: Dict[str, tuple[lc.VarType, lc.Expression]] = {}
 
         # Layer / Function Call arguments first extractions
         #   layer or function call -> ( args, kwargs )
@@ -390,7 +390,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     # --------------------------------------------------------- #
 
     #
-    def found_arg_idx(self, arg_name: str, arg_lst: list[tuple[str, tuple[str, Any]]], layer_type: str) -> int:
+    def found_arg_idx(self, arg_name: str, arg_lst: list[tuple[str, tuple[lc.VarType, Any]]], layer_type: str) -> int:
 
         #
         i: int
@@ -413,7 +413,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
-        args_lst: list[tuple[str, tuple[str, lc.Expression]]]
+        args_lst: list[tuple[str, tuple[lc.VarType, lc.Expression]]]
 
         #
         if layer.layer_type not in self.layers:
@@ -766,7 +766,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
     #
-    def _get_node_arguments(self, node: ast.FunctionDef) -> dict[str, tuple[str, Any]]:
+    def _get_node_arguments(self, node: ast.FunctionDef) -> dict[str, tuple[lc.VarType, Any]]:
         """
         Extract a function arguments inside of a class.
 
@@ -774,17 +774,17 @@ class ModelAnalyzer(ast.NodeVisitor):
             node (ast.FunctionDef): _description_
 
         Returns:
-            dict[str, tuple[str, Any]]: _description_
+            dict[str, tuple[lc.VarType, Any]]: _description_
         """
 
         # Extract function arguments:
 
         # Preparing the argument dict
-        args: dict[str, tuple[str, Any]] = {}
+        args: dict[str, tuple[lc.VarType, Any]] = {}
 
         # Preparing var types
         arg_name: str
-        arg_type: str
+        arg_type: lc.VarType
         default: Any
 
         # browse the function arguments
@@ -799,11 +799,11 @@ class ModelAnalyzer(ast.NodeVisitor):
 
             # Checking the argument type annotation
             if isinstance(arg.annotation, ast.Name):
-                arg_type = arg.annotation.id
+                arg_type = lc.VarType(arg.annotation.id)
             elif arg.annotation is not None:
-                arg_type = ast.dump(arg.annotation)
+                arg_type = lc.VarType(ast.dump(arg.annotation))
             else:
-                arg_type = "Any"
+                arg_type = lc.VarType("Any")
 
             # Trying to get argument default value
             default = None
@@ -908,7 +908,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Define forward method
         forward_func = lc.BlockFunction(
                             function_name="forward",
-                            function_arguments={"x": ("Tensor", lc.ExpressionNoDefaultArguments())},
+                            function_arguments={"x": (lc.VarType("Tensor"), lc.ExpressionNoDefaultArguments())},
                             model_block=sub_block
         )
 
@@ -957,7 +957,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         block.block_layers[var_name] = lc.Layer(
             layer_var_name=var_name,
             layer_type=container_type,
-            layer_parameters_kwargs={"sub_block": sub_block_name}
+            layer_parameters_kwargs={"sub_block": lc.ExpressionVariable(sub_block_name)}
         )
 
     #
@@ -1004,7 +1004,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 layer_type = self.get_layer_type(stmt.value.func)
 
                 #
-                params = {kw.arg: extract_expression(kw.value, self) or kw.value for kw in stmt.value.keywords if kw.arg is not None}
+                params = {key: value for key, value in {kw.arg: extract_expression(kw.value, self) for kw in stmt.value.keywords if kw.arg is not None}.items() if key is not None and value is not None }
                 layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
 
         # Add layers to sub-block
@@ -1014,7 +1014,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Define forward method
         forward_func = lc.BlockFunction(
             function_name="forward",
-            function_arguments={ "x": ("Tensor", lc.ExpressionNoDefaultArguments()) },
+            function_arguments={ "x": (lc.VarType("Tensor"), lc.ExpressionNoDefaultArguments()) },
             model_block=sub_block
         )
 
@@ -1043,11 +1043,18 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
 
+        #
+        if isinstance(iterator, str):
+
+            #
+            iterator = lc.ExpressionVariable(iterator)
+
+
         # Add to parent block
         block.block_layers[var_name] = lc.Layer(
             layer_var_name=var_name,
             layer_type="ModuleList",
-            layer_parameters_kwargs={"sub_block": sub_block_name, "iterator": iterator, "iterable_var": iterable_var}
+            layer_parameters_kwargs={"sub_block": lc.ExpressionVariable(sub_block_name), "iterator": iterator, "iterable_var": lc.ExpressionVariable(iterable_var)}
         )
 
 
@@ -1167,7 +1174,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             #
             sub_func = lc.BlockFunction(
                 function_name=sub_func_name,
-                function_arguments={"input": ("Any", lc.ExpressionNoDefaultArguments())},
+                function_arguments={"input": (lc.VarType("Any"), lc.ExpressionNoDefaultArguments())},
                 model_block=self.model_blocks[self.current_model_visit[-1]]
         )
 
@@ -1282,7 +1289,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             type_str = "int" if isinstance(value, lc.ExpressionConstantNumeric) and isinstance(value.constant, int) else "float" if isinstance(value, lc.ExpressionConstantNumeric) else "str" if isinstance(value, lc.ExpressionConstantString) else "list"
 
             #
-            self.global_constants[target.id] = (type_str, value)
+            self.global_constants[target.id] = (lc.VarType(type_str), value)
 
             #
             return
@@ -1377,7 +1384,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
             #
             if value:
-                self.global_constants[target.id] = (annotation, value)
+                self.global_constants[target.id] = (lc.VarType(annotation), value)
 
             # There is nothing more to analyse in this ast tree path
             return
@@ -1399,7 +1406,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                     #
                     func.function_flow_control.append(
-                        lc.FlowControlVariableInit(var_name=target.id, var_type=annotation, var_value=value)
+                        lc.FlowControlVariableInit(var_name=target.id, var_type=lc.VarType(annotation), var_value=value)
                     )
 
                 #
@@ -1407,7 +1414,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                     #
                     func.function_flow_control.append(
-                        lc.FlowControlVariableInit(var_name=target.id, var_type=annotation)
+                        lc.FlowControlVariableInit(var_name=target.id, var_type=lc.VarType(annotation))
                     )
 
             #
