@@ -55,3 +55,22 @@ renvoi le résultat du calcul suivant:
 softmax(xi) = exp(xi) / Σ(exp(x))
 le calcul est fait selon les lignes si "dim" = 1 et selon les colonnes si "dim" = 0
 '''
+
+Tensor LayerNorm(X: Tensor, normalized_shape: int, eps: float, elementwise_affine: bool, bias: bool)
+'''
+Renvoie le résultat du calcul suivant :
+
+1. On calcule la moyenne µ et la variance σ² de X le long de la (ou des) dimensions spécifiées 
+   par la dimension de normalized_shape .For example, if normalized_shape is (3, 5) (a 2-dimensional shape), the mean and standard-deviation are computed over the last 2 dimensions of the input (i.e. input.mean((-2, -1))).
+2. On normalise chaque élément xᵢ du tenseur selon la formule :
+      X_normᵢ = (xᵢ - µ) / sqrt(σ² + eps).
+3. Si elementwise_affine est vrai, on multiplie X_normᵢ par gamma (poids) ; 
+   si bias est vrai, on ajoute beta (biais).
+
+Le paramètre `normalized_shape` représente le nombre de dimensions (en partant de la fin) sur 
+lesquelles on effectue la normalisation. Le paramètre `eps` est un petit flottant pour éviter 
+les divisions par zéro. Lorsque `elementwise_affine` et `bias` sont tous deux activés, la sortie 
+finale est : 
+   Y = gamma * X_norm + beta.
+
+'''
