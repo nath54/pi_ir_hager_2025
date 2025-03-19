@@ -7,6 +7,7 @@ import torch.nn as nn  # type: ignore
 RANDOM_CONSTANT1: int = 1
 RANDOM_CONSTANT2: float = 0.1
 NB_BLOCKS: int = 10
+RANDOM_CONSTANT3: int = 20
 
 
 #
@@ -43,11 +44,11 @@ class Model(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.i: int = 20
-        self.fc1: nn.Linear = nn.Linear(10, self.i)
+        self.fc1: nn.Linear = nn.Linear(10, RANDOM_CONSTANT3)
         self.seq1: nn.Sequential = nn.Sequential(
-            *(Block1(self.i, 50) for _ in range(NB_BLOCKS))
+            *(Block1(RANDOM_CONSTANT3, 50) for _ in range(NB_BLOCKS))
         )
-        self.fc2: nn.Linear = nn.Linear(self.i, 30)
+        self.fc2: nn.Linear = nn.Linear(RANDOM_CONSTANT3, 30)
 
     #
     def forward(self, x: Tensor) -> Tensor:
