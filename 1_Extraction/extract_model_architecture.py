@@ -156,7 +156,7 @@ def extract_call_arg_value(node: ast.AST, analyzer: "ModelAnalyzer") -> lc.Expre
     #
     expr = extract_expression(node=node, analyzer=analyzer)
     #
-    arg_value = lc.Expression()  # Error / Default value
+    arg_value = lc.ExpressionNone()  # Error / Default value
     #
     if expr is not None:
         #
@@ -586,8 +586,6 @@ class ModelAnalyzer(ast.NodeVisitor):
             #
             if block_name in ["MainModel", "MainNet", "Model", "Net"]:
                 #
-                print(f"DEBUG | main_block = {block_name}")
-                #
                 self.main_block = block_name
 
         # Adding the discovered block to the list of all blocks
@@ -847,7 +845,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         # Handle arguments
         if call_node.args:
-            for arg in call_node.args:
+            for i, arg in enumerate(call_node.args):
 
                 #
                 # Call: A call expression, such as func(...)
@@ -858,7 +856,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                     layer_type = self.get_layer_type(arg.func)
 
                     # Extract the layer and add it to the layers list
-                    layer = extract_layer_call(node=arg, var_name="#TODO", layer_type=layer_type, analyzer=self)
+                    layer = extract_layer_call(node=arg, var_name=f"{i}", layer_type=layer_type, analyzer=self)
                     layers.append( layer )
 
                 #
@@ -957,8 +955,8 @@ class ModelAnalyzer(ast.NodeVisitor):
         # Add to parent block
         block.block_layers[var_name] = lc.Layer(
             layer_var_name=var_name,
-            layer_type=container_type,
-            layer_parameters_kwargs={"sub_block": lc.ExpressionVariable(sub_block_name)}
+            layer_type=sub_block_name,
+            layer_parameters_kwargs={}
         )
 
     #
