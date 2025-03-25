@@ -1594,9 +1594,6 @@ def import_module_from_filepath(filepath: str) -> object:
 def get_pytorch_main_model(model_arch: lc.Language1_Model, filepath: str) -> Callable:
 
     #
-    print(f"DEBUG 2 | model_arch.main_block = { model_arch.main_block }")
-
-    #
     if model_arch.main_block == "":
         #
         raise UserWarning("Error: No main blocks detected in the model architecture !")

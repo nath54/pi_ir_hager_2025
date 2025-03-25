@@ -32,9 +32,6 @@ if __name__ == "__main__":
     l1_model: lc.Language1_Model = extract_from_file(filepath=path_to_python_file, main_block_name=main_block_name)
 
     #
-    print(l1_model)
-
-    #
     filepath_to_weights: str = sys.argv[2]
 
     #
@@ -44,7 +41,9 @@ if __name__ == "__main__":
     model: nn.Module = model_class()  # For the moment, we will suppose we will support only model that doesn't need parameters to initialise
 
     #
-    model.load_state_dict(torch.load(filepath_to_weights, weights_only=True))
+    if filepath_to_weights != "NO_WEIGHTS":
+        #
+        model.load_state_dict(torch.load(filepath_to_weights, weights_only=True))
 
     #
     print(f"Model loaded and architecture extracted !\n\nExtracted architecture :\n\n{l1_model}\n\nArchitecture from direct pytorch module loaded:\n\n{model}\n")
