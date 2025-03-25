@@ -1,4 +1,4 @@
-YYYYMMDD keyword1_keyword2
+YYYYMMDD keyword1 keyword2
 Examples :
 20250311 init
-20250311 update_tensor_functions
+20250311 update tensor functions
