@@ -16,7 +16,7 @@ from model_to_export import Model
 
 
 #
-def export_executorch_model(model: nn.Module, example_inputs: Tensor) -> None:
+def export_executorch_model(model: nn.Module, example_inputs: tuple) -> None:
 
     # --- Standard ExecuTorch Export ---
     try:
@@ -37,7 +37,7 @@ def export_executorch_model(model: nn.Module, example_inputs: Tensor) -> None:
         )
 
         # Save the .pte file
-        output_pte_path = "my_model.pte"
+        output_pte_path = "model_pre_compiled.pte"
         with open(output_pte_path, "wb") as f:
             f.write(executorch_program.buffer)
         print(f"Model exported successfully to {output_pte_path}")
@@ -97,3 +97,6 @@ if __name__ == "__main__":
     #
     print( f"\npredictions : {predictions}\n" )
     print( f"\npredictions shape : {predictions.shape}\n" )
+
+    #
+    export_executorch_model( model, (input_data1,) )
