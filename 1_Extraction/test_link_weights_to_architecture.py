@@ -11,8 +11,29 @@ import lib_classes as lc
 
 
 
-#
 
+#
+def get_model_block_or_layer_from_named_pytorch_layer(path: str, main_block: lc.ModelBlock) -> None:
+
+    #
+    path_split: list[str] = path.split(".")
+
+    #
+    current_block: lc.ModelBlock | lc.Layer = main_block
+
+    #
+    path_elt: str
+    for path_elt in path_split:
+
+        #
+        if isinstance(current_block)
+
+
+#
+def link_weights(pytorch_model: nn.Module, model_block: lc.ModelBlock) -> None:
+
+    #
+    pass
 
 
 
@@ -47,6 +68,11 @@ if __name__ == "__main__":
 
     #
     print(f"Model loaded and architecture extracted !\n\nExtracted architecture :\n\n{l1_model}\n\nArchitecture from direct pytorch module loaded:\n\n{model}\n")
+
+    #
+    for name, module in model.named_modules():
+        #
+        print(f"DEBUG | {name}, module = {module}, {type(module)}")
 
 
 
