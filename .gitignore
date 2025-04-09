@@ -2,6 +2,7 @@
 *.pth
 *.tch
 *.pkl
+*.pte
 *.bin
 *.zip
 *venv
@@ -10,3 +11,5 @@
 *.
 **/database
 **prompt**
+**/*cache*
+**/build

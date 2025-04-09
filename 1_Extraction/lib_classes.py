@@ -823,6 +823,8 @@ class Language1_Model:
         #
         self.main_layer: Optional[Layer] = None
         #
+        self.main_layer: Optional[Layer] = None
+        #
         self.global_constants: dict[str, tuple[VarType, Expression]] = {}
 
     #
