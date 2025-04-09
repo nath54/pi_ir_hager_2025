@@ -13,3 +13,5 @@
 **prompt**
 **/*cache*
 **/build
+
+**/executorch
