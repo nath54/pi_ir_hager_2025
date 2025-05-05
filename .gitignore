@@ -17,3 +17,5 @@
 **/executorch
 **/tensorflow_src
 **/minimal_build
+
+*.onnx
