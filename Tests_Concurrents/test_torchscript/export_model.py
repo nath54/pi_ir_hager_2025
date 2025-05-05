@@ -17,10 +17,14 @@ def export_executorch_model(model: nn.Module, example_inputs: tuple) -> None:
     # --- Standard ExecuTorch Export ---
     try:
 
-        traced_script_module = torch.jit.trace(model, example_inputs)
+        # traced_script_module = torch.jit.trace(model, example_inputs)
 
-        # Save the TorchScript model
-        traced_script_module.save("traced_model.pt")
+        onnx_program = torch.onnx.export(model, example_inputs, dynamo=True)
+
+        onnx_program.optimize()
+
+        onnx_program.save("model.onnx")
+
 
     except Exception as e:
         print(f"Export failed: {e}")
