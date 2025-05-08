@@ -23,7 +23,7 @@ def export_executorch_model(model: nn.Module, example_inputs: tuple) -> None:
 
         onnx_program.optimize()
 
-        onnx_program.save("model.onnx")
+        onnx_program.save("exported_model.onnx")
 
 
     except Exception as e:
