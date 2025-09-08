@@ -1,19 +1,20 @@
-import sys
 #
-sys.path.append("../../1_Extraction/")
-import lib_classes as lc  # type: ignore
+### Import Modules. ###
+#
+import lib_impl.lib_classes as lc
+
 
 # Définition du bloc Softmax
 Softmax: lc.ModelBlock = lc.ModelBlock(block_name="Softmax")
 Softmax.block_parameters = {
-    "dim": ("int", None)  # Paramètre pour définir l'axe de normalisation
+    "dim": ( lc.VarType("int"), lc.ExpressionNoDefaultArguments() )  # Paramètre pour définir l'axe de normalisation
 }
 
 # Définition de la fonction forward
 Softmax_forward = lc.BlockFunction(
-    function_name="forward", 
+    function_name="forward",
     function_arguments={
-        "X": ("Tensor[*dims, input_dim]", None)
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block=Softmax
 )
@@ -26,7 +27,7 @@ Softmax_forward.function_flow_control = [
         function_called="exp",
         function_arguments={"X": lc.ExpressionVariable(var_name="X")}
     ),
-    
+
     # Calcul de la somme des exponentielles sur l'axe défini
     lc.FlowControlFunctionCall(
         output_variables=["sum_exp"],
@@ -37,7 +38,7 @@ Softmax_forward.function_flow_control = [
             "keepdim": lc.ExpressionConstantNumeric(True)
         }
     ),
-    
+
     # Division élément par élément
     lc.FlowControlBasicBinaryOperation(
         output_var_name="Y",
@@ -45,7 +46,7 @@ Softmax_forward.function_flow_control = [
         operation="/",
         input2_var_name="sum_exp"
     ),
-    
+
     # Retour de Y
     lc.FlowControlReturn(
         return_variables=["Y"]

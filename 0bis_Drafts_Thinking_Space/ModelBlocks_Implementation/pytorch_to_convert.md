@@ -7,7 +7,6 @@ Fonction de bases Pytorch à convertir pour le langage intermédiaire:
 
     Fonctions prioritaires (utilisées dans test_model_architecture_2) :
         - Conv2d
-        - Dropout
         - LayerNorm
 
     Fonction Secondaires:

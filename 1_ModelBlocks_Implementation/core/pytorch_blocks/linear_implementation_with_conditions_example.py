@@ -1,17 +1,15 @@
 #
-import sys
+### Import Modules. ###
 #
-sys.path.append( "../1_Extraction/" )
-#
-import lib_classes as lc  # type: ignore
+import lib_impl.lib_classes as lc
 
 
 #
 linear: lc.ModelBlock = lc.ModelBlock(block_name="Linear")
 linear.block_parameters = {
-    "in_features": ("int", None),
-    "out_features": ("int", None),
-    "bias": ("bool", True)
+    "in_features": (lc.VarType("int"), lc.ExpressionNoDefaultArguments()),
+    "out_features": (lc.VarType("int"), lc.ExpressionNoDefaultArguments()),
+    "bias": (lc.VarType("bool"), lc.ExpressionConstant(True))
 }
 #
 linear.block_weights = {
@@ -22,7 +20,7 @@ linear.block_weights = {
 linear_forward: lc.BlockFunction = lc.BlockFunction(
     function_name="forward",
     function_arguments={
-        "X": ("Tensor[*dims, input_dim]", None),
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block=linear
 )
@@ -60,7 +58,7 @@ linear_forward.function_flow_control = [
 linear_with_bias: lc.BlockFunction = lc.BlockFunction(
     function_name="with_bias",
     function_arguments={
-        "X": ("Tensor", None)
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block=linear
 )
@@ -79,7 +77,7 @@ linear_with_bias.function_flow_control = [
 linear_without_bias: lc.BlockFunction = lc.BlockFunction(
     function_name="without_bias",
     function_arguments={
-        "X": ("Tensor", None)
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block=linear
 )

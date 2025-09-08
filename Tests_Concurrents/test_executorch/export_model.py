@@ -1,6 +1,8 @@
 #
 import pickle
+
 import numpy as np
+from numpy.typing import NDArray
 import torch
 from torch import nn
 from torch import Tensor
@@ -74,7 +76,7 @@ if __name__ == "__main__":
 
     #
     with open("model_to_export_example_data.pkl", "rb") as f:
-        example_data: list[np.ndarray] = pickle.load( f )
+        example_data: list[NDArray[np.float32]] = pickle.load( f )
 
     #
     input_data1: Tensor = Tensor( example_data[0] ).unsqueeze(dim=0)

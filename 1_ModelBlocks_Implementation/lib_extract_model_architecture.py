@@ -2,7 +2,7 @@
 import ast
 import sys
 import os
-from typing import Optional, Dict, List, cast, Any, Callable
+from typing import Optional, Dict, List, cast, Any, Callable, Type
 
 #
 import inspect
@@ -10,8 +10,8 @@ import importlib.util
 import importlib.machinery
 
 #
-import lib_classes as lc
-import lib_layers as ll
+import core.lib_impl.lib_classes as lc
+import core.lib_impl.lib_layers as ll
 
 
 # --------------------------------------------------------- #
@@ -65,9 +65,9 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
             type_str, value = analyzer.global_constants[node.id]
             if type_str in ("int", "float"):
                 return value # lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
-            elif type_str == "str":
+            elif type_str.type_name == "str":
                 return value # lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
-            elif type_str == "list":
+            elif type_str.type_name == "list":
                 return value # lc.ExpressionConstantList(elements=value.elements if isinstance(value, lc.ExpressionConstantList) else value)
         return lc.ExpressionVariable(var_name=node.id)
     #
@@ -77,7 +77,7 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
         elif isinstance(node.value, str):
             return lc.ExpressionConstantString(constant=node.value)
         elif isinstance(node.value, list):
-            elements = [elt for elt in [extract_expression(ast.Constant(value=elt), analyzer) for elt in node.value] if isinstance(elt, lc.ExpressionConstant)]
+            elements = [elt for elt in [extract_expression(ast.Constant(value=elt), analyzer) for elt in node.value] if isinstance(elt, lc.ExpressionConstant)]  # type: ignore
             return lc.ExpressionConstantList(elements=elements)
     #
     elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "range":
@@ -239,11 +239,11 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     """
 
     # On recup les infos du call
-    layer_name: str
+    _layer_name: str
     layer_call_args: list[lc.Expression]
     layer_call_keywords: dict[str, lc.Expression]
-    instructions_to_do_before: list[lc.FlowControlInstruction]
-    layer_name, layer_call_args, layer_call_keywords, instructions_to_do_before = extract_call(node=node, analyzer=analyzer)
+    _instructions_to_do_before: list[lc.FlowControlInstruction]
+    _layer_name, layer_call_args, layer_call_keywords, _instructions_to_do_before = extract_call(node=node, analyzer=analyzer)
 
     # On ajoute le layer à la liste des layers du block
     layer: lc.Layer = lc.Layer(
@@ -287,7 +287,7 @@ def process_expression(node: ast.AST, flow_control: List[lc.FlowControlInstructi
         # Handle binary operations like `y * RANDOM_CONSTANT2`
         left_var = process_expression(node.left, flow_control, analyzer)
         right_var = process_expression(node.right, flow_control, analyzer)
-        op_map = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}
+        op_map: dict[Type[Any], str] = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}
         op = op_map.get(type(node.op), None)
         if not op:
             return left_var  # Fallback if operation not supported
@@ -477,7 +477,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         for i in range(len(args_lst)):
 
             #
-            if args_lst[i][1][1] is None:
+            if args_lst[i][1][1] is None:  # type: ignore
 
                 #
                 raise IndexError(f"Error: argument {args_lst[i][0]} of layer ")
@@ -502,7 +502,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
     #
-    def _apply_layers_or_fn_call_arguments(self) -> None:
+    def apply_layers_or_fn_call_arguments(self) -> None:
         """
         _summary_
         """
@@ -525,7 +525,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 )
 
             #
-            elif isinstance(layer_or_fcall, lc.FlowControlFunctionCall):
+            elif isinstance(layer_or_fcall, lc.FlowControlFunctionCall):  # type: ignore
 
                 #
                 self._apply_fn_call_argument(
@@ -710,7 +710,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 target = stmt.targets[0]
 
             #
-            elif isinstance(stmt, ast.AnnAssign):
+            elif isinstance(stmt, ast.AnnAssign):  # type: ignore
 
                 #
                 if not isinstance(stmt.target, ast.Attribute):
@@ -806,7 +806,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
             # Trying to get argument default value
             default = None
-            if arg_name in node.args.defaults:
+            if arg_name in node.args.defaults:  # type: ignore
                 default = extract_expression(node.args.defaults[node.args.args.index(arg) - len(node.args.defaults)], self)
 
             # Adding the argument to the argument dict
@@ -1003,7 +1003,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                 layer_type = self.get_layer_type(stmt.value.func)
 
                 #
-                params = {key: value for key, value in {kw.arg: extract_expression(kw.value, self) for kw in stmt.value.keywords if kw.arg is not None}.items() if key is not None and value is not None }
+                params = {key: value for key, value in {kw.arg: extract_expression(kw.value, self) for kw in stmt.value.keywords if kw.arg is not None}.items() if key is not None and value is not None }  # type: ignore
                 layers.append(lc.Layer(f"layer_{len(layers)}", layer_type, params))
 
         # Add layers to sub-block
@@ -1037,10 +1037,10 @@ class ModelAnalyzer(ast.NodeVisitor):
             )
 
             #
-            output_vars.append(output_var)
+            output_vars.append(output_var)  # type: ignore
 
         #
-        forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))
+        forward_func.function_flow_control.append(lc.FlowControlReturn(return_variables=output_vars))  # type: ignore
 
         #
         if isinstance(iterator, str):
@@ -1342,7 +1342,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             return
 
         func = current_block.block_functions[self.current_function_visit]
-        op_map = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}
+        op_map: dict[Type[Any], str] = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}
         op = op_map.get(type(node.op), None)
         if not op:
             return
@@ -1490,7 +1490,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
 #
-def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_Model:
+def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language_Model:
     """
     Extracts a neural network model architecture from a PyTorch script file.
 
@@ -1502,7 +1502,7 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
         FileNotFoundError: If the file is not found.
 
     Returns:
-        lc.Language1_Model: The extracted model architecture.
+        lc.Language_Model: The extracted model architecture.
     """
 
     #
@@ -1517,11 +1517,11 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language1_
     analyzer = ModelAnalyzer()
     analyzer.main_block = main_block_name
     analyzer.visit(tree)
-    analyzer._apply_layers_or_fn_call_arguments()
+    analyzer.apply_layers_or_fn_call_arguments()
     analyzer.cleaning_and_error_detections()
 
     #
-    lang1: lc.Language1_Model = lc.Language1_Model()
+    lang1: lc.Language_Model = lc.Language_Model()
     lang1.main_block = analyzer.main_block
     lang1.model_blocks = analyzer.model_blocks
     lang1.global_constants = analyzer.global_constants
@@ -1591,7 +1591,7 @@ def import_module_from_filepath(filepath: str) -> object:
 
 
 #
-def get_pytorch_main_model(model_arch: lc.Language1_Model, filepath: str) -> Callable:
+def get_pytorch_main_model(model_arch: lc.Language_Model, filepath: str) -> Callable[..., Any]:
 
     #
     if model_arch.main_block == "":
@@ -1624,7 +1624,7 @@ if __name__ == "__main__":
         main_block_name = sys.argv[2].split("=")[1] if "=" in sys.argv[2] else sys.argv[2].split()[1]
 
     #
-    l1_model: lc.Language1_Model = extract_from_file(filepath=path_to_file, main_block_name=main_block_name)
+    l1_model: lc.Language_Model = extract_from_file(filepath=path_to_file, main_block_name=main_block_name)
 
     #
     print(l1_model)

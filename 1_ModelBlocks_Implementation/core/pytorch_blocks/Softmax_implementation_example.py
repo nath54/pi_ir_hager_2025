@@ -1,16 +1,18 @@
-import sys
 #
-sys.path.append( "../../1_Extraction/" )
-import lib_classes as lc  # type: ignore
+### Import Modules. ###
+#
+import lib_impl.lib_classes as lc
 
+
+#
 Softmax: lc.ModelBlock = lc.ModelBlock(block_name = "Softmax")
 Softmax.block_parameters = {
-    "dim": ("int", None)
+    "dim": (lc.VarType("int"), lc.ExpressionNoDefaultArguments())
 }
 Softmax_forward = lc.BlockFunction = lc.BlockFunction(
-    function_name = "forward", 
+    function_name = "forward",
     function_arguments = {
-        "X": ("Tensor[*dims, input_dim]", None)
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block = Softmax
 )

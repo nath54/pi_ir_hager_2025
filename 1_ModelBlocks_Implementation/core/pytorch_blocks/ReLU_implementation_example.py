@@ -1,16 +1,18 @@
-import sys
 #
-sys.path.append( "../../1_Extraction/" )
-import lib_classes as lc  # type: ignore
+### Import Modules. ###
+#
+import lib_impl.lib_classes as lc
 
+
+#
 ReLU: lc.ModelBlock = lc.ModelBlock(block_name="ReLU")
 ReLU.block_parameters = {
-    "inplace": ("bool", False)
+    "inplace": ( lc.VarType("bool"), lc.ExpressionConstant(False) )
 }
 ReLU_forward: lc.BlockFunction = lc.BlockFunction(
-    function_name = "forward", 
+    function_name = "forward",
     function_arguments = {
-        "X": ("Tensor[*dims, input_dim]", None)
+        "X": ( lc.VarTypeTensor(tensor_type="number", tensor_dims=["*dims", "input_dim"]), lc.ExpressionNoDefaultArguments()),
     },
     model_block = ReLU
 )
