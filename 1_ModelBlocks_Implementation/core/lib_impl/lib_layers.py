@@ -9,7 +9,7 @@ from dataclasses import dataclass
 #
 import json
 #
-import lib_classes as lc
+from . import lib_classes as lc
 #
 
 

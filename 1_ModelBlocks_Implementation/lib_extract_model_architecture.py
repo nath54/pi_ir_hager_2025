@@ -32,10 +32,12 @@ def extract_name_or_attribute(node: ast.AST) -> str:
 
     #
     if isinstance(node, ast.Name):
+        #
         return node.id
 
     #
     elif isinstance(node, ast.Attribute):
+        #
         return extract_name_or_attribute(node.value)
 
     #
@@ -61,27 +63,56 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
 
     #
     if isinstance(node, ast.Name):
+        #
         if analyzer and node.id in analyzer.global_constants:
+
+            #
+            type_str: lc.VarType
+            value: lc.Expression
+            #
             type_str, value = analyzer.global_constants[node.id]
-            if type_str in ("int", "float"):
-                return value # lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+            #
+            if type_str.type_name in ("int", "float"):
+                #
+                return value
+                #
+                # return lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+            #
             elif type_str.type_name == "str":
-                return value # lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+                #
+                return value
+                #
+                # return lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
+            #
             elif type_str.type_name == "list":
-                return value # lc.ExpressionConstantList(elements=value.elements if isinstance(value, lc.ExpressionConstantList) else value)
+                #
+                return value
+                #
+                # return lc.ExpressionConstantList(elements=value.elements if isinstance(value, lc.ExpressionConstantList) else value)
+
+        #
         return lc.ExpressionVariable(var_name=node.id)
     #
     elif isinstance(node, ast.Constant):
+        #
         if isinstance(node.value, (int, float)):
+            #
             return lc.ExpressionConstantNumeric(constant=node.value)
+        #
         elif isinstance(node.value, str):
+            #
             return lc.ExpressionConstantString(constant=node.value)
+        #
         elif isinstance(node.value, list):
+            #
             elements = [elt for elt in [extract_expression(ast.Constant(value=elt), analyzer) for elt in node.value] if isinstance(elt, lc.ExpressionConstant)]  # type: ignore
+            #
             return lc.ExpressionConstantList(elements=elements)
     #
     elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "range":
+        #
         args = [elt.constant for elt in [extract_expression(arg, analyzer) for arg in node.args] if isinstance(elt, lc.ExpressionConstant)]
+        #
         return lc.ExpressionConstantRange(end_value=args[1] if len(args) > 1 else args[0], start_value=args[0] if len(args) > 1 else 0, step=args[2] if len(args) > 2 else 1)
     #
     return None
@@ -106,27 +137,48 @@ def extract_condition(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.C
 
     #
     if isinstance(node, ast.Compare):
-        left = extract_expression(node.left, analyzer)
+
+        #
+        left: Optional[lc.Expression] = extract_expression(node.left, analyzer)
+        #
         if left is None:
+            #
             return None
-        ops = [op.__class__.__name__.lower() for op in node.ops]
-        comparators = [comp for comp in [extract_expression(comp, analyzer) for comp in node.comparators] if comp is not None]
+
+        #
+        ops: list[str] = [op.__class__.__name__.lower() for op in node.ops]
+        #
+        comparators: list[lc.Expression] = [comp for comp in [extract_expression(comp, analyzer) for comp in node.comparators] if comp is not None]
+        #
         if len(ops) == 1 and len(comparators) >= 1:
+            #
             return lc.ConditionBinary(elt1=left, cond_operator=ops[0], elt2=comparators[0])
     #
     elif isinstance(node, ast.BoolOp):
-        values = [elt for elt in [extract_condition(val, analyzer) or extract_expression(val, analyzer) for val in node.values] if elt is not None]
-        op = "and" if isinstance(node.op, ast.And) else "or"
+        #
+        values: list[lc.Expression | lc.Condition] = [elt for elt in [extract_condition(val, analyzer) or extract_expression(val, analyzer) for val in node.values] if elt is not None]
+        #
+        op: str = "and" if isinstance(node.op, ast.And) else "or"
+        #
         if len(values) < 2:
+            #
             return None
-        result = values[0]
+        #
+        result: lc.Expression | lc.Condition = values[0]
+        #
         for val in values[1:]:
+            #
             result = lc.ConditionBinary(elt1=result, cond_operator=op, elt2=val)
+        #
         return cast(lc.Condition, result)
+
     #
     elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
-        operand = extract_condition(node.operand, analyzer) or extract_expression(node.operand, analyzer)
+        #
+        operand: Optional[lc.Expression | lc.Condition] = extract_condition(node.operand, analyzer) or extract_expression(node.operand, analyzer)
+        #
         if operand is not None:
+            #
             return lc.ConditionUnary(elt=operand, cond_operator="not")
     #
     return None
@@ -345,7 +397,7 @@ class ModelAnalyzer(ast.NodeVisitor):
     # --------------------------------------------------------- #
 
     #
-    def __init__(self, layers_filepath: str = "layers.json") -> None:
+    def __init__(self, layers_filepath: str = "core/layers.json") -> None:
         """
         Initializer of the ModelAnalyzer class.
 
