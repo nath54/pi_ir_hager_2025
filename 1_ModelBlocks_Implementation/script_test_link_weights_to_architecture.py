@@ -28,6 +28,7 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
 
     #
     _path_elt: str
+    #
     for _path_elt in path_split:
 
         #
@@ -128,12 +129,15 @@ if __name__ == "__main__":
 
     #
     if len(sys.argv) < 3 or len(sys.argv) > 4:
+        #
         raise UserWarning(f"Error: Usage: python {sys.argv[0]} path_to_model_script.py path_to_model_weight.ptx [--main-block <MainBlockName>]")
 
     #
     path_to_python_file: str = sys.argv[1]
     main_block_name: str = ""
+    #
     if len(sys.argv) == 4 and sys.argv[3].startswith("--main-block"):
+        #
         main_block_name = sys.argv[3].split("=")[1] if "=" in sys.argv[3] else ""
 
     #
