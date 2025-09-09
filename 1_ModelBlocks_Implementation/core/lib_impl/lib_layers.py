@@ -231,7 +231,7 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
                     raise SystemError(f"Error, {layer_dict["tensor_inputs_shapes"]} is list of length > 1, it must be a dictionnary with variables names !\nlayer_dict = {layer_dict}")
 
                 #
-                if len(layer_dict["tensor_inputs_shapes"]) > 1:
+                elif len(layer_dict["tensor_inputs_shapes"]) == 0:
                     #
                     raise SystemError(f"Error, {layer_dict["tensor_inputs_shapes"]} is an empty list, it must be a list with one value or a dictionnary with variables names !\nlayer_dict = {layer_dict}")
 
@@ -257,7 +257,7 @@ def load_layers_dict(filepath: str) -> dict[str, BaseLayerInfo]:
             if isinstance(layer_dict["tensor_input_shape"], str):
 
                 #
-                tensor_input_shapes["X"] = parse_tensor_shape_str(layer_dict["tensor_inputs_shapes"])
+                tensor_input_shapes["X"] = parse_tensor_shape_str(layer_dict["tensor_input_shape"])
 
             #
             else:

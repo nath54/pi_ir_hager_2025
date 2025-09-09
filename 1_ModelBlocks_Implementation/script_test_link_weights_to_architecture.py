@@ -33,7 +33,6 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
 
         #
         if crt_block_name not in l_model.model_blocks:
-
             #
             raise UserWarning(f"Error: no block named `{crt_block_name}` in model : {l_model}")
 
@@ -42,7 +41,6 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
 
         #
         if _path_elt not in _current_block.block_layers:
-
             #
             raise UserWarning(f"Error: no elt named `{_path_elt}` in block : {_current_block}")
 
@@ -51,13 +49,11 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
 
         #
         if _current_layer.layer_type in l_model.model_blocks:
-
             #
             crt_block_name = _current_layer.layer_type
 
         #
         elif _current_layer.layer_type in all_layers_info:
-
             #
             return _current_layer
 
