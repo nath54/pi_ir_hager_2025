@@ -27,9 +27,15 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
     _current_block: lc.ModelBlock
 
     #
+    print(f"\033[41m DEBUG | get_model_block_or_layer_from_named_pytorch_layer | path = `{path}` \033[m")
+
+    #
     _path_elt: str
     #
-    for _path_elt in path_split:
+    for j, _path_elt in enumerate(path_split):
+
+        #
+        print(f"\033[41m DEBUG | j = `{j}` | _path_elt = `{_path_elt}` \033[m")
 
         #
         if crt_block_name not in l_model.model_blocks:
@@ -47,18 +53,52 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
         #
         _current_layer: lc.Layer = _current_block.block_layers[_path_elt]
 
+        print(f"\033[41m DEBUG | => _current_layer = `{_current_layer}` \033[m")
+
         #
         if _current_layer.layer_type in l_model.model_blocks:
             #
             crt_block_name = _current_layer.layer_type
+            #
+            print(f"\033[41m DEBUG | _current_layer.layer_type in l_model.model_blocks | crt_block_name = `{crt_block_name}` \033[m")
 
         #
         elif _current_layer.layer_type in all_layers_info:
+            #
+            print(f"\033[42m DEBUG | _current_layer.layer_type in all_layers_info \033[m")
             #
             return _current_layer
 
     #
     return None
+
+
+#
+def get_class_name(o: Any) -> str:
+
+    #
+    a: str = str(o.__class__)
+
+    #
+    j: int = a.rfind("'")
+    #
+    if j == -1:
+        #
+        return ""
+
+    #
+    i: int = a.rfind(".", 0, j)
+    #
+    if i == -1:
+        #
+        i = a.rfind("'", 0, j)
+        #
+        if i == -1:
+            #
+            return ""
+
+    #
+    return a[i+1:j]
 
 
 #
@@ -69,11 +109,9 @@ def link_weights(pt_model: nn.Module, l_model: lc.Language_Model, all_layers_inf
     module: nn.Module
     #
     for module_path_name, module in pt_model.named_modules():  # type: ignore
-        #
-        print(f" \033[33m DEBUG | {module_path_name}, {type(module)} \033[m ")  # type: ignore
 
         #
-        if not module_path_name:
+        if not module_path_name or get_class_name(module) not in all_layers_info:
             #
             continue
 

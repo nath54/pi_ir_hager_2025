@@ -1061,10 +1061,16 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
+        print(f"DEBUG | _handle_container(var_name=`{var_name}`, container_type=`{container_type}`, call_node=`{call_node}`, block.block_name=`{block.block_name}`)")
+
+        #
         ### Create a unique sub-block name. ###
         #
         sub_block_name: str = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
         self.sub_block_counter[self.current_model_visit[-1]] += 1
+
+        #
+        print(f"DEBUG | sub_block_name = `{sub_block_name}`")
 
         #
         ### Creating the sub-block. ###
@@ -1084,12 +1090,21 @@ class ModelAnalyzer(ast.NodeVisitor):
         layer: lc.Layer
 
         #
+        print(f"DEBUG | call_node.args = {call_node.args} => {bool(call_node.args)}")
+
+        #
         ### Handle arguments. ###
         #
         if call_node.args:
 
             #
+            print(f"DEBUG | in call_node.args condition, just before the loop")
+
+            #
             for i, arg in enumerate(call_node.args):
+
+                #
+                print(f"DEBUG | inside loop | i = {i} | arg = {arg} | type(arg) = {type(arg)}")
 
                 #
                 # Call: A call expression, such as func(...)
