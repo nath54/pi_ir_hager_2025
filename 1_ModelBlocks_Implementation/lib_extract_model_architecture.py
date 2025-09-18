@@ -1124,6 +1124,34 @@ class ModelAnalyzer(ast.NodeVisitor):
                     layers.append( layer )
 
                 #
+                elif isinstance(arg, ast.List) or isinstance(arg, ast.Tuple):
+
+                    #
+                    ###
+                    #
+                    for j, sub_arg in enumerate(arg.elts):
+
+                        #
+                        print(f"DEBUG | inside sub loop | j = {j} | sub_arg = {sub_arg} | type(sub_arg) = {type(sub_arg)}")
+
+                        #
+                        # Call: A call expression, such as func(...)
+                        #
+                        if isinstance(sub_arg, ast.Call):
+
+                            #
+                            ### Get the layer type. ###
+                            #
+                            layer_type: str = self.get_layer_type(sub_arg.func)
+
+                            #
+                            ### Extract the layer and add it to the layers list. ###
+                            #
+                            layer: lc.Layer = extract_layer_call(node=sub_arg, var_name=f"{j}", layer_type=layer_type, analyzer=self)
+                            #
+                            layers.append( layer )
+
+                #
                 # GeneratorExp: A generator expression, such as (var for var in iterable)
                 #
                 # GeneartorExp:
