@@ -27,7 +27,7 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
     _current_block: lc.ModelBlock
 
     #
-    print(f"\033[41m DEBUG | get_model_block_or_layer_from_named_pytorch_layer | path = `{path}` \033[m")
+    # print(f"\033[41m DEBUG | get_model_block_or_layer_from_named_pytorch_layer | path = `{path}` \033[m")
 
     #
     _path_elt: str
@@ -35,7 +35,7 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
     for j, _path_elt in enumerate(path_split):
 
         #
-        print(f"\033[41m DEBUG | j = `{j}` | _path_elt = `{_path_elt}` \033[m")
+        # print(f"\033[41m DEBUG | j = `{j}` | _path_elt = `{_path_elt}` \033[m")
 
         #
         if crt_block_name not in l_model.model_blocks:
@@ -53,19 +53,19 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
         #
         _current_layer: lc.Layer = _current_block.block_layers[_path_elt]
 
-        print(f"\033[41m DEBUG | => _current_layer = `{_current_layer}` \033[m")
+        # print(f"\033[41m DEBUG | => _current_layer = `{_current_layer}` \033[m")
 
         #
         if _current_layer.layer_type in l_model.model_blocks:
             #
             crt_block_name = _current_layer.layer_type
             #
-            print(f"\033[41m DEBUG | _current_layer.layer_type in l_model.model_blocks | crt_block_name = `{crt_block_name}` \033[m")
+            # print(f"\033[41m DEBUG | _current_layer.layer_type in l_model.model_blocks | crt_block_name = `{crt_block_name}` \033[m")
 
         #
         elif _current_layer.layer_type in all_layers_info:
             #
-            print(f"\033[42m DEBUG | _current_layer.layer_type in all_layers_info \033[m")
+            # print(f"\033[42m DEBUG | _current_layer.layer_type in all_layers_info \033[m")
             #
             return _current_layer
 
