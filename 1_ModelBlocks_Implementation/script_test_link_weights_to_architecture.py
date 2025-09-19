@@ -32,7 +32,7 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
     #
     _path_elt: str
     #
-    for j, _path_elt in enumerate(path_split):
+    for _j, _path_elt in enumerate(path_split):
 
         #
         # print(f"\033[41m DEBUG | j = `{j}` | _path_elt = `{_path_elt}` \033[m")
@@ -154,6 +154,7 @@ def link_weights(pt_model: nn.Module, l_model: lc.Language_Model, all_layers_inf
 
     #
     return l_model
+
 
 #
 if __name__ == "__main__":
