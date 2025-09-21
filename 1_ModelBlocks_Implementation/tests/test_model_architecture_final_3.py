@@ -67,11 +67,11 @@ class ConvEncode(nn.Module):
         #
         device: str | torch.device = x.device
         #
-        b: int
-        _wt: int
-        _fd1: int
-        _fd2: int
-        b, _wt, _fd1, _fd2 = x.size()
+        tmp: tuple[int, ...] = x.size()
+        #
+        b: int = tmp[0]
+        #
+        # b, wt, fd1, fd2 = x.size()
         #
         x_conv: Tensor = self.conv(x)
 
@@ -124,7 +124,7 @@ class Head(nn.Module) :
     def forward(self, x: Tensor) -> Tensor:
 
         #
-        _b, _t, _c = x.shape
+        # _b, _t, _c = x.shape
 
         #
         k: Tensor = self.key(x) # (_b, _t, head_size)
@@ -307,12 +307,11 @@ class DeepArcNet(nn.Module) :
     def forward(self, x: Tensor) -> Tensor:
 
         #
-        _b: int
-        _wt: int
-        _fd1: int
-        _fd2: int
+        tmp: tuple[int, ...] = x.size() # (Batch, Window_time, Feature_dimension_1 , Feature_dimension_2)
         #
-        _b, _wt, _fd1, _fd2 = x.size() # (Batch, Window_time, Feature_dimension_1 , Feature_dimension_2)
+        b: int = tmp[0]
+        #
+        # wt, fd1, fd2 = tmp[1], tmp[2], tmp[3]
 
         #
         output_ConvEncode: list[Tensor] = [ module_c(xi) for (xi, module_c) in zip( x.split(1, dim=1), self.ConvEncode ) ]  # type: ignore
@@ -327,7 +326,7 @@ class DeepArcNet(nn.Module) :
         layer_norm_output: Tensor = self.ln_f(self_attention_output) # (B,T,C)
 
         #
-        classes_output: Tensor  = self.fc(layer_norm_output.view(_b,1,-1)) # (B,1,C) no more time step only one class
+        classes_output: Tensor  = self.fc(layer_norm_output.view(b,1,-1)) # (B,1,C) no more time step only one class
 
         #
         probabilities: Tensor = classes_output.squeeze(1)

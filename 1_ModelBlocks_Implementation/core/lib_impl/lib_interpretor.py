@@ -388,8 +388,11 @@ class LanguageModel_ForwardInterpreter:
         return outputs
 
     #
-    def _execute_flow_control_instruction(self, instruction: lc.FlowControlInstruction,
-                                        context: ExecutionContext) -> Any:
+    def _execute_flow_control_instruction(
+        self, instruction: lc.FlowControlInstruction,
+        context: ExecutionContext
+    ) -> Any:
+
         """
         Execute a single flow control instruction.
 
@@ -400,6 +403,9 @@ class LanguageModel_ForwardInterpreter:
         Returns:
             Any: Result of the instruction execution
         """
+
+        #
+        print(f"\033[44mDEBUG | execute instruction = {instruction}\033[m")
 
         #
         if isinstance(instruction, lc.FlowControlVariableInit):
@@ -1145,6 +1151,8 @@ class LanguageModel_ForwardInterpreter:
         #
         else:
             #
+            print(f"INFORMATIONS | function_name = `{function_name}` | args = {args}")
+            #
             raise NotImplementedError(f"External function '{function_name}' not implemented")
 
     #
@@ -1732,8 +1740,13 @@ def example_usage():
     outputs = ModelInterpreterUtils.print_execution_trace(interpreter, inputs, verbose=True)
 
     #
-    print(f"\nFinal output shape: {outputs['output'].shape}")
-    print(f"Output sample: {outputs['output'][0]}")
+    print(f"DEBUG | outputs = {outputs}")
+
+    #
+    if "output" in outputs:
+        #
+        print(f"\nFinal output shape: {outputs['output'].shape}")
+        print(f"Output sample: {outputs['output'][0]}")
 
 
 #

@@ -104,6 +104,11 @@ if __name__ == "__main__":
     outputs: dict[str, NDArray[np.float32]] = li.ModelInterpreterUtils.print_execution_trace(interpreter, inputs, verbose=True)
 
     #
-    print(f"\nFinal output shape: {outputs['output'].shape}")
-    print(f"Output sample: {outputs['output'][0]}")
+    print(f"DEBUG | outputs = {outputs}")
+
+    #
+    if "output" in outputs:
+        #
+        print(f"\nFinal output shape: {outputs['output'].shape}")
+        print(f"Output sample: {outputs['output'][0]}")
 

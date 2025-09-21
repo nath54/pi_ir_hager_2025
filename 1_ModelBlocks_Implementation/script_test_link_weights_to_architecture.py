@@ -75,30 +75,8 @@ def get_model_block_or_layer_from_named_pytorch_layer(path: str, l_model: lc.Lan
 
 #
 def get_class_name(o: Any) -> str:
-
     #
-    a: str = str(o.__class__)
-
-    #
-    j: int = a.rfind("'")
-    #
-    if j == -1:
-        #
-        return ""
-
-    #
-    i: int = a.rfind(".", 0, j)
-    #
-    if i == -1:
-        #
-        i = a.rfind("'", 0, j)
-        #
-        if i == -1:
-            #
-            return ""
-
-    #
-    return a[i+1:j]
+    return o.__class__.__name__
 
 
 #

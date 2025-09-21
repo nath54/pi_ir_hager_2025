@@ -19,6 +19,19 @@ import importlib.machinery
 import core.lib_impl.lib_classes as lc
 import core.lib_impl.lib_layers as ll
 
+#
+### Custom error handling. ###
+#
+class UnsupportedASTNodeError(NotImplementedError):
+    """Custom exception for unsupported AST nodes during model parsing."""
+
+    #
+    def __init__(self, message: str, node: ast.AST):
+        #
+        super().__init__(f"{message} | node = {node} (at line {node.lineno})")  # type: ignore
+        #
+        self.node = node
+
 
 # --------------------------------------------------------- #
 # ----        EXTRACT NAME OR ATTRIBUTE TO STR         ---- #
@@ -27,13 +40,15 @@ import core.lib_impl.lib_layers as ll
 #
 def extract_name_or_attribute(node: ast.AST) -> str:
     """
-    _summary_
+    Recursively extracts a fully qualified name from an AST node.
+
+    Handles simple names (e.g., 'Linear') and attributes (e.g., 'nn.Linear').
 
     Args:
-        node (ast.Node): _description_
+        node (ast.AST): The node to analyze, typically ast.Name or ast.Attribute.
 
     Returns:
-        str: _description_
+        str: The extracted name as a string.
     """
 
     #
@@ -61,7 +76,7 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
 
     Args:
         node (ast.AST): The AST node to analyze.
-        analyzer (ModelAnalyzer, optional): The analyzer instance to access global constants.
+        analyzer (ModelAnalyzer): The analyzer instance to access global constants.
 
     Returns:
         Optional[lc.Expression]: The extracted expression or None if not applicable.
@@ -81,20 +96,14 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
             if type_str.type_name in ("int", "float"):
                 #
                 return value
-                #
-                # return lc.ExpressionConstantNumeric(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
             #
             elif type_str.type_name == "str":
                 #
                 return value
-                #
-                # return lc.ExpressionConstantString(constant=value.constant if isinstance(value, lc.ExpressionConstant) else value)
             #
             elif type_str.type_name == "list":
                 #
                 return value
-                #
-                # return lc.ExpressionConstantlist(elements=value.elements if isinstance(value, lc.ExpressionConstantlist) else value)
 
         #
         return lc.ExpressionVariable(var_name=node.id)
@@ -114,17 +123,463 @@ def extract_expression(node: ast.AST, analyzer: "ModelAnalyzer") -> Optional[lc.
             #
             elements: list[lc.ExpressionConstant] = [elt for elt in [extract_expression(ast.Constant(value=elt), analyzer) for elt in node.value] if isinstance(elt, lc.ExpressionConstant)]  # type: ignore
             #
-            return lc.ExpressionConstantList(elements=elements)
+            return lc.ExpressionConstantList(elements=elements)  # type: ignore
 
     #
-    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "range":
-        #
-        args: list[Any] = [elt.constant for elt in [extract_expression(arg, analyzer) for arg in node.args] if isinstance(elt, lc.ExpressionConstant)]
-        #
-        return lc.ExpressionConstantRange(end_value=args[1] if len(args) > 1 else args[0], start_value=args[0] if len(args) > 1 else 0, step=args[2] if len(args) > 2 else 1)
+    elif isinstance(node, ast.Call):
 
+        #
+        if isinstance(node.func, ast.Name) and node.func.id == "range":
+            #
+            args: list[Any] = [elt.constant for elt in [extract_expression(arg, analyzer) for arg in node.args] if isinstance(elt, lc.ExpressionConstant)]
+            #
+            return lc.ExpressionConstantRange(end_value=args[1] if len(args) > 1 else args[0], start_value=args[0] if len(args) > 1 else 0, step=args[2] if len(args) > 2 else 1)
+
+        #
+        ### Handle other simple function calls that can be represented as expressions ###
+        ### For complex function calls, return None to indicate they need flow control processing ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.BinOp):
+
+        #
+        ### For simple binary operations between constants, we can evaluate directly ###
+        #
+        left_expr: Optional[lc.Expression] = extract_expression(node.left, analyzer)
+        right_expr: Optional[lc.Expression] = extract_expression(node.right, analyzer)
+
+        #
+        ### Only handle cases where both operands are constants ###
+        #
+        if (isinstance(left_expr, lc.ExpressionConstantNumeric) and isinstance(right_expr, lc.ExpressionConstantNumeric)):
+
+            #
+            ### Evaluate constant expressions at compile time ###
+            #
+            if isinstance(node.op, ast.Add):
+                #
+                return lc.ExpressionConstantNumeric(constant=left_expr.constant + right_expr.constant)
+            #
+            elif isinstance(node.op, ast.Sub):
+                #
+                return lc.ExpressionConstantNumeric(constant=left_expr.constant - right_expr.constant)
+            #
+            elif isinstance(node.op, ast.Mult):
+                #
+                return lc.ExpressionConstantNumeric(constant=left_expr.constant * right_expr.constant)
+            #
+            elif isinstance(node.op, ast.Div):
+                #
+                if right_expr.constant != 0:
+                    #
+                    return lc.ExpressionConstantNumeric(constant=left_expr.constant / right_expr.constant)
+            #
+            elif isinstance(node.op, ast.FloorDiv):
+                #
+                if right_expr.constant != 0:
+                    #
+                    return lc.ExpressionConstantNumeric(constant=left_expr.constant // right_expr.constant)
+            #
+            elif isinstance(node.op, ast.Mod):
+                #
+                if right_expr.constant != 0:
+                    #
+                    return lc.ExpressionConstantNumeric(constant=left_expr.constant % right_expr.constant)
+            elif isinstance(node.op, ast.Pow):
+                #
+                return lc.ExpressionConstantNumeric(constant=left_expr.constant ** right_expr.constant)
+
+        #
+        ### For non-constant binary operations, return None to indicate flow control processing needed ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.UnaryOp):
+
+        #
+        operand_expr: Optional[lc.Expression] = extract_expression(node.operand, analyzer)
+
+        #
+        ### Handle unary operations on constants ###
+        #
+        if isinstance(operand_expr, lc.ExpressionConstantNumeric):
+            #
+            if isinstance(node.op, ast.UAdd):
+                #
+                return lc.ExpressionConstantNumeric(constant=+operand_expr.constant)
+            #
+            elif isinstance(node.op, ast.USub):
+                #
+                return lc.ExpressionConstantNumeric(constant=-operand_expr.constant)
+
+        #
+        ### For non-constant unary operations, return None ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.Tuple):
+
+        #
+        ### Handle tuple of simple expressions ###
+        #
+        elements: list[lc.Expression] = []
+
+        #
+        for elt in node.elts:
+            #
+            elt_expr: Optional[lc.Expression] = extract_expression(elt, analyzer)
+            #
+            if elt_expr is None:
+                #
+                ### If any element can't be expressed simply, return None ###
+                #
+                return None
+
+            #
+            elements.append(elt_expr)
+
+        #
+        ### Create a list expression for tuples (since we convert tuples to lists) ###
+        #
+        constant_elements: list[lc.ExpressionConstant] = [elt for elt in elements if isinstance(elt, lc.ExpressionConstant)]
+        #
+        if len(constant_elements) == len(elements):
+            #
+            return lc.ExpressionConstantList(elements=constant_elements)
+
+        #
+        ### Mixed constant/variable tuples need flow control processing ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.List):
+
+        #
+        ### Handle list literals ###
+        #
+        elements: list[lc.Expression] = []
+
+        #
+        for elt in node.elts:
+            #
+            elt_expr: Optional[lc.Expression] = extract_expression(elt, analyzer)
+            #
+            if elt_expr is None:
+                #
+                ### If any element can't be expressed simply, return None ###
+                #
+                return None
+            #
+            elements.append(elt_expr)
+
+        #
+        ### Create list expression ###
+        #
+        constant_elements: list[lc.ExpressionConstant] = [elt for elt in elements if isinstance(elt, lc.ExpressionConstant)]
+        #
+        if len(constant_elements) == len(elements):
+            return lc.ExpressionConstantList(elements=constant_elements)
+
+        #
+        ### Mixed constant/variable lists need flow control processing ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.ListComp):
+
+        #
+        ### List comprehensions are complex and need flow control processing ###
+        ### We could potentially handle simple cases like [x for x in range(n)] ###
+        ### But for now, return None to indicate flow control processing needed ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.Attribute):
+
+        #
+        ### Handle attribute access like obj.attr ###
+        ### For simple cases where the value is a known variable ###
+        #
+        if isinstance(node.value, ast.Name):
+            #
+            ### Create a variable expression for the full attribute path ###
+            #
+            return lc.ExpressionVariable(var_name=f"{node.value.id}.{node.attr}")
+
+        #
+        ### For complex attribute access, return None ###
+        #
+        return None
+
+    #
+    elif isinstance(node, ast.Subscript):
+
+        #
+        ### Handle subscript access like obj[index] ###
+        ### For simple cases where both value and slice are extractable ###
+        #
+        value_expr: Optional[lc.Expression] = extract_expression(node.value, analyzer)
+
+        #
+        ### Handle simple index access ###
+        #
+        index_expr: Optional[lc.Expression] = extract_expression(node.slice, analyzer)
+
+        #
+        if (isinstance(value_expr, lc.ExpressionVariable) and isinstance(index_expr, (lc.ExpressionConstantNumeric, lc.ExpressionVariable))):
+            #
+            ### Create a variable expression for simple subscript access ###
+            #
+            if isinstance(index_expr, lc.ExpressionConstantNumeric):
+                #
+                return lc.ExpressionVariable(var_name=f"{value_expr.var_name}[{int(index_expr.constant)}]")
+            #
+            else:
+                #
+                return lc.ExpressionVariable(var_name=f"{value_expr.var_name}[{index_expr.var_name}]")
+
+        #
+        ### For complex subscript access, return None ###
+        #
+        return None
+
+    #
+    ### Handle None/null constants ###
+    #
+    elif isinstance(node, ast.Constant) and node.value is None:
+        return lc.ExpressionNone()
+
+    #
+    ### Handle boolean constants ###
+    #
+    elif isinstance(node, ast.Constant) and isinstance(node.value, bool):
+        #
+        ### Convert bool to int. ###
+        #
+        return lc.ExpressionConstantNumeric(constant=int(node.value))
+
+    #
+    ### If we can't extract a simple expression, return None ###
+    ### This indicates that flow control processing is needed ###
     #
     return None
+
+
+#
+def decompose_complex_expression(node: ast.AST, analyzer: "ModelAnalyzer", flow_control: list[lc.FlowControlInstruction]) -> str:
+    """
+    _summary_
+
+    Args:
+        node (ast.AST): _description_
+        analyzer (ModelAnalyzer): _description_
+        flow_control (list[lc.FlowControlInstruction]): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    #
+    if isinstance(node, ast.Call):
+
+        #
+        ### Function/method call. ###
+        #
+        func_name, args, kwargs, pre_instructions = extract_call(node, analyzer)
+        #
+        flow_control.extend(pre_instructions)
+
+        #
+        temp_var = f"temp_call_{id(node)}"
+
+        #
+        ### Convert args to proper dict format. ###
+        #
+        args_dict = kwargs.copy()
+        #
+        if args:
+            #
+            if isinstance(node.func, ast.Attribute):
+                #
+                ### Method call. ###
+                #
+                args_dict['self'] = args[0]
+                #
+                for i, arg in enumerate(args[1:]):
+                    #
+                    args_dict[f'arg_{i}'] = arg
+            #
+            else:
+                #
+                ### Function call. ###
+                #
+                for i, arg in enumerate(args):
+                    #
+                    args_dict[f'arg_{i}'] = arg
+
+        #
+        ### Check if it's a layer call or function call. ###
+        #
+        if (analyzer.current_model_visit and func_name in analyzer.model_blocks[analyzer.current_model_visit[-1]].block_layers):
+            #
+            flow_control.append(lc.FlowControlLayerPass([temp_var], func_name, args_dict))
+        #
+        else:
+            #
+            flow_control.append(lc.FlowControlFunctionCall([temp_var], func_name, args_dict))
+
+        #
+        return temp_var
+
+    #
+    elif isinstance(node, ast.Attribute):
+        #
+        ### Handle attribute access like x.device, x.shape[0], etc. ###
+        #
+        if isinstance(node.value, ast.Name):
+            #
+            ### Simple attribute access. ###
+            #
+            temp_var = f"temp_attr_{id(node)}"
+            #
+            flow_control.append(lc.FlowControlFunctionCall(
+                output_variables=[temp_var],
+                function_called="getattr",
+                function_arguments={
+                    "obj": lc.ExpressionVariable(node.value.id),
+                    "attr": lc.ExpressionConstantString(node.attr)
+                }
+            ))
+            #
+            return temp_var
+        #
+        else:
+            #
+            ### Complex attribute access - decompose the value first. ###
+            #
+            value_var = decompose_complex_expression(node.value, analyzer, flow_control)
+            #
+            temp_var = f"temp_attr_{id(node)}"
+            #
+            flow_control.append(lc.FlowControlFunctionCall(
+                output_variables=[temp_var],
+                function_called="getattr",
+                function_arguments={
+                    "obj": lc.ExpressionVariable(value_var),
+                    "attr": lc.ExpressionConstantString(node.attr)
+                }
+            ))
+            #
+            return temp_var
+
+    #
+    elif isinstance(node, ast.Subscript):
+        #
+        ### Handle subscript access like tmp[0], x.shape[2], etc. ###
+        #
+        value_var = decompose_complex_expression(node.value, analyzer, flow_control)
+        index_var = decompose_complex_expression(node.slice, analyzer, flow_control)
+
+        #
+        temp_var = f"temp_subscript_{id(node)}"
+        #
+        flow_control.append(lc.FlowControlFunctionCall(
+            output_variables=[temp_var],
+            function_called="getitem",
+            function_arguments={
+                "obj": lc.ExpressionVariable(value_var),
+                "index": lc.ExpressionVariable(index_var)
+            }
+        ))
+
+        #
+        return temp_var
+
+    #
+    elif isinstance(node, ast.BinOp):
+        #
+        ### Binary operations. ###
+        #
+        left_var = decompose_complex_expression(node.left, analyzer, flow_control)
+        right_var = decompose_complex_expression(node.right, analyzer, flow_control)
+
+        #
+        op_map: dict[Callable[..., Any], str] = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/", ast.Mod: "%"}
+        op: str = op_map.get(type(node.op), "unknown_op")
+
+        #
+        temp_var = f"temp_binop_{id(node)}"
+        flow_control.append(lc.FlowControlBasicBinaryOperation(
+            output_var_name=temp_var,
+            input1_var_name=left_var,
+            operation=op,
+            input2_var_name=right_var
+        ))
+
+        #
+        return temp_var
+
+    #
+    elif isinstance(node, ast.Name):
+        #
+        return node.id
+
+    #
+    elif isinstance(node, ast.Constant):
+        #
+        temp_var = f"temp_const_{id(node)}"
+        #
+        expr = extract_expression(node, analyzer)
+        #
+        if expr:
+            #
+            type_str = lc.VarType("int" if isinstance(node.value, int) else "float" if isinstance(node.value, float) else "str")
+            #
+            flow_control.append(lc.FlowControlVariableInit(
+                var_name=temp_var,
+                var_type=type_str,
+                var_value=expr
+            ))
+        #
+        return temp_var
+
+    #
+    elif isinstance(node, ast.Tuple):
+        #
+        ### Handle tuple creation. ###
+        #
+        element_vars: list[str] = []
+        #
+        for elt in node.elts:
+            #
+            element_vars.append(decompose_complex_expression(elt, analyzer, flow_control))
+
+        #
+        temp_var = f"temp_tuple_{id(node)}"
+        #
+        ### Create tuple construction instruction. ###
+        #
+        flow_control.append(lc.FlowControlFunctionCall(
+            output_variables=[temp_var],
+            function_called="tuple",
+            function_arguments={f"arg_{i}": lc.ExpressionVariable(var) for i, var in enumerate(element_vars)}
+        ))
+        #
+        return temp_var
+
+    #
+    else:
+        #
+        ### Fallback for unknown expressions. ###
+        #
+        return f"unknown_expr_{id(node)}"
 
 
 # --------------------------------------------------------- #
@@ -246,57 +701,115 @@ def extract_call(node: ast.Call, analyzer: "ModelAnalyzer") -> tuple[str, list[l
         analyzer (ModelAnalyzer): _description_
 
     Returns:
-        tuple[str, list[lc.Expression], dict[lc.Expression]]: _description_
+        tuple[str, list[lc.Expression], dict[str, lc.Expression], list[lc.FlowControlInstruction]]: _description_
     """
 
     #
-    ### Get function name. ###
+    ### Get function name and handle method calls. ###
     #
-    func_name: str = extract_name_or_attribute(node=node.func)
+    func_name: str
+    is_method_call: bool = False
+    method_object: Optional[lc.Expression] = None
 
     #
-    ### Init instructions to do before. ###
+    if isinstance(node.func, ast.Attribute):
+
+        #
+        ### This is a method call like x.size() or torch.tensor(). ###
+        #
+        func_name = node.func.attr
+        is_method_call = True
+
+        #
+        ### Extract the object being called on (e.g., 'x' in x.size()). ###
+        #
+        if isinstance(node.func.value, ast.Name):
+            #
+            ### Check if this is a library call (torch, F, etc.). ###
+            #
+            if node.func.value.id in ["torch", "F", "nn"]:
+                #
+                ### Handle as library function call. ###
+                #
+                func_name = f"{node.func.value.id}.{node.func.attr}"
+                is_method_call = False
+            #
+            else:
+                #
+                ### Regular method call on an object. ###
+                #
+                method_object = extract_call_arg_value(node=node.func.value, analyzer=analyzer)
+        #
+        else:
+            #
+            ### Complex expression as the object. ###
+            #
+            method_object = extract_call_arg_value(node=node.func.value, analyzer=analyzer)
+
+    #
+    elif isinstance(node.func, ast.Name):
+        #
+        ### This is a regular function call like range() or len(). ###
+        #
+        func_name = node.func.id
+
+    #
+    else:
+        #
+        ### Fallback for complex expressions. ###
+        #
+        func_name = extract_name_or_attribute(node=node.func)
+
+    #
+    ### Init instructions and arguments ###
     #
     instructions_to_do_before: list[lc.FlowControlInstruction] = []
-
-    #
-    ### init func call args. ###
-    #
-    ""
     func_call_args: list[lc.Expression] = []
-
-    #
-    ### init func call keywords. ###
-    #
     func_call_keywords: dict[str, lc.Expression] = {}
 
     #
-    ### Extract simple arguments. ###
+    ### For method calls, add the object as the first argument ###
     #
-    arg: ast.AST
+    if is_method_call and method_object is not None:
+        #
+        func_call_args.append(method_object)
+
+    #
+    ### Extract arguments ###
     #
     for arg in node.args:
+
         #
-        func_call_args.append( extract_call_arg_value(node=arg, analyzer=analyzer) )
+        arg_expr = extract_call_arg_value(node=arg, analyzer=analyzer)
+        #
+        ### If the argument is a complex expression, we might need to decompose it. ###
+        #
+        if isinstance(arg, ast.Call) or isinstance(arg, ast.BinOp):
+            #
+            ### Complex expressions should be processed separately. ###
+            #
+            temp_var: str = f"temp_arg_{id(arg)}"  # type: ignore
+
+            #
+            ### TODO: Add instruction to compute the complex expression ###
+            ### This is where we'd need to extend the processing ###
+            #
+            pass
+
+        #
+        func_call_args.append(arg_expr)
 
     #
-    ### Extract keyword arguments. ###
-    #
-    kw: ast.keyword
+    ### Extract keyword arguments ###
     #
     for kw in node.keywords:
-
         #
         if kw.arg is None:
-            #
-            print(f"Error, arg is None : {kw}")
             #
             continue
 
         #
         keyword_name: str = kw.arg
-
-        #
         func_call_keywords[keyword_name] = extract_call_arg_value(node=kw.value, analyzer=analyzer)
 
     #
@@ -319,7 +832,7 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     """
 
     #
-    ### On recup les infos du call. ###
+    ### Extract call information. ###
     #
     _layer_name: str
     layer_call_args: list[lc.Expression]
@@ -329,7 +842,7 @@ def extract_layer_call(node: ast.Call, var_name: str, layer_type: str, analyzer:
     _layer_name, layer_call_args, layer_call_keywords, _instructions_to_do_before = extract_call(node=node, analyzer=analyzer)
 
     #
-    ### On ajoute le layer à la liste des layers du block. ###
+    ### Add the layer to the current block's layer list. ###
     #
     layer: lc.Layer = lc.Layer(
         layer_var_name=var_name,
@@ -619,6 +1132,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         layer.layer_parameters_kwargs = res_args
 
+
     #
     def _apply_fn_call_argument(self, fn_call: lc.FlowControlFunctionCall, args: list[lc.Expression], kwargs: dict[str, lc.Expression]) -> None:
         """
@@ -694,6 +1208,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Not foud `nn.Module`. ###
         #
         return False
+
 
     #
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
@@ -860,6 +1375,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             #
             self._process_stmt_block_init(stmt=stmt, current_block=current_block)
 
+
     #
     def _process_stmt_block_init(self, stmt: ast.AST, current_block: lc.ModelBlock) -> None:
         """
@@ -954,7 +1470,9 @@ class ModelAnalyzer(ast.NodeVisitor):
                 elif isinstance(stmt.value, ast.Name) or isinstance(stmt.value, ast.Attribute):
 
                     #
-                    print(f"DEBUG | var_name = {var_name} | model_block = {current_block.block_name} | stmt.value = {stmt.value}")
+                    pass
+                    #
+                    # print(f"DEBUG | var_name = {var_name} | model_block = {current_block.block_name} | stmt.value = {stmt.value}")
 
                 #
                 # elif isinstance(stmt.value, ast.For):
@@ -1061,16 +1579,10 @@ class ModelAnalyzer(ast.NodeVisitor):
         """
 
         #
-        print(f"DEBUG | _handle_container(var_name=`{var_name}`, container_type=`{container_type}`, call_node=`{call_node}`, block.block_name=`{block.block_name}`)")
-
-        #
         ### Create a unique sub-block name. ###
         #
         sub_block_name: str = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
         self.sub_block_counter[self.current_model_visit[-1]] += 1
-
-        #
-        print(f"DEBUG | sub_block_name = `{sub_block_name}`")
 
         #
         ### Creating the sub-block. ###
@@ -1090,21 +1602,12 @@ class ModelAnalyzer(ast.NodeVisitor):
         layer: lc.Layer
 
         #
-        print(f"DEBUG | call_node.args = {call_node.args} => {bool(call_node.args)}")
-
-        #
         ### Handle arguments. ###
         #
         if call_node.args:
 
             #
-            print(f"DEBUG | in call_node.args condition, just before the loop")
-
-            #
             for i, arg in enumerate(call_node.args):
-
-                #
-                print(f"DEBUG | inside loop | i = {i} | arg = {arg} | type(arg) = {type(arg)}")
 
                 #
                 # Call: A call expression, such as func(...)
@@ -1130,9 +1633,6 @@ class ModelAnalyzer(ast.NodeVisitor):
                     ###
                     #
                     for j, sub_arg in enumerate(arg.elts):
-
-                        #
-                        print(f"DEBUG | inside sub loop | j = {j} | sub_arg = {sub_arg} | type(sub_arg) = {type(sub_arg)}")
 
                         #
                         # Call: A call expression, such as func(...)
@@ -1290,8 +1790,6 @@ class ModelAnalyzer(ast.NodeVisitor):
             layer_parameters_kwargs={}
         )
 
-        #
-        print(f"\033[36m DEBUG | _handle_container | sub_block = {sub_block} \033[m")
 
     #
     def _handle_loop_init(self, var_name: str, for_node: ast.For, block: lc.ModelBlock) -> None:
@@ -1414,193 +1912,164 @@ class ModelAnalyzer(ast.NodeVisitor):
             flow_control (list[lc.FlowControlInstruction]): The flow control list to append to.
         """
 
-        #
         if isinstance(stmt, ast.Assign):
 
-            #
             target: Optional[str] = stmt.targets[0].id if isinstance(stmt.targets[0], ast.Name) else None
-
-            #
             value: Optional[lc.Expression] = extract_expression(stmt.value, self)
 
-            #
             if target and value:
-
-                #
                 flow_control.append(lc.FlowControlVariableAssignment(var_name=target, var_value=value))
 
-            #
             elif isinstance(stmt.value, ast.Call):
-
-                #
+                # Handle function/method calls
                 outputs: list[str] = [t.id for t in stmt.targets if isinstance(t, ast.Name)]
 
-                #
-                func_name: str = self.get_layer_type(stmt.value.func)
+                func_name, func_args, func_kwargs, instructions_before = extract_call(stmt.value, self)
 
-                #
-                args: dict[str, lc.Expression] = {keyword: expression for keyword, expression in {kw.arg: extract_expression(kw.value, self) for kw in stmt.value.keywords if kw.arg is not None}.items() if expression is not None }
+                # Add any required pre-instructions
+                flow_control.extend(instructions_before)
 
-                #
+                # Convert positional args to keyword args dict for consistency
+                args_dict = func_kwargs.copy()
+
+                # Handle positional arguments
+                if func_args:
+                    if isinstance(stmt.value.func, ast.Attribute):
+                        # Method call - first arg is the object, rest are positional
+                        args_dict['self'] = func_args[0]
+                        for i, arg in enumerate(func_args[1:]):
+                            args_dict[f'arg_{i}'] = arg
+                    else:
+                        # Regular function call
+                        for i, arg in enumerate(func_args):
+                            args_dict[f'arg_{i}'] = arg
+
                 if func_name in self.model_blocks[self.current_model_visit[-1]].block_layers:
-
-                    #
-                    flow_control.append(lc.FlowControlLayerPass(outputs, func_name, args))
-
-                #
+                    flow_control.append(lc.FlowControlLayerPass(outputs, func_name, args_dict))
                 else:
+                    flow_control.append(lc.FlowControlFunctionCall(outputs, func_name, args_dict))
 
-                    #
-                    flow_control.append(lc.FlowControlFunctionCall(outputs, func_name, args))
+            elif target:
+                # Handle complex expressions that couldn't be extracted as simple expressions
+                temp_var = decompose_complex_expression(stmt.value, self, flow_control)
+                if temp_var != f"unknown_expr_{id(stmt.value)}":
+                    flow_control.append(lc.FlowControlVariableAssignment(
+                        var_name=target,
+                        var_value=lc.ExpressionVariable(temp_var)
+                    ))
 
-        #
         elif isinstance(stmt, ast.AugAssign):
-
-            #
             self.visit_AugAssign(stmt)
 
-        #
         elif isinstance(stmt, ast.For):
-
-            #
             if not isinstance(stmt.target, ast.Name):
-                #
                 return
 
-            #
-            iterator: Optional[lc.Expression] | str = extract_expression(stmt.iter, self) or (stmt.iter.id if isinstance(stmt.iter, ast.Name) else None)
-            #
+            iterator = extract_expression(stmt.iter, self) or (stmt.iter.id if isinstance(stmt.iter, ast.Name) else None)
             if iterator is None:
-                #
                 return
 
-            #
-            flow_control_loop: lc.FlowControlForLoop = lc.FlowControlForLoop(
+            flow_control_loop = lc.FlowControlForLoop(
                 iterable_var_name=stmt.target.id,
                 iterator=iterator,
                 flow_control_instructions=[]
             )
-
-            #
             flow_control.append(flow_control_loop)
 
-            #
-            sub_stmt: ast.stmt
-            #
             for sub_stmt in stmt.body:
-                #
                 self._process_statement(sub_stmt, flow_control_loop.flow_control_instructions)
 
-        #
         elif isinstance(stmt, ast.While):
-
-            #
-            condition: Optional[lc.Condition] = extract_condition(stmt.test, self)
-            #
+            condition = extract_condition(stmt.test, self)
             if condition is None:
-                #
                 return
 
-            #
-            flow_control_while: lc.FlowControlWhileLoop = lc.FlowControlWhileLoop(
+            flow_control_while = lc.FlowControlWhileLoop(
                 condition=condition,
                 flow_control_instructions=[]
             )
-
-            #
             flow_control.append(flow_control_while)
-            #
-            for sub_stmt in stmt.body:
 
-                #
+            for sub_stmt in stmt.body:
                 self._process_statement(sub_stmt, flow_control_while.flow_control_instructions)
 
-        #
         elif isinstance(stmt, ast.If):
-
-            #
-            condition: Optional[lc.Condition] = extract_condition(stmt.test, self)
-            #
+            condition = extract_condition(stmt.test, self)
             if condition is None:
-                #
                 return
 
-            #
-            sub_func_name: str = f"cond_{len(self.model_blocks[self.current_model_visit[-1]].block_functions)}"
-
-            #
-            sub_func: lc.BlockFunction = lc.BlockFunction(
+            sub_func_name = f"cond_{len(self.model_blocks[self.current_model_visit[-1]].block_functions)}"
+            sub_func = lc.BlockFunction(
                 function_name=sub_func_name,
                 function_arguments={"input": (lc.VarType("Any"), lc.ExpressionNoDefaultArguments())},
                 model_block=self.model_blocks[self.current_model_visit[-1]]
             )
-
-            #
             self.model_blocks[self.current_model_visit[-1]].block_functions[sub_func_name] = sub_func
 
-            #
-            sub_stmt: ast.stmt
-            #
             for sub_stmt in stmt.body:
-                #
                 self._process_statement(sub_stmt, sub_func.function_flow_control)
 
-            #
-            flow_control_subcall: lc.FlowControlSubBlockFunctionCall = lc.FlowControlSubBlockFunctionCall(
+            flow_control_subcall = lc.FlowControlSubBlockFunctionCall(
                 output_variables=["output"],
                 function_called=sub_func_name,
                 function_arguments={"input": lc.ExpressionVariable("x")}
             )
-
-            #
             flow_control.append(flow_control_subcall)
 
-            #
-            # self.model_blocks[self.current_model_visit[-1]].block_layers[sub_func_name] = lc.LayerCondition(
-            #     layer_var_name=sub_func_name,
-            #     layer_conditions_blocks={condition: flow_control_subcall}
-            # )
-
-        #
         elif isinstance(stmt, ast.Return):
-
-            #
-            expr: Optional[lc.Expression]
-
-            #
             returns: list[str] = []
 
-            #
-            if isinstance(stmt.value, ast.Tuple):
-
-                #
+            if stmt.value is None:
+                # Empty return
+                pass
+            elif isinstance(stmt.value, ast.Tuple):
+                # Multiple return values
                 for val in stmt.value.elts:
-
-                    #
-                    expr: Optional[lc.Expression] = extract_expression(val, self)
-
-                    #
-                    if expr is None:
-                        #
-                        continue
-
-                    #
-                    elif isinstance(expr, lc.ExpressionVariable):
-                        #
-                        returns.append(expr.var_name)
-
-                    #
-                    elif isinstance(val, ast.Name):
-                        #
+                    if isinstance(val, ast.Name):
                         returns.append(val.id)
-
-            #
+                    else:
+                        # ✅ FIXED: Properly decompose complex expressions
+                        temp_var = decompose_complex_expression(val, self, flow_control)
+                        returns.append(temp_var)
             elif isinstance(stmt.value, ast.Name):
-                #
+                # Single variable return
                 returns.append(stmt.value.id)
+            else:
+                # ✅ FIXED: Single complex expression return - properly decompose
+                temp_var = decompose_complex_expression(stmt.value, self, flow_control)
+                returns.append(temp_var)
 
-            #
             flow_control.append(lc.FlowControlReturn(return_variables=returns))
+
+        elif isinstance(stmt, ast.Expr):
+            # ✅ NEW: Handle expression statements (standalone expressions)
+            # These are statements like function calls that don't assign to variables
+            if isinstance(stmt.value, ast.Call):
+                func_name, func_args, func_kwargs, instructions_before = extract_call(stmt.value, self)
+                flow_control.extend(instructions_before)
+
+                # Convert args to dict
+                args_dict = func_kwargs.copy()
+                if func_args:
+                    if isinstance(stmt.value.func, ast.Attribute):
+                        args_dict['self'] = func_args[0]
+                        for i, arg in enumerate(func_args[1:]):
+                            args_dict[f'arg_{i}'] = arg
+                    else:
+                        for i, arg in enumerate(func_args):
+                            args_dict[f'arg_{i}'] = arg
+
+                # Create temporary output variable for the call
+                temp_output = f"temp_expr_{id(stmt.value)}"
+
+                if func_name in self.model_blocks[self.current_model_visit[-1]].block_layers:
+                    flow_control.append(lc.FlowControlLayerPass([temp_output], func_name, args_dict))
+                else:
+                    flow_control.append(lc.FlowControlFunctionCall([temp_output], func_name, args_dict))
+            else:
+                # Other expression statements - decompose complex expressions
+                decompose_complex_expression(stmt.value, self, flow_control)
+
 
     #
     def get_layer_type(self, func: ast.AST) -> str:
@@ -1708,6 +2177,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         ast.NodeVisitor.generic_visit(self, node)
 
+
     #
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         """
@@ -1773,6 +2243,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         ### No need to call generic_visit since we're handling the node fully here. ###
         #
+
 
     #
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
