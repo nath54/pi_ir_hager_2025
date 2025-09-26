@@ -13,8 +13,6 @@ from torch.nn import functional as F
 pos_encode: int = 4
 features_after_conv: int = 17
 n_embd: int = 68 # features_after_conv * pos_encode
-dropout: float = 0.0
-learning_rate: float = 0.006
 num_outputs: int = 6
 batch_size: int = 40
 
@@ -117,8 +115,6 @@ class Head(nn.Module) :
         self.query: nn.Linear = nn.Linear(68, 34, bias = False)
         self.value: nn.Linear = nn.Linear(68, 34, bias = False)
 
-        #
-        self.dropout: nn.Dropout = nn.Dropout(dropout)
 
     #
     def forward(self, x: Tensor) -> Tensor:
@@ -135,7 +131,6 @@ class Head(nn.Module) :
         #
         wei: Tensor = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5 # (B, T, hs) @ (B, hs, T) to (B, T, T)
         wei = F.softmax(wei, dim = -1)
-        wei = self.dropout(wei)
 
         #
         ### perform the weighted aggregation of the values. ###
@@ -171,17 +166,12 @@ class MultiHeadAttention(nn.Module) :
         #
         self.proj = nn.Linear(68, 68)
 
-        #
-        self.dropout = nn.Dropout(dropout)
 
     #
     def forward(self, x: Tensor) -> Tensor:
 
         #
         out: Tensor = torch.cat( [h(x) for h in self.heads], dim = -1 ) # (Batch, Time, Channel Feature dimension) = (B,T , [h1,h1,h2,h2,h3,h3,h4,h4])
-
-        #
-        out = self.dropout(self.proj(out))
 
         #
         return out
@@ -198,9 +188,8 @@ class FeedFoward(nn.Module):
         #
         self.net = nn.Sequential(
             nn.Linear(68, 34) ,
-            nn.ReLU() ,
-            nn.Linear(34, 68) ,
-            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(34, 68)
         )
 
     #
