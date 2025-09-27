@@ -1,11 +1,17 @@
 #
+### Import Modules. ###
+#
+import torch
 from torch import Tensor
 from torch import nn
 
-
+#
+### Define a simple PyTorch model for testing. ###
 #
 class SimpleModel(nn.Module):
 
+    #
+    ### Constructor. ###
     #
     def __init__(self, in_features: int = 10, mid_features: int = 40, out_features: int = 5) -> None:
 
@@ -20,6 +26,8 @@ class SimpleModel(nn.Module):
         self.relu = nn.ReLU()
 
     #
+    ### Forward method. ###
+    #
     def forward(self, x: Tensor) -> Tensor:
 
         #
@@ -27,6 +35,12 @@ class SimpleModel(nn.Module):
 
         #
         print(f"Batch size: {b}")
+
+        #
+        y: Tensor = 2 * x + torch.ones_like(x)
+
+        #
+        x = x + self.linear2(x + self.relu(x + self.linear1(x)))
 
         #
         x = self.linear1(x)

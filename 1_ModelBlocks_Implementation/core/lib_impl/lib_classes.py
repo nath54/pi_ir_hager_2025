@@ -295,6 +295,198 @@ class ExpressionToEvaluate(Expression):
         self.expr_to_evaluate: str = expr_to_evaluate
 
 
+#
+class ExpressionTuple(ExpressionConstant):
+    #
+    def __init__(self, elements: tuple[ExpressionConstant, ...] = ()) -> None:
+        """
+        Represents a constant tuple expression.
+
+        Args:
+            elements (tuple[ExpressionConstant, ...]): tuple of the values
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.elements: tuple[ExpressionConstant, ...] = elements
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"({", ".join([elt.__str__() for elt in self.elements])})"
+
+
+#
+class ExpressionList(Expression):
+    #
+    def __init__(self, elements: list[Expression] = []) -> None:
+        """
+        Represents a list of expression.
+
+        Args:
+            elements (list[Expression]): list of the values
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.elements: list[Expression] = elements
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"[{", ".join([elt.__str__() for elt in self.elements])}]"
+
+
+#
+class ExpressionDict(ExpressionConstant):
+    #
+    def __init__(self, elements: dict[ExpressionConstant, ExpressionConstant] = {}) -> None:
+        """
+        Represents a constant dictionary expression.
+
+        Args:
+            elements (dict[ExpressionConstant, ExpressionConstant]): dictionary of the values
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.elements: dict[ExpressionConstant, ExpressionConstant] = elements
+
+    #
+    def __str__(self) -> str:
+        #
+        return "{" + f"{", ".join([f"{k}: {v}" for k, v in self.elements.items()])}" + "}"
+
+
+#
+class ExpressionSet(ExpressionConstant):
+    #
+    def __init__(self, elements: set[ExpressionConstant] = set()) -> None:
+        """
+        Represents a constant set expression.
+
+        Args:
+            elements (set[ExpressionConstant]): set of the values
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.elements: set[ExpressionConstant] = elements
+
+    #
+    def __str__(self) -> str:
+        #
+        return "{" + f"{", ".join([elt.__str__() for elt in self.elements])}" + "}"
+
+
+#
+class ExpressionSlice1D(Expression):
+    #
+    def __init__(self, start: Optional[ExpressionConstant] = None, end: Optional[ExpressionConstant] = None, step: Optional[ExpressionConstant] = None) -> None:
+        """
+        Represents a slice expression (1D).
+
+        Args:
+            start (Optional[ExpressionConstant], optional): Start of the slice. Defaults to None.
+            end (Optional[ExpressionConstant], optional): End of the slice. Defaults to None.
+            step (Optional[ExpressionConstant], optional): Step of the slice. Defaults to None.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.start: Optional[ExpressionConstant] = start
+        self.end: Optional[ExpressionConstant] = end
+        self.step: Optional[ExpressionConstant] = step
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"[{self.start}:{self.end}:{self.step}]"
+
+
+#
+class ExpressionSliceND(Expression):
+    #
+    def __init__(self, slices: list[ExpressionSlice1D]) -> None:
+        """
+        Represents a slice expression (ND).
+
+        Args:
+            slices (list[ExpressionSlice1D]): List of the 1D slices for each dimension.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.slices: list[ExpressionSlice1D] = slices
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"[{", ".join([s.__str__() for s in self.slices])}]"
+
+
+#
+class ExpressionIndexAccess(Expression):
+    #
+    def __init__(self, variable: ExpressionVariable, index: Expression) -> None:
+        """
+        Represents an index access expression.
+
+        Args:
+            variable (ExpressionVariable): Variable on which we access the index.
+            index (Expression): Index to access.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.variable: ExpressionVariable = variable
+        self.index: Expression = index
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.variable}[{self.index}]"
+
+
+#
+class ExpressionAttributeAccess(Expression):
+    #
+    def __init__(self, variable: ExpressionVariable, attribute: str) -> None:
+        """
+        Represents an attribute access expression.
+
+        Args:
+            variable (ExpressionVariable): Variable on which we access the attribute.
+            attribute (str): Name of the attribute to access.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.variable: ExpressionVariable = variable
+        self.attribute: str = attribute
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.variable}.{self.attribute}"
+
+
 # Normally, with the following FlowControlInstructions basic instructions, there is no need to have anything else than ExpressionVariable and ExpressionConstant, because we can decompose any complex instructions in a sequence of basic instructions (we may have to create temporary variables, but aside that, it is good)
 
 # We will constraint the models to not use other types of constants and variables, (like dictionaries or custom objects), and we can convert the tuples into lists.
@@ -724,7 +916,14 @@ class FlowControlCondition(FlowControlInstruction):
 #
 class BlockFunction:
     #
-    def __init__(self, function_name: str, function_arguments: dict[str, tuple[VarType, Expression]], model_block: "ModelBlock") -> None:
+    def __init__(
+        self,
+        function_name: str,
+        function_arguments: dict[str, tuple[VarType, Expression]],
+        model_block: "ModelBlock",
+        complex_default_argument_values_instructions_to_do_before_real_function_flow: Optional[dict[str, list[FlowControlInstruction]]] = None,
+    ) -> None:
+
         """
         Represents a function of a model block.
         Can be the traditional forward function, or another function.
