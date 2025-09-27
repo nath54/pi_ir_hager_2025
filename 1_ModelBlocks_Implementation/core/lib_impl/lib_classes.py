@@ -411,7 +411,19 @@ class ExpressionSlice1D(Expression):
     #
     def __str__(self) -> str:
         #
-        return f"[{self.start}:{self.end}:{self.step}]"
+        start_str = str(self.start) if self.start is not None else ""
+        end_str = str(self.end) if self.end is not None else ""
+        step_str = str(self.step) if self.step is not None else ""
+        
+        # Handle different cases for proper slice syntax
+        if step_str:
+            return f"[{start_str}:{end_str}:{step_str}]"
+        elif end_str:
+            return f"[{start_str}:{end_str}]"
+        elif start_str:
+            return f"[{start_str}:]"
+        else:
+            return "[:]"
 
 
 #
@@ -818,7 +830,32 @@ class FlowControlFunctionCall(FlowControlInstruction):
     #
     def __str__(self) -> str:
         #
-        return f"\t\t * {self.output_variables} = {self.function_called}({self.function_arguments})"
+        # Format arguments more naturally for display
+        formatted_args = []
+        
+        # Handle positional arguments (keys that are numeric strings)
+        positional_args = []
+        keyword_args = []
+        
+        for key, value in self.function_arguments.items():
+            if key.isdigit():
+                positional_args.append((int(key), value))
+            else:
+                keyword_args.append((key, value))
+        
+        # Sort positional arguments by index
+        positional_args.sort(key=lambda x: x[0])
+        
+        # Add positional arguments
+        for _, value in positional_args:
+            formatted_args.append(str(value))
+        
+        # Add keyword arguments
+        for key, value in keyword_args:
+            formatted_args.append(f"{key}={value}")
+        
+        args_str = ", ".join(formatted_args)
+        return f"\t\t * {self.output_variables} = {self.function_called}({args_str})"
 
 
 #
