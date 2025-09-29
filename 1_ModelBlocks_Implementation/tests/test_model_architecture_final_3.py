@@ -303,7 +303,17 @@ class DeepArcNet(nn.Module) :
         # wt, fd1, fd2 = tmp[1], tmp[2], tmp[3]
 
         #
-        output_ConvEncode: list[Tensor] = [ module_c(xi) for (xi, module_c) in zip( x.split(1, dim=1), self.ConvEncode ) ]  # type: ignore
+        ### Split input tensor and apply each ConvEncode module. ###
+        #
+        split_tensors = x.split(1, dim=1)
+        #
+        output_ConvEncode: list[Tensor] = []
+        #
+        for i, xi in enumerate(split_tensors):
+            #
+            module_c = self.ConvEncode[i]
+            #
+            output_ConvEncode.append(module_c(xi))
 
         #
         concatenated_ConvEncode: Tensor = torch.cat(output_ConvEncode, dim= -2) # (Batch, Window_time, Convol_feature)

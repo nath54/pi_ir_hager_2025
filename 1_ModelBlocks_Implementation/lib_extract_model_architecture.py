@@ -1,7 +1,6 @@
 #
 ### Import Modules. ###
 #
-from sqlite3 import NotSupportedError
 from typing import Optional, Any, Callable
 #
 import ast
@@ -69,8 +68,11 @@ def extract_name_or_attribute(node: ast.AST) -> str:
     #
     elif isinstance(node, ast.Attribute):
         #
-        # Build the full qualified name by combining value and attr
+        ### Build the full qualified name by combining value and attr. ###
+        #
         value_name = extract_name_or_attribute(node.value)
+
+        #
         return f"{value_name}.{node.attr}"
 
     #
@@ -300,16 +302,24 @@ def extract_expression(
             #
             ### Create a simple function call instruction ###
             #
-            # Convert arguments to the proper format for FlowControlFunctionCall
+            ### Convert arguments to the proper format for FlowControlFunctionCall. ###
+            #
             function_arguments = {}
 
-            # Add positional arguments with proper names
+            #
+            ### Add positional arguments with proper names. ###
+            #
             for i, arg in enumerate(arg_exprs):
                 function_arguments[str(i)] = arg
 
-            # Add keyword arguments
+            #
+            ### Add keyword arguments. ###
+            #
             function_arguments.update(kwarg_exprs)
 
+            #
+            ### Create a simple function call instruction. ###
+            #
             instructions_to_do_before.append(
                 lc.FlowControlFunctionCall(
                     output_variables=[temp_var_name],
@@ -580,24 +590,121 @@ def extract_expression(
         temp_var_name: str = get_next_temp_var_name()
 
         #
-        ### Extract the expression being computed for each element ###
+        ### For complex list comprehensions, we need to create a proper loop structure ###
+        ### This is a more complete implementation that handles iteration variables ###
         #
-        element_expr: lc.Expression = extract_expression(node.elt, analyzer, instructions_to_do_before)
+
+        # Create a temporary variable to store the result list
+        result_list_var: str = get_next_temp_var_name()
+        instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+            var_name=result_list_var,
+            var_value=lc.ExpressionConstantList(elements=[])
+        ))
+
+        # Handle the generator/iterator part
+        if len(node.generators) == 1:
+            generator = node.generators[0]
+
+            # Extract the iterable expression
+            iterable_expr: lc.Expression = extract_expression(generator.iter, analyzer, instructions_to_do_before)
+
+            # Handle the target (iteration variables)
+            if isinstance(generator.target, ast.Tuple):
+                # Multiple iteration variables like (xi, module_c)
+                target_vars = []
+                for target in generator.target.elts:
+                    if isinstance(target, ast.Name):
+                        target_vars.append(target.id)
+                    else:
+                        # Complex target, create temp variable
+                        temp_target_var = get_next_temp_var_name()
+                        target_expr = extract_expression(target, analyzer, instructions_to_do_before)
+                        instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+                            var_name=temp_target_var,
+                            var_value=target_expr
+                        ))
+                        target_vars.append(temp_target_var)
+            else:
+                # Single iteration variable
+                if isinstance(generator.target, ast.Name):
+                    target_vars = [generator.target.id]
+                else:
+                    # Complex target, create temp variable
+                    temp_target_var = get_next_temp_var_name()
+                    target_expr = extract_expression(generator.target, analyzer, instructions_to_do_before)
+                    instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+                        var_name=temp_target_var,
+                        var_value=target_expr
+                    ))
+                    target_vars = [temp_target_var]
+
+            # Create a for loop to iterate over the iterable
+            loop_instructions = []
+
+            # Extract the element expression (this will now have access to iteration variables)
+            element_expr: lc.Expression = extract_expression(node.elt, analyzer, loop_instructions)
+
+            # Append the element to the result list
+            loop_instructions.append(lc.FlowControlFunctionCall(
+                output_variables=[],
+                function_called="append",
+                function_arguments={
+                    "0": lc.ExpressionVariable(result_list_var),
+                    "1": element_expr
+                }
+            ))
+
+            # Create the for loop instruction
+            for_loop = lc.FlowControlForLoop(
+                iterable_var_name=target_vars[0] if len(target_vars) == 1 else f"({', '.join(target_vars)})",
+                iterator=iterable_expr,
+                flow_control_instructions=loop_instructions
+            )
+
+            instructions_to_do_before.append(for_loop)
+
+        else:
+            # Multiple generators - for now, handle only the first one
+            # This is a simplified case
+            generator = node.generators[0]
+            iterable_expr: lc.Expression = extract_expression(generator.iter, analyzer, instructions_to_do_before)
+
+            if isinstance(generator.target, ast.Name):
+                target_var = generator.target.id
+            else:
+                target_var = get_next_temp_var_name()
+                target_expr = extract_expression(generator.target, analyzer, instructions_to_do_before)
+                instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+                    var_name=target_var,
+                    var_value=target_expr
+                ))
+
+            # Create a simple loop
+            loop_instructions = []
+            element_expr: lc.Expression = extract_expression(node.elt, analyzer, loop_instructions)
+            loop_instructions.append(lc.FlowControlFunctionCall(
+                output_variables=[],
+                function_called="append",
+                function_arguments={
+                    "0": lc.ExpressionVariable(result_list_var),
+                    "1": element_expr
+                }
+            ))
+
+            for_loop = lc.FlowControlForLoop(
+                iterable_var_name=target_var,
+                iterator=iterable_expr,
+                flow_control_instructions=loop_instructions
+            )
+
+            instructions_to_do_before.append(for_loop)
 
         #
-        ### For now, create a simple list expression ###
-        ### TODO: This is a simplified implementation - could be enhanced to handle complex comprehensions ###
-        #
-        list_comp_expr: lc.ExpressionList = lc.ExpressionList(
-            elements=[element_expr]  # Simplified - just put the element in a list
-        )
-
-        #
-        ### Create a temporary variable to store the result ###
+        ### Create a temporary variable to store the final result ###
         #
         instructions_to_do_before.append(lc.FlowControlVariableAssignment(
             var_name=temp_var_name,
-            var_value=list_comp_expr
+            var_value=lc.ExpressionVariable(result_list_var)
         ))
 
         #
@@ -731,10 +838,7 @@ def extract_condition(
         return lc.ConditionUnary(elt=lc.ExpressionConstantNumeric(constant=False))
 
     #
-    else:
-
-        #
-        raise NotImplementedError(f"Condition type {type(node)} not implemented")
+    raise NotImplementedError(f"Condition type {type(node)} not implemented")
 
 
 #
@@ -805,7 +909,7 @@ def extract_function_arguments(
     #
     for keyword in node.keywords:
         #
-        if keyword.arg is not None:  # Skip **kwargs for now
+        if keyword.arg is not None:
             #
             keyword_args[keyword.arg] = extract_expression(keyword.value, analyzer, instructions_to_do_before)
 
@@ -843,6 +947,7 @@ def extract_target(
     elif isinstance(node, ast.Attribute):
         #
         ### For attributes like self.linear1, return the attribute name ###
+        #
         return node.attr
 
     #
@@ -891,6 +996,7 @@ def extract_call_arg_value(
     analyzer: "ModelAnalyzer",
     instructions_to_do_before: list[lc.FlowControlInstruction]
 ) -> lc.Expression:
+
     """
     Extracts the value of an argument node from an AST Call.
 
@@ -977,8 +1083,6 @@ def extract_call(
     return func_name, func_call_args, func_call_keywords
 
 
-
-
 #
 ### Extract Layer call. ###
 #
@@ -1031,7 +1135,6 @@ def extract_layer_call(
 
     #
     return layer
-
 
 
 #
@@ -1108,6 +1211,8 @@ class ModelAnalyzer(ast.NodeVisitor):
     #
 
     #
+    ### Extract layer type from a function node. ###
+    #
     def get_layer_type(self, func_node: ast.AST) -> str:
         """
         Extract layer type from a function node.
@@ -1118,11 +1223,34 @@ class ModelAnalyzer(ast.NodeVisitor):
         Returns:
             str: The layer type name.
         """
+
         #
-        return extract_name_or_attribute(func_node)
+        layer_type = extract_name_or_attribute(func_node)
+
+        #
+        ### Remove nn. prefix if present to match all_layers_info. ###
+        #
+        if layer_type.startswith('nn.'):
+            #
+            ### Remove 'nn.' prefix. ###
+            #
+            layer_type = layer_type[3:]
+
+        #
+        return layer_type
+
 
     #
-    def _handle_container(self, var_name: str, container_type: str, call_node: ast.Call, block: lc.ModelBlock) -> None:
+    ### Handle container. ###
+    #
+    def _handle_container(
+        self,
+        var_name: str,
+        container_type: str,
+        call_node: ast.Call,
+        block: lc.ModelBlock
+    ) -> None:
+
         """
         Handles nn.ModuleList and nn.Sequential by creating sub-blocks and defining their forward methods.
 
@@ -1165,7 +1293,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             for i, arg in enumerate(call_node.args):
 
                 #
-                # Call: A call expression, such as func(...)
+                ### Call: A call expression, such as func(...). ###
                 #
                 if isinstance(arg, ast.Call):
 
@@ -1186,12 +1314,12 @@ class ModelAnalyzer(ast.NodeVisitor):
                 elif isinstance(arg, ast.List) or isinstance(arg, ast.Tuple):
 
                     #
-                    ###
+                    ### Handle arguments. ###
                     #
                     for j, sub_arg in enumerate(arg.elts):
 
                         #
-                        # Call: A call expression, such as func(...)
+                        ### Call: A call expression, such as func(...). ###
                         #
                         if isinstance(sub_arg, ast.Call):
 
@@ -1282,7 +1410,15 @@ class ModelAnalyzer(ast.NodeVisitor):
 
 
     #
-    def _handle_module_or_sequential_assignment(self, var_name: str, call_node: ast.Call, target: ast.AST) -> None:
+    ### Handle module or sequential assignment. ###
+    #
+    def _handle_module_or_sequential_assignment(
+        self,
+        var_name: str,
+        call_node: ast.Call,
+        target: ast.AST
+    ) -> None:
+
         """
         Handles nn.Module and nn.Sequential assignments by creating new model blocks.
 
@@ -1306,29 +1442,46 @@ class ModelAnalyzer(ast.NodeVisitor):
         current_block: lc.ModelBlock = self.model_blocks[current_block_name]
 
         #
-        ### Determine the type (Module or Sequential) ###
+        ### Determine the type (Module, Sequential, or ModuleList) ###
         #
         func_name = extract_name_or_attribute(call_node.func)
+
+        #
         if func_name in ["nn.Module", "Module"]:
+            #
             container_type = "Module"
+        #
         elif func_name in ["nn.Sequential", "Sequential"]:
+            #
             container_type = "Sequential"
+        #
+        elif func_name in ["nn.ModuleList", "ModuleList"]:
+            #
+            container_type = "ModuleList"
+        #
         else:
+            #
             print(f"\033[1;31m - WARNING: Unknown container type `{func_name}` for variable `{var_name}`, skipping. - \033[m")
+            #
             return
 
         #
         ### Create a unique sub-block name ###
         #
         sub_block_name: str = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter.get(self.current_model_visit[-1], 0)}"
+        #
         if self.current_model_visit[-1] not in self.sub_block_counter:
+            #
             self.sub_block_counter[self.current_model_visit[-1]] = 0
+
+        #
         self.sub_block_counter[self.current_model_visit[-1]] += 1
 
         #
         ### Create the sub-block ###
         #
         sub_block = lc.ModelBlock(block_name=sub_block_name)
+        #
         self.model_blocks[sub_block_name] = sub_block
 
         #
@@ -1340,15 +1493,81 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Handle arguments (layers in the container) ###
         #
         if call_node.args:
+
+            #
             for i, arg in enumerate(call_node.args):
-                if isinstance(arg, ast.Call):
-                    # Get the layer type
+
+                #
+                ### Handle the case where the argument is a List containing multiple calls. ###
+                #
+                if isinstance(arg, ast.List):
+
+                    #
+                    for j, list_item in enumerate(arg.elts):
+
+                        #
+                        if isinstance(list_item, ast.Call):
+
+                            #
+                            ### Get the layer type. ###
+                            #
+                            layer_type: str = self.get_layer_type(list_item.func)
+
+                            #
+                            ### Check if it's a known layer type. ###
+                            #
+                            if layer_type in self.layers:
+
+                                #
+                                ### Extract the layer and add it to the layers list. ###
+                                #
+                                instructions_to_do_before: list[lc.FlowControlInstruction] = []
+
+                                #
+                                layer: lc.Layer = extract_layer_call(
+                                    node=list_item,
+                                    var_name=f"{j}",
+                                    layer_type=layer_type,
+                                    analyzer=self,
+                                    instructions_to_do_before=instructions_to_do_before
+                                )
+
+                                #
+                                layers.append(layer)
+
+                            #
+                            else:
+
+                                #
+                                ### If it's not a known layer, treat it as a sub-module. ###
+                                ### This handles cases like custom modules or other nn.Module subclasses. ###
+                                #
+                                sub_module_layer = lc.Layer(
+                                    layer_var_name=f"{j}",
+                                    layer_type=layer_type,  # This will be the model block name (e.g., "ConvEncode")
+                                    layer_parameters_kwargs={}
+                                )
+                                layers.append(sub_module_layer)
+
+                #
+                elif isinstance(arg, ast.Call):
+
+                    #
+                    ### Get the layer type. ###
+                    #
                     layer_type: str = self.get_layer_type(arg.func)
 
-                    # Check if it's a known layer type
+                    #
+                    ### Check if it's a known layer type. ###
+                    #
                     if layer_type in self.layers:
-                        # Extract the layer and add it to the layers list
+
+                        #
+                        ### Extract the layer and add it to the layers list. ###
+                        #
                         instructions_to_do_before: list[lc.FlowControlInstruction] = []
+
+                        #
                         layer: lc.Layer = extract_layer_call(
                             node=arg,
                             var_name=f"{i}",
@@ -1356,21 +1575,31 @@ class ModelAnalyzer(ast.NodeVisitor):
                             analyzer=self,
                             instructions_to_do_before=instructions_to_do_before
                         )
+
+                        #
                         layers.append(layer)
+
+                    #
                     else:
-                        # If it's not a known layer, treat it as a sub-module
-                        # This handles cases like custom modules or other nn.Module subclasses
+
+                        #
+                        ### If it's not a known layer, treat it as a sub-module. ###
+                        ### This handles cases like custom modules or other nn.Module subclasses. ###
+                        #
                         sub_module_layer = lc.Layer(
                             layer_var_name=f"{i}",
-                            layer_type=layer_type,
+                            layer_type=layer_type,  # This will be the model block name (e.g., "ConvEncode"). ###
                             layer_parameters_kwargs={}
                         )
+
+                        #
                         layers.append(sub_module_layer)
 
         #
         ### Add layers to sub_block ###
         #
         for i, layer in enumerate(layers):
+            #
             sub_block.block_layers[layer.layer_var_name] = layer
 
         #
@@ -1392,13 +1621,18 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         current_input: lc.ExpressionVariable = lc.ExpressionVariable("x")
 
+        #
         if container_type == "Sequential":
+
             #
             ### For Sequential, pass output of one layer as input to the next ###
             #
             for i, layer in enumerate(layers):
+
+                #
                 output_var: str = f"out_{i}"
 
+                #
                 forward_func.function_flow_control.append(
                     lc.FlowControlLayerPass(
                         output_variables=[output_var],
@@ -1407,6 +1641,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                     )
                 )
 
+                #
                 current_input = lc.ExpressionVariable(output_var)
 
             #
@@ -1416,16 +1651,53 @@ class ModelAnalyzer(ast.NodeVisitor):
                 lc.FlowControlReturn(return_variables=[current_input.var_name])
             )
 
+        #
         elif container_type == "Module":
+
             #
             ### For Module, process all layers and return all outputs ###
             #
             output_vars: list[str] = []
 
+            #
             for i, layer in enumerate(layers):
+
+                #
                 output_var: str = f"out_{i}"
                 output_vars.append(output_var)
 
+                #
+                forward_func.function_flow_control.append(
+                    lc.FlowControlLayerPass(
+                        output_variables=[output_var],
+                        layer_name=layer.layer_var_name,
+                        layer_arguments={"x": current_input}
+                    )
+                )
+
+            #
+            ### Return all outputs ###
+            #
+            forward_func.function_flow_control.append(
+                lc.FlowControlReturn(return_variables=output_vars)
+            )
+
+        #
+        elif container_type == "ModuleList":
+
+            #
+            ### For ModuleList, process all layers and return all outputs ###
+            #
+            output_vars: list[str] = []
+
+            #
+            for i, layer in enumerate(layers):
+
+                #
+                output_var: str = f"out_{i}"
+                output_vars.append(output_var)
+
+                #
                 forward_func.function_flow_control.append(
                     lc.FlowControlLayerPass(
                         output_variables=[output_var],
@@ -1450,8 +1722,17 @@ class ModelAnalyzer(ast.NodeVisitor):
             layer_parameters_kwargs={}
         )
 
+
     #
-    def _handle_loop_init(self, var_name: str, for_node: ast.For, block: lc.ModelBlock) -> None:
+    ### Handle loop initialization. ###
+    #
+    def _handle_loop_init(
+        self,
+        var_name: str,
+        for_node: ast.For,
+        block: lc.ModelBlock
+    ) -> None:
+
         """
         Handles loop-based initialization of layers (e.g., ModuleList).
 
@@ -1510,8 +1791,8 @@ class ModelAnalyzer(ast.NodeVisitor):
                 layers.append(layer)
 
         #
-        ### Add layers to sub-block. ##
-        ##
+        ### Add layers to sub-block. ###
+        #
         for i, layer in enumerate(layers):
             #
             sub_block.block_layers[f"{i}"] = layer
@@ -1569,6 +1850,120 @@ class ModelAnalyzer(ast.NodeVisitor):
         )
 
 
+    #
+    ### Helper function to extract function arguments. ###
+    #
+    def extract_function_arguments(
+        self,
+        node: ast.FunctionDef
+    ) -> tuple[ dict[str, tuple[lc.VarType, lc.Expression]], Optional[dict[str, list[lc.FlowControlInstruction]]]]:
+
+        """
+        Extracts function arguments from a function definition node.
+
+        Args:
+            node (ast.FunctionDef): The function definition node to extract the arguments from.
+
+        Returns:
+            tuple[ dict[str, tuple[lc.VarType, lc.Expression]], Optional[dict[str, list[lc.FlowControlInstruction]]]]: The function arguments and the complex default argument values instructions to do before real function flow.
+        """
+
+        #
+        ### Prepare function arguments. ###
+        #
+        function_arguments: dict[str, tuple[lc.VarType, lc.Expression]] = {}
+
+        #
+        ### Prepare complex default argument values instructions to do before real function flow. ###
+        #
+        complex_default_argument_values_instructions_to_do_before_real_function_flow: Optional[dict[str, list[lc.FlowControlInstruction]]] = {}
+
+        #
+        ### For each argument, extract the argument name, type, and default value. ###
+        #
+        ### Get default values from node.defaults (positional) and node.kw_defaults (keyword-only). ###
+        #
+        defaults = node.defaults if hasattr(node, 'defaults') else []
+        kw_defaults = node.kw_defaults if hasattr(node, 'kw_defaults') else []
+
+        #
+        ### Calculate the number of positional args with defaults. ###
+        #
+        num_positional_with_defaults = len(defaults)
+        num_positional_args = len(node.args.args)
+        num_positional_without_defaults = num_positional_args - num_positional_with_defaults
+
+        #
+        arg: ast.arg
+        #
+        for i, arg in enumerate(node.args.args):
+
+            #
+            ### Extract argument name. ###
+            #
+            arg_name: str = arg.arg
+
+            #
+            ### Prepare instructions to do before the real function flow. ###
+            #
+            instructions_to_do_before: list[lc.FlowControlInstruction] = []
+
+            #
+            ### Extract argument type. ###
+            #
+            arg_type: lc.VarType = lc.VarType(type_name=extract_name_or_attribute(arg.annotation) if arg.annotation else "Any")
+
+            #
+            ### Extract argument default value. ###
+            #
+            arg_default_value: lc.Expression
+
+            #
+            ### Check if this argument has a default value. ###
+            #
+            if i >= num_positional_without_defaults:
+                #
+                ### This argument has a default value. ###
+                #
+                default_index = i - num_positional_without_defaults
+                #
+                if default_index < len(defaults):
+                    #
+                    arg_default_value = extract_expression(defaults[default_index], self, instructions_to_do_before)
+                #
+                else:
+                    #
+                    arg_default_value = lc.ExpressionNoDefaultArguments()
+            #
+            else:
+                #
+                ### This argument has no default value. ###
+                #
+                arg_default_value = lc.ExpressionNoDefaultArguments()
+
+            #
+            ### Add argument to function arguments. ###
+            #
+            function_arguments[arg_name] = (arg_type, arg_default_value)
+
+            #
+            ### If there are instructions to do before the real function flow, add them to the complex default argument values instructions to do before real function flow. ###
+            #
+            if len(instructions_to_do_before) > 0:
+                #
+                complex_default_argument_values_instructions_to_do_before_real_function_flow[arg_name] = instructions_to_do_before
+
+        #
+        ### If there are no complex default argument values instructions to do before real function flow, set it to None. ###
+        #
+        if len(complex_default_argument_values_instructions_to_do_before_real_function_flow) == 0:
+            #
+            complex_default_argument_values_instructions_to_do_before_real_function_flow = None
+
+        #
+        ### Return the function arguments and the complex default argument values instructions to do before real function flow. ###
+        #
+        return function_arguments, complex_default_argument_values_instructions_to_do_before_real_function_flow
 
 
     #
@@ -1658,103 +2053,6 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         self.visit_method_function(node=node, current_block=current_block)
-
-
-    #
-    ### Helper function to extract function arguments. ###
-    #
-    def extract_function_arguments(self, node: ast.FunctionDef) -> tuple[ dict[str, tuple[lc.VarType, lc.Expression]], Optional[dict[str, list[lc.FlowControlInstruction]]]]:
-        """
-        Extracts function arguments from a function definition node.
-
-        Args:
-            node (ast.FunctionDef): The function definition node to extract the arguments from.
-
-        Returns:
-            tuple[ dict[str, tuple[lc.VarType, lc.Expression]], Optional[dict[str, list[lc.FlowControlInstruction]]]]: The function arguments and the complex default argument values instructions to do before real function flow.
-        """
-
-        #
-        ### Prepare function arguments. ###
-        #
-        function_arguments: dict[str, tuple[lc.VarType, lc.Expression]] = {}
-
-        #
-        ### Prepare complex default argument values instructions to do before real function flow. ###
-        #
-        complex_default_argument_values_instructions_to_do_before_real_function_flow: Optional[dict[str, list[lc.FlowControlInstruction]]] = {}
-
-        #
-        ### For each argument, extract the argument name, type, and default value. ###
-        #
-        # Get default values from node.defaults (positional) and node.kw_defaults (keyword-only)
-        defaults = node.defaults if hasattr(node, 'defaults') else []
-        kw_defaults = node.kw_defaults if hasattr(node, 'kw_defaults') else []
-
-        # Calculate the number of positional args with defaults
-        num_positional_with_defaults = len(defaults)
-        num_positional_args = len(node.args.args)
-        num_positional_without_defaults = num_positional_args - num_positional_with_defaults
-
-        arg: ast.arg
-        #
-        for i, arg in enumerate(node.args.args):
-
-            #
-            ### Extract argument name. ###
-            #
-            arg_name: str = arg.arg
-
-            #
-            ### Prepare instructions to do before the real function flow. ###
-            #
-            instructions_to_do_before: list[lc.FlowControlInstruction] = []
-
-            #
-            ### Extract argument type. ###
-            #
-            arg_type: lc.VarType = lc.VarType(type_name=extract_name_or_attribute(arg.annotation) if arg.annotation else "Any")
-
-            #
-            ### Extract argument default value. ###
-            #
-            arg_default_value: lc.Expression
-
-            # Check if this argument has a default value
-            if i >= num_positional_without_defaults:
-                # This argument has a default value
-                default_index = i - num_positional_without_defaults
-                if default_index < len(defaults):
-                    arg_default_value = extract_expression(defaults[default_index], self, instructions_to_do_before)
-                else:
-                    arg_default_value = lc.ExpressionNoDefaultArguments()
-            else:
-                # This argument has no default value
-                arg_default_value = lc.ExpressionNoDefaultArguments()
-
-            #
-            ### Add argument to function arguments. ###
-            #
-            function_arguments[arg_name] = (arg_type, arg_default_value)
-
-            #
-            ### If there are instructions to do before the real function flow, add them to the complex default argument values instructions to do before real function flow. ###
-            #
-            if len(instructions_to_do_before) > 0:
-                #
-                complex_default_argument_values_instructions_to_do_before_real_function_flow[arg_name] = instructions_to_do_before
-
-        #
-        ### If there are no complex default argument values instructions to do before real function flow, set it to None. ###
-        #
-        if len(complex_default_argument_values_instructions_to_do_before_real_function_flow) == 0:
-            #
-            complex_default_argument_values_instructions_to_do_before_real_function_flow = None
-
-        #
-        ### Return the function arguments and the complex default argument values instructions to do before real function flow. ###
-        #
-        return function_arguments, complex_default_argument_values_instructions_to_do_before_real_function_flow
 
 
     #
@@ -1848,12 +2146,12 @@ class ModelAnalyzer(ast.NodeVisitor):
             var_name: str = extract_target(target, self, instructions_to_do_before)
 
             #
-            ### Check if this is a nn.Module or nn.Sequential assignment that needs special handling ###
+            ### Check if this is a nn.Module, nn.Sequential, or nn.ModuleList assignment that needs special handling ###
             #
             if isinstance(node.value, ast.Call):
                 func_name = extract_name_or_attribute(node.value.func)
-                # Check if this is nn.Module or nn.Sequential
-                if func_name in ["nn.Module", "nn.Sequential", "Module", "Sequential"]:
+                # Check if this is nn.Module, nn.Sequential, or nn.ModuleList
+                if func_name in ["nn.Module", "nn.Sequential", "nn.ModuleList", "Module", "Sequential", "ModuleList"]:
                     # Only handle if we're inside a class (regardless of whether we're in a function)
                     if self.current_model_visit:
                         self._handle_module_or_sequential_assignment(var_name, node.value, target)
@@ -1883,6 +2181,79 @@ class ModelAnalyzer(ast.NodeVisitor):
                 current_function: lc.BlockFunction = current_block.block_functions[self.current_function_visit]
 
                 #
+                ### Check if this is a layer assignment that should be added to block_layers ###
+                #
+                if isinstance(node.value, ast.Call):
+
+                    #
+                    func_name = extract_name_or_attribute(node.value.func)
+
+                    #
+                    ### Remove nn. prefix if present. ###
+                    #
+                    if func_name.startswith('nn.'):
+                        #
+                        func_name = func_name[3:]
+
+                    #
+                    ### Check if this is a known layer type. ###
+                    #
+                    if func_name in self.layers:
+
+                        #
+                        ### This is a layer assignment, add it to the current block. ###
+                        #
+                        instructions_to_do_before_layer: list[lc.FlowControlInstruction] = []
+                        #
+                        layer: lc.Layer = extract_layer_call(
+                            node=node.value,
+                            var_name=var_name,
+                            layer_type=func_name,
+                            analyzer=self,
+                            instructions_to_do_before=instructions_to_do_before_layer
+                        )
+
+                        #
+                        ### Add layer to the current block. ###
+                        #
+                        current_block.block_layers[var_name] = layer
+
+                        #
+                        ### Add any instructions to the current function. ###
+                        #
+                        for instr in instructions_to_do_before_layer:
+                            current_function.function_flow_control.append(instr)
+
+                        #
+                        ### Skip the regular assignment processing. ###
+                        #
+                        continue
+
+                    #
+                    ### Check if this is a custom module instantiation (not a known layer but a model block). ###
+                    #
+                    elif func_name in self.model_blocks:
+
+                        #
+                        ### This is a custom module instantiation, add it to the current block. ###
+                        #
+                        custom_layer = lc.Layer(
+                            layer_var_name=var_name,
+                            layer_type=func_name,  # This will be the model block name (e.g., "MultiHeadAttention")
+                            layer_parameters_kwargs={}
+                        )
+
+                        #
+                        ### Add layer to the current block. ###
+                        #
+                        current_block.block_layers[var_name] = custom_layer
+
+                        #
+                        ### Skip the regular assignment processing. ###
+                        #
+                        continue
+
+                #
                 ### Add any instructions that must be executed before the assignment. ###
                 #
                 for instr in instructions_to_do_before:
@@ -1902,7 +2273,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             elif inside_class and not inside_function:
 
                 #
-                raise NotSupportedError()
+                raise UserWarning("Class variables are not supported yet.")
 
             #
             # If not inside a class, this is a global variable
@@ -1934,49 +2305,78 @@ class ModelAnalyzer(ast.NodeVisitor):
             node (ast.AnnAssign): The annotated assignment node to visit.
         """
 
-
         #
         ### Extract the variable name ###
         #
         if isinstance(node.target, ast.Attribute):
+            #
             var_name = node.target.attr
+        #
         elif isinstance(node.target, ast.Name):
+            #
             var_name = node.target.id
+        #
         else:
+            #
             return
 
         #
         ### Check if this is a nn.Module or nn.Sequential assignment that needs special handling ###
         #
         if isinstance(node.value, ast.Call):
+
+            #
             func_name = extract_name_or_attribute(node.value.func)
 
-            # Check if this is nn.Module or nn.Sequential
+            #
+            ### Check if this is nn.Module or nn.Sequential. ###
+            #
             if func_name in ["nn.Module", "nn.Sequential", "Module", "Sequential"]:
-                # Only handle if we're inside a class (regardless of whether we're in a function)
+                #
+                ### Only handle if we're inside a class (regardless of whether we're in a function). ###
+                #
                 if self.current_model_visit:
+                    #
                     self._handle_module_or_sequential_assignment(var_name, node.value, node.target)
+                    #
                     return
 
         #
         ### Check if this is a layer assignment that should be added to block_layers ###
         #
         if isinstance(node.value, ast.Call):
+
+            #
             func_name = extract_name_or_attribute(node.value.func)
 
-            # Check if this is a known layer type
-            # Try both the full name and just the layer name (e.g., "nn.Linear" and "Linear")
+            #
+            ### Check if this is a known layer type. ###
+            ### Try both the full name and just the layer name (e.g., "nn.Linear" and "Linear"). ###
+            #
             layer_name = func_name.split('.')[-1] if '.' in func_name else func_name
+
+            #
             if func_name in self.layers or layer_name in self.layers:
-                # Use the layer name that exists in the dictionary
+
+                #
+                ### Use the layer name that exists in the dictionary. ###
+                #
                 actual_layer_name = func_name if func_name in self.layers else layer_name
-                # This is a layer assignment, add it to the current block
+
+                #
+                ### This is a layer assignment, add it to the current block. ###
+                #
                 if self.current_model_visit and self.current_function_visit:
+
+                    #
                     current_block_name: str = self.current_model_visit[-1]
                     current_block: lc.ModelBlock = self.model_blocks[current_block_name]
 
-                    # Extract layer parameters
+                    #
+                    ### Extract layer parameters. ###
+                    #
                     instructions_to_do_before: list[lc.FlowControlInstruction] = []
+                    #
                     layer: lc.Layer = extract_layer_call(
                         node=node.value,
                         var_name=var_name,
@@ -1985,22 +2385,178 @@ class ModelAnalyzer(ast.NodeVisitor):
                         instructions_to_do_before=instructions_to_do_before
                     )
 
-                    # Add layer to the current block
+                    #
+                    ### Add layer to the current block. ###
+                    #
                     current_block.block_layers[var_name] = layer
 
-                    # Add any instructions to the current function
+                    #
+                    ### Add any instructions to the current function. ###
+                    #
                     current_function: lc.BlockFunction = current_block.block_functions[self.current_function_visit]
+                    #
                     for instr in instructions_to_do_before:
+                        #
                         current_function.function_flow_control.append(instr)
 
+                    #
                     return
 
         #
         ### Handle as regular assignment ###
         #
-        # Convert AnnAssign to regular Assign for processing
+        ### Convert AnnAssign to regular Assign for processing. ###
+        #
         assign_node = ast.Assign(targets=[node.target], value=node.value)
+        #
         self.visit_Assign(assign_node)
+
+
+    #
+    ### Visit a For node in the AST. ###
+    #
+    def visit_For(self, node: ast.For) -> None:
+        """
+        Visits a for loop node in the AST.
+
+        Args:
+            node (ast.For): The for loop node to visit.
+        """
+
+        #
+        ### Ensure we are inside a function. ###
+        #
+        if not self.current_function_visit:
+            #
+            print(f"\033[1;31m - WARNING: For loop is not inside a function, skipping. - \033[m")
+            #
+            return
+
+        #
+        ### Get the current model block and function. ###
+        #
+        current_block_name: str = self.current_model_visit[-1]
+        current_block: lc.ModelBlock = self.model_blocks[current_block_name]
+        current_function: lc.BlockFunction = current_block.block_functions[self.current_function_visit]
+
+        #
+        ### Extract the iterable expression. ###
+        #
+        instructions_to_do_before: list[lc.FlowControlInstruction] = []
+        iterable_expr: lc.Expression = extract_expression(node.iter, self, instructions_to_do_before)
+
+        #
+        ### Extract the target variable(s). ###
+        #
+        if isinstance(node.target, ast.Tuple):
+            # Multiple iteration variables like (i, xi)
+            target_vars = []
+            for target in node.target.elts:
+                if isinstance(target, ast.Name):
+                    target_vars.append(target.id)
+                else:
+                    # Complex target, create temp variable
+                    temp_target_var = get_next_temp_var_name()
+                    target_expr = extract_expression(target, self, instructions_to_do_before)
+                    instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+                        var_name=temp_target_var,
+                        var_value=target_expr
+                    ))
+                    target_vars.append(temp_target_var)
+        else:
+            # Single iteration variable
+            if isinstance(node.target, ast.Name):
+                target_vars = [node.target.id]
+            else:
+                # Complex target, create temp variable
+                temp_target_var = get_next_temp_var_name()
+                target_expr = extract_expression(node.target, self, instructions_to_do_before)
+                instructions_to_do_before.append(lc.FlowControlVariableAssignment(
+                    var_name=temp_target_var,
+                    var_value=target_expr
+                ))
+                target_vars = [temp_target_var]
+
+        #
+        ### Extract loop body instructions. ###
+        #
+        # Store the current function's instructions
+        original_instructions = current_function.function_flow_control.copy()
+        # Clear the current function's instructions temporarily
+        current_function.function_flow_control.clear()
+
+        # Process the loop body
+        for body_node in node.body:
+            self.visit(body_node)
+
+        # Get the loop body instructions
+        loop_instructions = current_function.function_flow_control.copy()
+
+        # Restore the original instructions
+        current_function.function_flow_control = original_instructions
+
+        #
+        ### Add any instructions that must be executed before the loop. ###
+        #
+        for instruction in instructions_to_do_before:
+            current_function.function_flow_control.append(instruction)
+
+        #
+        ### Create the for loop instruction. ###
+        #
+        for_loop = lc.FlowControlForLoop(
+            iterable_var_name=target_vars[0] if len(target_vars) == 1 else f"({', '.join(target_vars)})",
+            iterator=iterable_expr,
+            flow_control_instructions=loop_instructions
+        )
+
+        #
+        ### Add the for loop to the function flow control. ###
+        #
+        current_function.function_flow_control.append(for_loop)
+
+    #
+    ### Visit an Expr node in the AST. ###
+    #
+    def visit_Expr(self, node: ast.Expr) -> None:
+        """
+        Visits an expression node in the AST.
+        This handles standalone expressions like function calls that don't assign to a variable.
+
+        Args:
+            node (ast.Expr): The expression node to visit.
+        """
+
+        #
+        ### Ensure we are inside a function. ###
+        #
+        if not self.current_function_visit:
+            #
+            print(f"\033[1;31m - WARNING: Expression is not inside a function, skipping. - \033[m")
+            #
+            return
+
+        #
+        ### Get the current model block and function. ###
+        #
+        current_block_name: str = self.current_model_visit[-1]
+        current_block: lc.ModelBlock = self.model_blocks[current_block_name]
+        current_function: lc.BlockFunction = current_block.block_functions[self.current_function_visit]
+
+        #
+        ### Extract the expression and any instructions that must be executed before it. ###
+        #
+        instructions_to_do_before: list[lc.FlowControlInstruction] = []
+        value_expr: lc.Expression = extract_expression(node.value, self, instructions_to_do_before)
+
+        #
+        ### Add any instructions that must be executed before the expression. ###
+        ### Note: extract_expression already handles function calls and creates the appropriate ###
+        ### FlowControlFunctionCall instructions, so we don't need to duplicate that logic here. ###
+        #
+        for instruction in instructions_to_do_before:
+            current_function.function_flow_control.append(instruction)
+
 
     #
     ### Visit a Return node in the AST. ###
@@ -2048,7 +2604,7 @@ class ModelAnalyzer(ast.NodeVisitor):
             if isinstance(return_expr, lc.ExpressionTuple):
 
                 #
-                for rexpr in return_expr.expressions:
+                for rexpr in return_expr.elements:
 
                     #
                     if isinstance(rexpr, lc.ExpressionVariable):
