@@ -83,7 +83,9 @@ class Expression:
         Generic class for manipulating Expressions (in the sense of compilation and control flow).
         """
 
-        # ABSTRACT CLASS
+        #
+        ### ABSTRACT CLASS ###
+        #
         pass
 
     #
@@ -389,8 +391,15 @@ class ExpressionSet(ExpressionConstant):
 
 #
 class ExpressionSlice1D(Expression):
+
     #
-    def __init__(self, start: Optional[ExpressionConstant] = None, end: Optional[ExpressionConstant] = None, step: Optional[ExpressionConstant] = None) -> None:
+    def __init__(
+        self,
+        start: Optional[ExpressionConstant] = None,
+        end: Optional[ExpressionConstant] = None,
+        step: Optional[ExpressionConstant] = None
+    ) -> None:
+
         """
         Represents a slice expression (1D).
 
@@ -410,24 +419,37 @@ class ExpressionSlice1D(Expression):
 
     #
     def __str__(self) -> str:
+
         #
         start_str = str(self.start) if self.start is not None else ""
         end_str = str(self.end) if self.end is not None else ""
         step_str = str(self.step) if self.step is not None else ""
 
-        # Handle different cases for proper slice syntax
+        #
+        ### Handle different cases for proper slice syntax. ###
+        #
         if step_str:
+            #
             return f"[{start_str}:{end_str}:{step_str}]"
+
+        #
         elif end_str:
+            #
             return f"[{start_str}:{end_str}]"
+
+        #
         elif start_str:
+            #
             return f"[{start_str}:]"
+
         else:
+            #
             return "[:]"
 
 
 #
 class ExpressionSliceND(Expression):
+
     #
     def __init__(self, slices: list[ExpressionSlice1D]) -> None:
         """
@@ -517,7 +539,10 @@ class Condition:
         """
         Generic Abstract class for representing Conditions (for FlowControlWhileLoop or FlowControlCondition )
         """
-        # ABSTRACT CLASS
+
+        #
+        ### ABSTRACT CLASS ###
+        #
         pass
 
     #
@@ -538,8 +563,15 @@ class Condition:
 
 #
 class ConditionBinary(Condition):
+
     #
-    def __init__(self, elt1: Expression | Condition, cond_operator: str, elt2: Expression | Condition) -> None:
+    def __init__(
+        self,
+        elt1: Expression | Condition,
+        cond_operator: str,
+        elt2: Expression | Condition
+    ) -> None:
+
         """
         Represents a condition on two elements with one operation. (elt1 cond_operator elt2)
 
@@ -548,9 +580,20 @@ class ConditionBinary(Condition):
             cond_operator (str): Operator of the condition. Can be `and`, `or`, `>`, `<`, `>=`, `<=`, `!=`, `==`
             elt2 (Expression | Condition): right side of the condition
         """
+
+
+        #
+        super().__init__()
+
         #
         self.elt1: Expression | Condition = elt1
-        self.cond_operator: str = cond_operator  # Can be `and`, `or`, `>`, `<`, `>=`, `<=`, `!=`, `==`
+
+        #
+        ### Can be `and`, `or`, `>`, `<`, `>=`, `<=`, `!=`, `==`. ###
+        #
+        self.cond_operator: str = cond_operator
+
+        #
         self.elt2: Expression | Condition = elt2
 
     #
@@ -561,8 +604,14 @@ class ConditionBinary(Condition):
 
 #
 class ConditionUnary(Condition):
+
     #
-    def __init__(self, elt: Expression | Condition, cond_operator: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        elt: Expression | Condition,
+        cond_operator: Optional[str] = None
+    ) -> None:
+
         """
         Represents a condition on one element with potentially an operation. (elt) or (cond_operator elt)
 
@@ -570,9 +619,17 @@ class ConditionUnary(Condition):
             elt (Expression | Condition): Element of the condition
             cond_operator (Optional[str], optional): A potential unary condition operator. Can be `not`. Defaults to None.
         """
+
+        #
+        super().__init__()
+
         #
         self.elt: Expression | Condition = elt
-        self.cond_operator: Optional[str] = cond_operator   # Can be `not`
+
+        #
+        ### Can be `not`. ###
+        #
+        self.cond_operator: Optional[str] = cond_operator
 
     #
     def __str__(self) -> str:
@@ -590,8 +647,11 @@ class ConditionElse(Condition):
     #
     def __init__(self) -> None:
         """
-        _summary_
+        Represents an else condition.
         """
+
+        #
+        super().__init__()
 
         #
         pass
@@ -609,8 +669,15 @@ class ConditionElse(Condition):
 
 #
 class Layer:
+
     #
-    def __init__(self, layer_var_name: str, layer_type: str, layer_parameters_kwargs: dict[str, Expression]) -> None:
+    def __init__(
+        self,
+        layer_var_name: str,
+        layer_type: str,
+        layer_parameters_kwargs: dict[str, Expression]
+    ) -> None:
+
         """
         Can represents a basic Neural Network Layer (from the list `layers.json`), or a block of a model.
 
@@ -619,11 +686,26 @@ class Layer:
             layer_type (str): Name of the layer or the model block.
             layer_parameters_kwargs (dict[str, Expression]): Parameters of the layer.
         """
+
         #
-        self.layer_var_name: str = layer_var_name  # name of the variable to be called from the model block
+        ### name of the variable to be called from the model block. ###
+        #
+        self.layer_var_name: str = layer_var_name
+
+        #
+        ### name of the layer or the model block. ###
+        #
         self.layer_type: str = layer_type
-        self.layer_parameters_kwargs: dict[str, Expression] = layer_parameters_kwargs  # the dict[str, Expression] is for variable name -> variable value
-        self.layer_weights: dict[str, NDArray[np.float32]] = {}  # Will contain all the weights of the layer to init & forward
+
+        #
+        ### the dict[str, Expression] is for variable name -> variable value. ###
+        #
+        self.layer_parameters_kwargs: dict[str, Expression] = layer_parameters_kwargs
+
+        #
+        ### Will contain all the weights of the layer to init & forward. ###
+        #
+        self.layer_weights: dict[str, NDArray[np.float32]] = {}
 
     #
     def __repr__(self) -> str:
@@ -643,6 +725,7 @@ class Layer:
 
 #
 class FlowControlInstruction:
+
     #
     def __init__(self) -> None:
         """
@@ -650,7 +733,9 @@ class FlowControlInstruction:
         A function of a model block like forward() is decomposed in a list of FlowControlInstruction.
         """
 
-        # GENERIC ABSTRACT CLASS
+        #
+        ### GENERIC ABSTRACT CLASS ###
+        #
         pass
 
     #
@@ -666,8 +751,15 @@ class FlowControlInstruction:
 
 #
 class FlowControlVariableInit(FlowControlInstruction):
+
     #
-    def __init__(self, var_name: str, var_type: VarType, var_value: Optional[Expression] = None) -> None:
+    def __init__(
+        self,
+        var_name: str,
+        var_type: VarType,
+        var_value: Optional[Expression] = None
+    ) -> None:
+
         """
         Represents a Variable Initialisation.
 
@@ -676,6 +768,10 @@ class FlowControlVariableInit(FlowControlInstruction):
             var_type (str): Type of the variable
             var_value (Optional[Expression], optional): Potential Initialisation Value. Defaults to None.
         """
+
+        #
+        super().__init__()
+
         #
         self.var_name: str = var_name
         self.var_type: VarType = var_type
@@ -689,6 +785,7 @@ class FlowControlVariableInit(FlowControlInstruction):
 
 #
 class FlowControlVariableAssignment(FlowControlInstruction):
+
     #
     def __init__(self, var_name: str, var_value: Expression) -> None:
         """
@@ -698,6 +795,9 @@ class FlowControlVariableAssignment(FlowControlInstruction):
             var_name (str): Name of the variable.
             var_value (Expression): Value that the variable will take.
         """
+
+        #
+        super().__init__()
 
         #
         self.var_name: str = var_name
@@ -711,8 +811,16 @@ class FlowControlVariableAssignment(FlowControlInstruction):
 
 #
 class FlowControlBasicBinaryOperation(FlowControlInstruction):
+
     #
-    def __init__(self, output_var_name: str, input1_var_name: str, operation: str, input2_var_name: str) -> None:
+    def __init__(
+        self,
+        output_var_name: str,
+        input1_var_name: str,
+        operation: str,
+        input2_var_name: str
+    ) -> None:
+
         """
         Represents a basic binary operation.
 
@@ -724,6 +832,9 @@ class FlowControlBasicBinaryOperation(FlowControlInstruction):
             operation (str): Name of the operation Can be `+`, `-`, `*`, `/`, `./`, `.*`, `^`, `<<`, `>>`, `%`, or more.
             input2_var_name (str): Name of the right operand.
         """
+
+        #
+        super().__init__()
 
         #
         self.output_var_name: str = output_var_name
@@ -739,8 +850,15 @@ class FlowControlBasicBinaryOperation(FlowControlInstruction):
 
 #
 class FlowControlBasicUnaryOperation(FlowControlInstruction):
+
     #
-    def __init__(self, output_var_name: str, operation: str, input_var_name: str) -> None:
+    def __init__(
+        self,
+        output_var_name: str,
+        operation: str,
+        input_var_name: str
+    ) -> None:
+
         """
         Represent a basic unary operation.
 
@@ -751,6 +869,10 @@ class FlowControlBasicUnaryOperation(FlowControlInstruction):
             operation (str): Name of the operation. Can be `-`, `inverse`, or more.
             input_var_name (str): Name of the operand.
         """
+
+        #
+        super().__init__()
+
         #
         self.output_var_name: str = output_var_name
         self.input_var_name: str = input_var_name
@@ -764,8 +886,15 @@ class FlowControlBasicUnaryOperation(FlowControlInstruction):
 
 #
 class FlowControlForLoop(FlowControlInstruction):
+
     #
-    def __init__(self, iterable_var_name: str, iterator: str | Expression, flow_control_instructions: list[FlowControlInstruction]) -> None:
+    def __init__(
+        self,
+        iterable_var_name: str,
+        iterator: str | Expression,
+        flow_control_instructions: list[FlowControlInstruction]
+    ) -> None:
+
         """
         Represents a foor loop.
 
@@ -776,6 +905,10 @@ class FlowControlForLoop(FlowControlInstruction):
             iterator (str): Value of the Iterator.
             flow_control_instructions (list[FlowControlInstruction]): The list of the flow control instructions inside the loop.
         """
+
+        #
+        super().__init__()
+
         #
         self.iterable_var_name: str = iterable_var_name
         self.iterator: str | Expression = iterator
@@ -789,8 +922,14 @@ class FlowControlForLoop(FlowControlInstruction):
 
 #
 class FlowControlWhileLoop(FlowControlInstruction):
+
     #
-    def __init__(self, condition: Condition, flow_control_instructions: list[FlowControlInstruction]) -> None:
+    def __init__(
+        self,
+        condition: Condition,
+        flow_control_instructions: list[FlowControlInstruction]
+    ) -> None:
+
         """
         Represents a while loop. (To avoid !)
 
@@ -798,8 +937,14 @@ class FlowControlWhileLoop(FlowControlInstruction):
             condition (Condition): The condition to stay in the while loop.
             flow_control_instructions (list[FlowControlInstruction]): The list of the flow control instructions inside the loop.
         """
+
+        #
+        super().__init__()
+
         #
         self.condition: Condition = condition
+
+        #
         self.flow_control_instructions: list[FlowControlInstruction] = flow_control_instructions
 
     #
@@ -810,8 +955,15 @@ class FlowControlWhileLoop(FlowControlInstruction):
 
 #
 class FlowControlFunctionCall(FlowControlInstruction):
+
     #
-    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Expression]) -> None:
+    def __init__(
+        self,
+        output_variables: list[str],
+        function_called: str,
+        function_arguments: dict[str, Expression]
+    ) -> None:
+
         """
         Represents a function call. (of a custom function (like a function of pytorch library)).
 
@@ -822,46 +974,85 @@ class FlowControlFunctionCall(FlowControlInstruction):
             function_called (str): Name of the function to call.
             function_arguments (dict[str, Any]): Keyword arguments of the function parameters to call.
         """
+
+        #
+        super().__init__()
+
         #
         self.output_variables: list[str] = output_variables
         self.function_called: str = function_called
-        self.function_arguments: dict[str, Expression] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+
+        #
+        ### the tuple[str, Any] is for (variable type, variable default value). ###
+        #
+        self.function_arguments: dict[str, Expression] = function_arguments
 
     #
     def __str__(self) -> str:
+
         #
-        # Format arguments more naturally for display
-        formatted_args = []
+        ### Format arguments more naturally for display. ###
+        #
+        formatted_args: list[str] = []
 
-        # Handle positional arguments (keys that are numeric strings)
-        positional_args = []
-        keyword_args = []
+        #
+        ### Handle positional arguments (keys that are numeric strings). ###
+        #
+        positional_args: list[tuple[int, Expression]] = []
+        keyword_args: list[tuple[str, Expression]] = []
 
+        #
+        key: str
+        value: Expression
+        #
         for key, value in self.function_arguments.items():
+
+            #
             if key.isdigit():
+                #
                 positional_args.append((int(key), value))
+            #
             else:
+                #
                 keyword_args.append((key, value))
 
-        # Sort positional arguments by index
+        #
+        ### Sort positional arguments by index. ###
+        #
         positional_args.sort(key=lambda x: x[0])
 
-        # Add positional arguments
+        #
+        ### Add positional arguments. ###
+        #
         for _, value in positional_args:
+            #
             formatted_args.append(str(value))
 
-        # Add keyword arguments
+        #
+        ### Add keyword arguments. ###
+        #
         for key, value in keyword_args:
+            #
             formatted_args.append(f"{key}={value}")
 
-        args_str = ", ".join(formatted_args)
+        #
+        args_str: str = ", ".join(formatted_args)
+
+        #
         return f"\t\t * {self.output_variables} = {self.function_called}({args_str})"
 
 
 #
 class FlowControlSubBlockFunctionCall(FlowControlInstruction):
+
     #
-    def __init__(self, output_variables: list[str], function_called: str, function_arguments: dict[str, Expression]) -> None:
+    def __init__(
+        self,
+        output_variables: list[str],
+        function_called: str,
+        function_arguments: dict[str, Expression]
+    ) -> None:
+
         """
         Represents a function call of a function that is defined inside a model class block.
 
@@ -870,10 +1061,20 @@ class FlowControlSubBlockFunctionCall(FlowControlInstruction):
             function_called (str): Name of the function to call.
             function_arguments (dict[str, Any]): Keyword arguments of the function parameters to call.
         """
+
+        #
+        super().__init__()
+
         #
         self.output_variables: list[str] = output_variables
+
+        #
         self.function_called: str = function_called
-        self.function_arguments: dict[str, Expression] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+
+        #
+        ### the tuple[str, Any] is for (variable type, variable default value). ###
+        #
+        self.function_arguments: dict[str, Expression] = function_arguments
 
     #
     def __str__(self) -> str:
@@ -883,8 +1084,15 @@ class FlowControlSubBlockFunctionCall(FlowControlInstruction):
 
 #
 class FlowControlLayerPass(FlowControlInstruction):
+
     #
-    def __init__(self, output_variables: list[str], layer_name: str, layer_arguments: dict[str, Expression]) -> None:
+    def __init__(
+        self,
+        output_variables: list[str],
+        layer_name: str,
+        layer_arguments: dict[str, Expression]
+    ) -> None:
+
         """
         Represents a call to a layer of the model block.
 
@@ -893,10 +1101,18 @@ class FlowControlLayerPass(FlowControlInstruction):
             layer_name (str): Name of the variable that contains the layer.
             layer_arguments (dict[str, Any]): Keywords arguments of the layer parameters to call.
         """
+
+        #
+        super().__init__()
+
         #
         self.output_variables: list[str] = output_variables
         self.layer_name: str = layer_name
-        self.layer_arguments: dict[str, Expression] = layer_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+
+        #
+        ### the tuple[str, Any] is for (variable type, variable default value). ###
+        #
+        self.layer_arguments: dict[str, Expression] = layer_arguments
 
     #
     def __str__(self) -> str:
@@ -906,6 +1122,7 @@ class FlowControlLayerPass(FlowControlInstruction):
 
 #
 class FlowControlReturn(FlowControlInstruction):
+
     #
     def __init__(self, return_variables: list[str]) -> None:
         """
@@ -914,6 +1131,10 @@ class FlowControlReturn(FlowControlInstruction):
         Args:
             return_variables (list[str]): Variable to return.
         """
+
+        #
+        super().__init__()
+
         #
         self.return_variables: list[str] = return_variables
 
@@ -925,8 +1146,13 @@ class FlowControlReturn(FlowControlInstruction):
 
 #
 class FlowControlCondition(FlowControlInstruction):
+
     #
-    def __init__(self, conditions_fn_call: dict[Condition, FlowControlSubBlockFunctionCall]) -> None:
+    def __init__(
+        self,
+        conditions_fn_call: dict[Condition, FlowControlSubBlockFunctionCall]
+    ) -> None:
+
         """
         Represents a condition of the control flow of a function (forward or other of a model block).
         Each of the paths in the conditions will be moved inside a sub-function (aside the foward function) of the model block, and this layer will be created and added into the current model block.
@@ -934,6 +1160,9 @@ class FlowControlCondition(FlowControlInstruction):
         Args:
             conditions_fn_call (dict[Condition, FlowControlSubBlockFunctionCall]): Dictionnary of couples (Condition, FlowControlSubBlockFunctionCall), where intuitively, each FlowControlSubBlockFunctionCall is associated to its corresponding Condition.
         """
+
+        #
+        super().__init__()
 
         #
         self.conditions_fn_call: dict[Condition, FlowControlSubBlockFunctionCall] = conditions_fn_call
@@ -952,6 +1181,7 @@ class FlowControlCondition(FlowControlInstruction):
 
 #
 class BlockFunction:
+
     #
     def __init__(
         self,
@@ -975,12 +1205,27 @@ class BlockFunction:
         """
 
         #
-        self.model_block: ModelBlock = model_block  # TO access the block variables / layers
+        ### To access the block variables / layers. ###
+        #
+        self.model_block: ModelBlock = model_block
+
         #
         self.function_name: str = function_name
-        self.function_arguments: dict[str, tuple[VarType, Expression]] = function_arguments  # the tuple[str, Any] is for (variable type, variable default value)
+
         #
-        self.function_flow_control: list[FlowControlInstruction] = []  # To complete while analysis
+        ### the tuple[str, Any] is for (variable type, variable default value). ###
+        #
+        self.function_arguments: dict[str, tuple[VarType, Expression]] = function_arguments
+
+        #
+        ### To complete while analysis. ###
+        #
+        self.function_flow_control: list[FlowControlInstruction] = []
+
+        #
+        ### To complete before real function flow, and before the default argument values instructions. ###
+        #
+        self.complex_default_argument_values_instructions_to_do_before_real_function_flow: Optional[dict[str, list[FlowControlInstruction]]] = complex_default_argument_values_instructions_to_do_before_real_function_flow
 
     #
     def __repr__(self) -> str:
@@ -995,6 +1240,7 @@ class BlockFunction:
 
 #
 class ModelBlock:
+
     #
     def __init__(self, block_name: str) -> None:
         """
@@ -1012,17 +1258,31 @@ class ModelBlock:
 
         #
         self.block_name: str = block_name
-        self.block_parameters: dict[str, tuple[VarType, Expression]] = {}  # the tuple[str, Any] is for (variable type, variable default value)
+
         #
-        self.block_weights: dict[str, list[int | str]] = {}  # indicate the weights of this model block, with its dimensions; indexed by the variable name of the weights.
+        ### the tuple[str, Any] is for (variable type, variable default value). ###
+        #
+        self.block_parameters: dict[str, tuple[VarType, Expression]] = {}
+
+        #
+        ### indicate the weights of this model block, with its dimensions; indexed by the variable name of the weights. ###
+        #
+        self.block_weights: dict[str, list[int | str]] = {}
+
         #
         self.block_layers: dict[str, Layer] = {}
+
         #
         self.block_functions: dict[str, BlockFunction] = {
-            # TO ADD: the foward pass (during the code analysis)
+            #
+            ### TO ADD: the foward pass (during the code analysis). ###
+            #
         }
+
         #
-        self.block_variables: dict[str, tuple[VarType, Expression]] = {}  # the tuple[str, Any] is for (variable type, variable value)
+        ### the tuple[str, Any] is for (variable type, variable value). ###
+        #
+        self.block_variables: dict[str, tuple[VarType, Expression]] = {}
 
     #
     def __repr__(self) -> str:
@@ -1042,6 +1302,7 @@ class ModelBlock:
         Raises:
             AttributeError: Always raises an error as this method should not be used
         """
+
         #
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'. Layer access should be through execution context.")
 
@@ -1069,6 +1330,7 @@ class Language_Model:
             - main_block (str): id of the main block, given in sys.argv with `--main-block <MainBlockName>`
             - global constants (dict[str, tuple[str, Any]])
         """
+
         #
         self.model_blocks: dict[str, ModelBlock] = {}
         #
@@ -1094,17 +1356,26 @@ class Language_Model:
 
     #
     def __str__(self) -> str:
+
         #
         text: str = "\n\n" + "-" * 26 + "\n -- Model Architecture --\n" + "-" * 26 + "\n\n"
+
+        #
         text += "Global constants:\n"
+
         #
         constant_name: str
+        #
         for constant_name in self.global_constants:
             #
             text += f"  - {constant_name} = {self.global_constants[constant_name]}\n"
 
         #
+        text += "\nModel blocks:\n"
+
+        #
         for _block_name, block in self.model_blocks.items():
+            #
             text += block.__str__()
 
         #
