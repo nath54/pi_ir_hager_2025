@@ -136,6 +136,8 @@ def extract_expression(
         start_expr = extract_expression(node.lower, analyzer, instructions_to_do_before) if node.lower is not None else None
         end_expr = extract_expression(node.upper, analyzer, instructions_to_do_before) if node.upper is not None else None
         step_expr = extract_expression(node.step, analyzer, instructions_to_do_before) if node.step is not None else None
+
+        #
         return lc.ExpressionSlice1D(start=start_expr, end=end_expr, step=step_expr)
 
     #
@@ -152,10 +154,13 @@ def extract_expression(
         ### Handle single index expressions like [0] or [None] ###
         #
         value_expr = extract_expression(node.value, analyzer, instructions_to_do_before)
+
+        #
         return lc.ExpressionSlice1D(start=value_expr, end=None, step=None)
 
     #
     elif isinstance(node, ast.BinOp):
+
         #
         ### Create temporary variable and intermediate instruction to store the binary operation result in instructions_to_do_before. ###
         #
@@ -168,16 +173,22 @@ def extract_expression(
         if not isinstance(left_expr, lc.ExpressionVariable):
             #
             left_instruction_var_name: str = get_next_temp_var_name()
+            #
             instruction_left_expr: lc.FlowControlVariableAssignment = lc.FlowControlVariableAssignment(var_name=left_instruction_var_name, var_value=left_expr)
+            #
             instructions_to_do_before.append(instruction_left_expr)
+            #
             left_expr = lc.ExpressionVariable(var_name=left_instruction_var_name)
 
         #
         if not isinstance(right_expr, lc.ExpressionVariable):
             #
             right_instruction_var_name: str = get_next_temp_var_name()
+            #
             instruction_right_expr: lc.FlowControlVariableAssignment = lc.FlowControlVariableAssignment(var_name=right_instruction_var_name, var_value=right_expr)
+            #
             instructions_to_do_before.append(instruction_right_expr)
+            #
             right_expr = lc.ExpressionVariable(var_name=right_instruction_var_name)
 
         #
@@ -189,21 +200,38 @@ def extract_expression(
         ### Convert operator to string ###
         #
         operator_str: str = node.op.__class__.__name__.lower()
+
+        #
         if operator_str == "add":
+            #
             operator_str = "+"
+        #
         elif operator_str == "sub":
+            #
             operator_str = "-"
+        #
         elif operator_str == "mult":
+            #
             operator_str = "*"
+        #
         elif operator_str == "div":
+            #
             operator_str = "/"
+        #
         elif operator_str == "mod":
+            #
             operator_str = "%"
+        #
         elif operator_str == "pow":
+            #
             operator_str = "^"
+        #
         elif operator_str == "lshift":
+            #
             operator_str = "<<"
+        #
         elif operator_str == "rshift":
+            #
             operator_str = ">>"
 
         #
@@ -233,8 +261,11 @@ def extract_expression(
         if not isinstance(operand_expr, lc.ExpressionVariable):
             #
             operand_instruction_var_name: str = get_next_temp_var_name()
+            #
             instruction_operand_expr: lc.FlowControlVariableAssignment = lc.FlowControlVariableAssignment(var_name=operand_instruction_var_name, var_value=operand_expr)
+            #
             instructions_to_do_before.append(instruction_operand_expr)
+            #
             operand_expr = lc.ExpressionVariable(var_name=operand_instruction_var_name)
 
         #
@@ -246,13 +277,22 @@ def extract_expression(
         ### Convert operator to string ###
         #
         operator_str: str = node.op.__class__.__name__.lower()
+
+        #
         if operator_str == "uadd":
+            #
             operator_str = "+"
+        #
         elif operator_str == "usub":
+            #
             operator_str = "-"
+        #
         elif operator_str == "not":
+            #
             operator_str = "not"
+        #
         elif operator_str == "invert":
+            #
             operator_str = "~"
 
         #
@@ -280,6 +320,7 @@ def extract_expression(
 
         #
         if is_library_call:
+
             #
             ### For library calls, create a simple function call expression ###
             #
@@ -289,14 +330,24 @@ def extract_expression(
             ### Prepare arguments for the library call ###
             #
             arg_exprs: list[lc.Expression] = []
+
+            #
             for arg in node.args:
+
+                #
                 arg_expr = extract_expression(arg, analyzer, instructions_to_do_before)
+                #
                 arg_exprs.append(arg_expr)
 
             #
             kwarg_exprs: dict[str, lc.Expression] = {}
+
+            #
             for kw in node.keywords:
+
+                #
                 if kw.arg is not None:
+                    #
                     kwarg_exprs[kw.arg] = extract_expression(kw.value, analyzer, instructions_to_do_before)
 
             #
@@ -310,6 +361,7 @@ def extract_expression(
             ### Add positional arguments with proper names. ###
             #
             for i, arg in enumerate(arg_exprs):
+                #
                 function_arguments[str(i)] = arg
 
             #
@@ -504,6 +556,7 @@ def extract_expression(
 
     #
     elif isinstance(node, ast.Subscript):
+
         #
         ### Handle subscript expressions like x[0], tensor[:, :, 0], etc. ###
         #
@@ -518,18 +571,39 @@ def extract_expression(
         ### Extract the slice/index ###
         #
         slice_expr: lc.Expression
+
+        #
         if isinstance(node.slice, ast.Tuple):
-            # Multi-dimensional slice like [:, :, 0]
+
+            #
+            ### Multi-dimensional slice like [:, :, 0] ###
+            #
             slices = []
+
+            #
             for dim in node.slice.elts:
+
+                #
                 dim_expr = extract_expression(dim, analyzer, instructions_to_do_before)
+
+                #
                 if isinstance(dim_expr, lc.ExpressionSlice1D):
+                    #
                     slices.append(dim_expr)
+
+                #
                 else:
-                    # Convert single index to slice
+                    #
+                    ### Convert single index to slice ###
+                    #
                     slices.append(lc.ExpressionSlice1D(start=dim_expr, end=None, step=None))
+
+            #
             slice_expr = lc.ExpressionSliceND(slices=slices)
+
+        #
         else:
+            #
             slice_expr = extract_expression(node.slice, analyzer, instructions_to_do_before)
 
         #
@@ -553,6 +627,7 @@ def extract_expression(
 
     #
     elif isinstance(node, ast.Attribute):
+
         #
         ### Handle attribute access like self.linear1, tensor.shape, etc. ###
         #
@@ -584,6 +659,7 @@ def extract_expression(
 
     #
     elif isinstance(node, ast.ListComp):
+
         #
         ### Handle list comprehensions like [module_c(xi) for (xi, module_c) in zip(...)] ###
         #
@@ -601,50 +677,90 @@ def extract_expression(
             var_value=lc.ExpressionConstantList(elements=[])
         ))
 
-        # Handle the generator/iterator part
+        #
+        ### Handle the generator/iterator part ###
+        #
         if len(node.generators) == 1:
+
+            #
             generator = node.generators[0]
 
-            # Extract the iterable expression
+            #
+            ### Extract the iterable expression ###
+            #
             iterable_expr: lc.Expression = extract_expression(generator.iter, analyzer, instructions_to_do_before)
 
-            # Handle the target (iteration variables)
+            #
+            ### Handle the target (iteration variables) ###
+            #
             if isinstance(generator.target, ast.Tuple):
-                # Multiple iteration variables like (xi, module_c)
+
+                #
+                ### Multiple iteration variables like (xi, module_c) ###
+                #
                 target_vars = []
+
+                #
                 for target in generator.target.elts:
+
+                    #
                     if isinstance(target, ast.Name):
+                        #
                         target_vars.append(target.id)
+                    #
                     else:
-                        # Complex target, create temp variable
+                        #
+                        ### Complex target, create temp variable ###
+                        #
                         temp_target_var = get_next_temp_var_name()
+                        #
                         target_expr = extract_expression(target, analyzer, instructions_to_do_before)
+                        #
                         instructions_to_do_before.append(lc.FlowControlVariableAssignment(
                             var_name=temp_target_var,
                             var_value=target_expr
                         ))
+                        #
                         target_vars.append(temp_target_var)
+
+            #
             else:
-                # Single iteration variable
+
+                #
+                ### Single iteration variable ###
+                #
                 if isinstance(generator.target, ast.Name):
+                    #
                     target_vars = [generator.target.id]
+                #
                 else:
-                    # Complex target, create temp variable
+                    #
+                    ### Complex target, create temp variable ###
+                    #
                     temp_target_var = get_next_temp_var_name()
+                    #
                     target_expr = extract_expression(generator.target, analyzer, instructions_to_do_before)
+                    #
                     instructions_to_do_before.append(lc.FlowControlVariableAssignment(
                         var_name=temp_target_var,
                         var_value=target_expr
                     ))
+                    #
                     target_vars = [temp_target_var]
 
-            # Create a for loop to iterate over the iterable
+            #
+            ### Create a for loop to iterate over the iterable ###
+            #
             loop_instructions = []
 
-            # Extract the element expression (this will now have access to iteration variables)
+            #
+            ### Extract the element expression (this will now have access to iteration variables) ###
+            #
             element_expr: lc.Expression = extract_expression(node.elt, analyzer, loop_instructions)
 
-            # Append the element to the result list
+            #
+            ### Append the element to the result list ###
+            #
             loop_instructions.append(lc.FlowControlFunctionCall(
                 output_variables=[],
                 function_called="append",
@@ -654,34 +770,51 @@ def extract_expression(
                 }
             ))
 
-            # Create the for loop instruction
+            #
+            ### Create the for loop instruction ###
+            #
             for_loop = lc.FlowControlForLoop(
                 iterable_var_name=target_vars[0] if len(target_vars) == 1 else f"({', '.join(target_vars)})",
                 iterator=iterable_expr,
                 flow_control_instructions=loop_instructions
             )
 
+            #
             instructions_to_do_before.append(for_loop)
 
+        #
         else:
-            # Multiple generators - for now, handle only the first one
-            # This is a simplified case
+            #
+            ### Multiple generators - for now, handle only the first one ###
+            ### This is a simplified case ###
+            #
             generator = node.generators[0]
+            #
             iterable_expr: lc.Expression = extract_expression(generator.iter, analyzer, instructions_to_do_before)
 
+            #
             if isinstance(generator.target, ast.Name):
+                #
                 target_var = generator.target.id
+            #
             else:
+                #
                 target_var = get_next_temp_var_name()
+                #
                 target_expr = extract_expression(generator.target, analyzer, instructions_to_do_before)
+                #
                 instructions_to_do_before.append(lc.FlowControlVariableAssignment(
                     var_name=target_var,
                     var_value=target_expr
                 ))
 
-            # Create a simple loop
+            #
+            ### Create a simple loop ###
+            #
             loop_instructions = []
+            #
             element_expr: lc.Expression = extract_expression(node.elt, analyzer, loop_instructions)
+            #
             loop_instructions.append(lc.FlowControlFunctionCall(
                 output_variables=[],
                 function_called="append",
@@ -691,12 +824,14 @@ def extract_expression(
                 }
             ))
 
+            #
             for_loop = lc.FlowControlForLoop(
                 iterable_var_name=target_var,
                 iterator=iterable_expr,
                 flow_control_instructions=loop_instructions
             )
 
+            #
             instructions_to_do_before.append(for_loop)
 
         #
@@ -740,6 +875,7 @@ def extract_condition(
 
     #
     if isinstance(node, ast.Compare):
+
         #
         ### Handle comparison operations ###
         #
@@ -782,6 +918,7 @@ def extract_condition(
 
     #
     elif isinstance(node, ast.BoolOp):
+
         #
         ### Handle boolean operations (and, or) ###
         #
@@ -860,10 +997,15 @@ def is_layer_instantiation(node: ast.Call, analyzer: "ModelAnalyzer") -> bool:
     ### Extract the function name ###
     #
     if isinstance(node.func, ast.Name):
+        #
         function_name: str = node.func.id
+    #
     elif isinstance(node.func, ast.Attribute):
+        #
         function_name: str = node.func.attr
+    #
     else:
+        #
         return False
 
     #
@@ -1366,6 +1508,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### For each layer, add flow control instructions. ###
         #
         for i, layer in enumerate(layers):
+
             #
             output_var: str = f"out_{i}"
 
@@ -1432,7 +1575,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Ensure we are inside a class ###
         #
         if not self.current_model_visit:
+            #
             print(f"\033[1;31m - WARNING: nn.Module/nn.Sequential assignment `{var_name}` is not inside a class, skipping. - \033[m")
+            #
             return
 
         #
@@ -1547,6 +1692,8 @@ class ModelAnalyzer(ast.NodeVisitor):
                                     layer_type=layer_type,  # This will be the model block name (e.g., "ConvEncode")
                                     layer_parameters_kwargs={}
                                 )
+
+                                #
                                 layers.append(sub_module_layer)
 
                 #
@@ -1750,6 +1897,7 @@ class ModelAnalyzer(ast.NodeVisitor):
 
         #
         sub_block: lc.ModelBlock = lc.ModelBlock(block_name=sub_block_name)
+        #
         self.model_blocks[sub_block_name] = sub_block
 
         #
@@ -1761,6 +1909,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Extract loop details. ###
         #
         instructions_to_do_before: list[lc.FlowControlInstruction] = []
+        #
         iterator: Optional[lc.Expression] | str = extract_expression(for_node.iter, self, instructions_to_do_before) or for_node.iter.id
 
         #
@@ -1780,6 +1929,8 @@ class ModelAnalyzer(ast.NodeVisitor):
 
                 #
                 instructions_to_do_before_layer: list[lc.FlowControlInstruction] = []
+
+                #
                 layer: lc.Layer = extract_layer_call(
                     node=stmt.value,
                     var_name=f"{len(layers)}",
@@ -1787,6 +1938,7 @@ class ModelAnalyzer(ast.NodeVisitor):
                     analyzer=self,
                     instructions_to_do_before=instructions_to_do_before_layer
                 )
+
                 #
                 layers.append(layer)
 
@@ -1889,9 +2041,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         ### Calculate the number of positional args with defaults. ###
         #
-        num_positional_with_defaults = len(defaults)
-        num_positional_args = len(node.args.args)
-        num_positional_without_defaults = num_positional_args - num_positional_with_defaults
+        num_positional_with_defaults: int = len(defaults)
+        num_positional_args: int = len(node.args.args)
+        num_positional_without_defaults: int = num_positional_args - num_positional_with_defaults
 
         #
         arg: ast.arg
@@ -2449,32 +2601,56 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Extract the target variable(s). ###
         #
         if isinstance(node.target, ast.Tuple):
-            # Multiple iteration variables like (i, xi)
+
+            #
+            ### Multiple iteration variables like (i, xi) ###
+            #
             target_vars = []
+
+            #
             for target in node.target.elts:
+
+                #
                 if isinstance(target, ast.Name):
+                    #
                     target_vars.append(target.id)
+                #
                 else:
-                    # Complex target, create temp variable
+                    #
+                    ### Complex target, create temp variable ###
+                    #
                     temp_target_var = get_next_temp_var_name()
+                    #
                     target_expr = extract_expression(target, self, instructions_to_do_before)
+                    #
                     instructions_to_do_before.append(lc.FlowControlVariableAssignment(
                         var_name=temp_target_var,
                         var_value=target_expr
                     ))
+                    #
                     target_vars.append(temp_target_var)
+        #
         else:
-            # Single iteration variable
+            #
+            ### Single iteration variable ###
+            #
             if isinstance(node.target, ast.Name):
+                #
                 target_vars = [node.target.id]
+            #
             else:
-                # Complex target, create temp variable
+                #
+                ### Complex target, create temp variable ###
+                #
                 temp_target_var = get_next_temp_var_name()
+                #
                 target_expr = extract_expression(node.target, self, instructions_to_do_before)
+                #
                 instructions_to_do_before.append(lc.FlowControlVariableAssignment(
                     var_name=temp_target_var,
                     var_value=target_expr
                 ))
+                #
                 target_vars = [temp_target_var]
 
         #
@@ -2514,6 +2690,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Add the for loop to the function flow control. ###
         #
         current_function.function_flow_control.append(for_loop)
+
 
     #
     ### Visit an Expr node in the AST. ###
@@ -2555,6 +2732,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### FlowControlFunctionCall instructions, so we don't need to duplicate that logic here. ###
         #
         for instruction in instructions_to_do_before:
+            #
             current_function.function_flow_control.append(instruction)
 
 
@@ -2582,7 +2760,9 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Get the current model block and function. ###
         #
         current_block_name: str = self.current_model_visit[-1]
+        #
         current_block: lc.ModelBlock = self.model_blocks[current_block_name]
+        #
         current_function: lc.BlockFunction = current_block.block_functions[self.current_function_visit]
 
         #

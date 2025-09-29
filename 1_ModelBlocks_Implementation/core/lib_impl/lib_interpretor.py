@@ -2872,179 +2872,317 @@ class LanguageModel_ForwardInterpreter:
         ### Linear algebra functions ###
         #
         elif function_name == "matmul" or function_name == "mm":
-            # torch.matmul() or np.matmul()
+            #
+            ### torch.matmul() or np.matmul() ###
+            #
             a = args.get("a", list(args.values())[0])
             b = args.get("b", list(args.values())[1])
+            #
             return np.matmul(a, b)
+
         #
         elif function_name == "bmm":
-            # torch.bmm() - batch matrix multiplication
+            #
+            ### torch.bmm() - batch matrix multiplication ###
+            #
             a = args.get("a", list(args.values())[0])
             b = args.get("b", list(args.values())[1])
+
+            #
             return np.matmul(a, b)
 
         #
         ### Activation functions ###
         #
         elif function_name == "softmax":
-            # torch.softmax() or F.softmax()
+            #
+            ### torch.softmax() or F.softmax() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", -1)
+            #
             if hasattr(tensor, 'softmax'):
+                #
                 return tensor.softmax(dim=dim)
+            #
             else:
-                # Manual softmax implementation
+                #
+                ### Manual softmax implementation ###
+                #
                 exp_tensor = np.exp(tensor - np.max(tensor, axis=dim, keepdims=True))
+
+                #
                 return exp_tensor / np.sum(exp_tensor, axis=dim, keepdims=True)
+
         #
         elif function_name == "relu":
-            # torch.relu() or F.relu()
+            #
+            ### torch.relu() or F.relu() ###
+            #
             tensor = list(args.values())[0]
+            #
             if hasattr(tensor, 'relu'):
+                #
                 return tensor.relu()
+            #
             else:
+                #
                 return np.maximum(0, tensor)
+
         #
         elif function_name == "sigmoid":
-            # torch.sigmoid() or F.sigmoid()
+            #
+            ### torch.sigmoid() or F.sigmoid() ###
+            #
             tensor = list(args.values())[0]
+            #
             if hasattr(tensor, 'sigmoid'):
+                #
                 return tensor.sigmoid()
+            #
             else:
+                #
                 return 1 / (1 + np.exp(-tensor))
 
         #
         ### Statistical functions ###
         #
         elif function_name == "mean":
-            # torch.mean() or np.mean()
+            #
+            ### torch.mean() or np.mean() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", None)
+            #
             if hasattr(tensor, 'mean'):
+                #
                 if dim is not None:
+                    #
                     return tensor.mean(dim=dim)
+                #
                 else:
+                    #
                     return tensor.mean()
+            #
             else:
+                #
                 if dim is not None:
+                    #
                     return np.mean(tensor, axis=dim)
+                #
                 else:
+                    #
                     return np.mean(tensor)
+
         #
         elif function_name == "sum":
-            # torch.sum() or np.sum()
+            #
+            ### torch.sum() or np.sum() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", None)
+            #
             if hasattr(tensor, 'sum'):
+                #
                 if dim is not None:
+                    #
                     return tensor.sum(dim=dim)
+                #
                 else:
+                    #
                     return tensor.sum()
+            #
             else:
+                #
                 if dim is not None:
+                    #
                     return np.sum(tensor, axis=dim)
+                #
                 else:
+                    #
                     return np.sum(tensor)
+
         #
         elif function_name == "max":
-            # torch.max() or np.max()
+            #
+            ### torch.max() or np.max() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", None)
+            #
             if hasattr(tensor, 'max'):
+                #
                 if dim is not None:
+                    #
                     return tensor.max(dim=dim)
+                #
                 else:
+                    #
                     return tensor.max()
+            #
             else:
+                #
                 if dim is not None:
+                    #
                     return np.max(tensor, axis=dim)
+                #
                 else:
+                    #
                     return np.max(tensor)
+
         #
         elif function_name == "min":
-            # torch.min() or np.min()
+            #
+            ### torch.min() or np.min() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", None)
+            #
             if hasattr(tensor, 'min'):
+                #
                 if dim is not None:
+                    #
                     return tensor.min(dim=dim)
+                #
                 else:
+                    #
                     return tensor.min()
+            #
             else:
+                #
                 if dim is not None:
+                    #
                     return np.min(tensor, axis=dim)
+                #
                 else:
+                    #
                     return np.min(tensor)
 
         #
         ### Shape manipulation functions ###
         #
         elif function_name == "reshape":
-            # torch.reshape() or np.reshape()
+            #
+            ### torch.reshape() or np.reshape() ###
+            #
             tensor = list(args.values())[0]
+            #
             shape = list(args.values())[1]
+            #
             if hasattr(tensor, 'reshape'):
+                #
                 return tensor.reshape(shape)
+            #
             else:
+                #
                 return np.reshape(tensor, shape)
+
         #
         elif function_name == "flatten":
-            # torch.flatten() or np.flatten()
+            #
+            ### torch.flatten() or np.flatten() ###
+            #
             tensor = list(args.values())[0]
+            #
             start_dim = args.get("start_dim", 0)
+            #
             end_dim = args.get("end_dim", -1)
+            #
             if hasattr(tensor, 'flatten'):
+                #
                 return tensor.flatten(start_dim=start_dim, end_dim=end_dim)
+            #
             else:
+                #
                 return np.flatten(tensor)
 
         #
         ### Indexing and slicing functions ###
         #
         elif function_name == "index_select":
-            # torch.index_select()
+            #
+            ### torch.index_select() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", 0)
+            #
             index = args.get("index", list(args.values())[1])
+            #
             if hasattr(tensor, 'index_select'):
+                #
                 return tensor.index_select(dim=dim, index=index)
+            #
             else:
+                #
                 return np.take(tensor, index, axis=dim)
+
         #
         elif function_name == "gather":
-            # torch.gather()
+            #
+            ### torch.gather() ###
+            #
             tensor = list(args.values())[0]
+            #
             dim = args.get("dim", 0)
+            #
             index = args.get("index", list(args.values())[1])
+            #
             if hasattr(tensor, 'gather'):
+                #
                 return tensor.gather(dim=dim, index=index)
+            #
             else:
-                # Manual gather implementation
+                #
+                ### Manual gather implementation ###
+                #
                 return np.take_along_axis(tensor, index, axis=dim)
 
         #
         ### Utility functions ###
         #
         elif function_name == "ones":
-            # torch.ones() or np.ones()
+            #
+            ### torch.ones() or np.ones() ###
+            #
             shape = list(args.values())[0]
+            #
             dtype = args.get("dtype", np.float32)
+            #
             return np.ones(shape, dtype=dtype)
+
         #
         elif function_name == "zeros":
-            # torch.zeros() or np.zeros()
+            #
+            ### torch.zeros() or np.zeros() ###
+            #
             shape = list(args.values())[0]
+            #
             dtype = args.get("dtype", np.float32)
+            #
             return np.zeros(shape, dtype=dtype)
+
         #
         elif function_name == "randn":
-            # torch.randn() or np.random.randn()
+            #
+            ### torch.randn() or np.random.randn() ###
+            #
             shape = list(args.values())[0]
+            #
             return np.random.randn(*shape).astype(np.float32)
+
         #
         elif function_name == "rand":
-            # torch.rand() or np.random.rand()
+            #
+            ### torch.rand() or np.random.rand() ###
+            #
             shape = list(args.values())[0]
+            #
             return np.random.rand(*shape).astype(np.float32)
 
         #
@@ -3336,6 +3474,7 @@ class ModelInterpreterUtils:
                 #
                 defined_variables.update(block_function.function_arguments.keys())
 
+                #
                 for instruction in block_function.function_flow_control:
                     #
                     issues.extend(
@@ -3348,18 +3487,31 @@ class ModelInterpreterUtils:
                         )
                     )
 
+                    #
                     ### Update defined variables based on instruction ###
+                    #
                     if isinstance(instruction, lc.FlowControlVariableAssignment):
+                        #
                         defined_variables.add(instruction.var_name)
+                    #
                     elif isinstance(instruction, lc.FlowControlBasicBinaryOperation):
+                        #
                         defined_variables.add(instruction.output_var_name)
+                    #
                     elif isinstance(instruction, lc.FlowControlBasicUnaryOperation):
+                        #
                         defined_variables.add(instruction.output_var_name)
+                    #
                     elif isinstance(instruction, lc.FlowControlFunctionCall):
+                        #
                         defined_variables.update(instruction.output_variables)
+                    #
                     elif isinstance(instruction, lc.FlowControlSubBlockFunctionCall):
+                        #
                         defined_variables.update(instruction.output_variables)
+                    #
                     elif isinstance(instruction, lc.FlowControlLayerPass):
+                        #
                         defined_variables.update(instruction.output_variables)
 
         #
@@ -3394,6 +3546,7 @@ class ModelInterpreterUtils:
 
         #
         if defined_variables is None:
+            #
             defined_variables = set()
 
         #
@@ -3447,6 +3600,7 @@ class ModelInterpreterUtils:
         ### Recursively check nested instructions. ###
         #
         if hasattr(instruction, 'flow_control_instructions'):
+
             #
             for nested_instruction in instruction.flow_control_instructions:  # type: ignore
                 #
@@ -3479,40 +3633,71 @@ class ModelInterpreterUtils:
         ### Check if it's a standard variable in the model structure ###
         #
         if (var_name in model_block.block_parameters or
-                var_name in model_block.block_variables or
-                var_name in model_block.block_layers or
+            var_name in model_block.block_variables or
+            var_name in model_block.block_layers or
             var_name in language_model.global_constants):
+
+            #
             return True
 
         #
         ### Check if it's a temporary variable created in flow control instructions ###
         #
         for function in model_block.block_functions.values():
+
+            #
             for instruction in function.function_flow_control:
+
+                #
                 if isinstance(instruction, lc.FlowControlVariableAssignment):
+                    #
                     if instruction.var_name == var_name:
+                        #
                         return True
+
+                #
                 elif isinstance(instruction, lc.FlowControlBasicBinaryOperation):
+                    #
                     if instruction.output_var_name == var_name:
+                        #
                         return True
+
+                #
                 elif isinstance(instruction, lc.FlowControlBasicUnaryOperation):
+                    #
                     if instruction.output_var_name == var_name:
+                        #
                         return True
+
+                #
                 elif isinstance(instruction, lc.FlowControlFunctionCall):
+                    #
                     if var_name in instruction.output_variables:
+                        #
                         return True
+
+                #
                 elif isinstance(instruction, lc.FlowControlSubBlockFunctionCall):
+                    #
                     if var_name in instruction.output_variables:
+                        #
                         return True
+
+                #
                 elif isinstance(instruction, lc.FlowControlLayerPass):
+                    #
                     if var_name in instruction.output_variables:
+                        #
                         return True
 
         #
         ### Check if it's a function argument ###
         #
         for function in model_block.block_functions.values():
+
+            #
             if var_name in function.function_arguments:
+                #
                 return True
 
         #
@@ -3554,6 +3739,7 @@ class ModelInterpreterUtils:
         summary.append(f"\nModel Blocks ({len(language_model.model_blocks)}):")
         #
         for block_name, model_block in language_model.model_blocks.items():
+
             #
             is_main = " (MAIN)" if block_name == language_model.main_block else ""
             #
