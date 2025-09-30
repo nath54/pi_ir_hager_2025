@@ -100,6 +100,29 @@ class ExecutionContext:
         return var_name in self.variables
 
     #
+    def get_variable_type(self, var_name: str) -> lc.VarType:
+        """
+        Get the type of a variable from the context.
+
+        Args:
+            var_name (str): Name of the variable
+
+        Returns:
+            lc.VarType: Type of the variable
+
+        Raises:
+            KeyError: If variable doesn't exist
+        """
+
+        #
+        if var_name not in self.variable_types:
+            #
+            raise KeyError(f"Variable '{var_name}' not found in execution context")
+
+        #
+        return self.variable_types[var_name]
+
+    #
     def copy(self) -> "ExecutionContext":
         """
         Create a copy of the execution context.

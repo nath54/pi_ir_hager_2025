@@ -10,7 +10,7 @@ import torch
 from torch import nn
 #z
 from lib_extract_model_architecture import extract_from_file, get_pytorch_main_model
-from script_test_link_weights_to_architecture import link_weights
+from lib_test_link_weights_to_architecture import link_weights
 import core.lib_impl.lib_classes as lc
 import core.lib_impl.lib_layers as ll
 import core.lib_impl.lib_interpretor as li

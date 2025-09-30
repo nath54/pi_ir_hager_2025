@@ -2946,6 +2946,12 @@ def extract_from_file(filepath: str, main_block_name: str = "") -> lc.Language_M
     analyzer.cleaning_and_error_detections()
 
     #
+    # If no main_block was specified, automatically detect it
+    if analyzer.main_block == "" and analyzer.model_blocks:
+        # Use the first (and typically only) model block as the main block
+        analyzer.main_block = list(analyzer.model_blocks.keys())[0]
+
+    #
     lang1: lc.Language_Model = lc.Language_Model()
     lang1.main_block = analyzer.main_block
     lang1.model_blocks = analyzer.model_blocks
