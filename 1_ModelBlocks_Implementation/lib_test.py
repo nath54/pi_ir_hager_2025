@@ -47,6 +47,213 @@ class Tester:
 
 
     #
+    def verify_model_extraction_and_linking(
+        self,
+        l_model: lc.Language_Model,
+        pt_model: nn.Module,
+        all_layer_infos: dict[str, ll.BaseLayerInfo]
+    ) -> tuple[bool, str]:
+
+        #
+        ### Verify each pytorch layer (excepted non inferences one like dropout is there). ###
+        #
+
+        #
+        ### Get all PyTorch layers that should be present in the extracted model. ###
+        #
+        pytorch_layers: list[tuple[str, nn.Module]] = []
+        #
+        name: str
+        module: nn.Module
+        #
+        for name, module in pt_model.named_modules():
+            #
+            if name and module.__class__.__name__ in all_layer_infos:
+                #
+                pytorch_layers.append((name, module))
+
+        #
+        ### Get all extracted layers from the language model. ###
+        #
+        extracted_layers: list[tuple[str, lc.Layer]] = []
+
+        #
+        for block_name, block in l_model.model_blocks.items():
+
+            #
+            for layer_name, layer in block.block_layers.items():
+
+                #
+                if layer.layer_type in all_layer_infos:
+                    #
+                    extracted_layers.append((f"{block_name}.{layer_name}", layer))
+
+        #
+        ### 1. Verify layer count ###
+        #
+        if len(pytorch_layers) != len(extracted_layers):
+            #
+            return (False, f"Layer count mismatch: PyTorch has {len(pytorch_layers)} layers, extracted model has {len(extracted_layers)} layers")
+
+        #
+        ### 2. Verify layer types and parameters ###
+        #
+        pytorch_layer_dict = {name: module for name, module in pytorch_layers}
+        extracted_layer_dict = {name: layer for name, layer in extracted_layers}
+
+        #
+        for pt_name, pt_module in pytorch_layers:
+
+            #
+            ### Find corresponding extracted layer ###
+            #
+            found_match: bool = False
+
+            #
+            for ext_name, ext_layer in extracted_layers:
+
+                #
+                if pt_module.__class__.__name__ == ext_layer.layer_type:
+
+                    #
+                    found_match = True
+
+                    #
+                    ### Verify layer type ###
+                    #
+                    if pt_module.__class__.__name__ != ext_layer.layer_type:
+                        #
+                        return (False, f"Layer type mismatch for {pt_name}: PyTorch has {pt_module.__class__.__name__}, extracted has {ext_layer.layer_type}")
+
+                    #
+                    ### Verify parameters ###
+                    #
+                    pt_params = dict(pt_module.named_parameters())
+                    ext_params = ext_layer.layer_parameters_kwargs
+
+                    #
+                    ### Check if parameter names match (basic check) ###
+                    #
+                    pt_param_names = set(pt_params.keys())
+                    ext_param_names = set(ext_params.keys())
+
+                    #
+                    ### For layers with weights, check if weight parameters are present and dimensions match ###
+                    #
+                    if hasattr(pt_module, 'weight') and 'weight' in pt_param_names:
+
+                        #
+                        if 'weight' not in ext_layer.layer_weights:
+
+                            #
+                            return (False, f"Missing weight parameter in extracted layer {ext_name}")
+
+                        #
+                        ### Verify weight dimensions match ###
+                        #
+                        pt_weight_shape = pt_module.weight.shape
+                        #
+                        ext_weight_shape = ext_layer.layer_weights['weight'].shape
+
+                        #
+                        if pt_weight_shape != ext_weight_shape:
+
+                            #
+                            return (False, f"Weight shape mismatch in layer {ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}")
+
+                    #
+                    if hasattr(pt_module, 'bias') and 'bias' in pt_param_names:
+                        #
+                        if 'bias' not in ext_layer.layer_weights:
+                            #
+                            return (False, f"Missing bias parameter in extracted layer {ext_name}")
+
+                        #
+                        ### Verify bias dimensions match ###
+                        #
+                        pt_bias_shape = pt_module.bias.shape
+                        #
+                        ext_bias_shape = ext_layer.layer_weights['bias'].shape
+
+                        #
+                        if pt_bias_shape != ext_bias_shape:
+                            #
+                            return (False, f"Bias shape mismatch in layer {ext_name}: PyTorch has {pt_bias_shape}, extracted has {ext_bias_shape}")
+
+                    #
+                    break
+
+            #
+            if not found_match:
+                #
+                return (False, f"No matching extracted layer found for PyTorch layer {pt_name} of type {pt_module.__class__.__name__}")
+
+        #
+        ### 3. Verify architecture structure ###
+        #
+
+        #
+        ### Check if main block exists ###
+        #
+        if not l_model.main_block:
+            #
+            return (False, "No main block specified in extracted model")
+
+        #
+        if l_model.main_block not in l_model.model_blocks:
+            #
+            return (False, f"Main block '{l_model.main_block}' not found in extracted model blocks")
+
+        #
+        ### Check if main block has a forward function ###
+        #
+        main_block = l_model.model_blocks[l_model.main_block]
+        #
+        if 'forward' not in main_block.block_functions:
+            #
+            return (False, f"Main block '{l_model.main_block}' does not have a forward function")
+
+        #
+        ### 4. Verify that all extracted layers are valid according to layer definitions ###
+        #
+        for ext_name, ext_layer in extracted_layers:
+            #
+            if ext_layer.layer_type not in all_layer_infos:
+                #
+                return (False, f"Extracted layer {ext_name} has unknown type {ext_layer.layer_type}")
+
+            #
+            layer_info = all_layer_infos[ext_layer.layer_type]
+
+            #
+            ### Check if required parameters are present ###
+            #
+            for param_name, (param_type, param_default) in layer_info.parameters.items():
+                #
+                if param_name not in ext_layer.layer_parameters_kwargs:
+                    #
+                    if isinstance(param_default, lc.ExpressionNoDefaultArguments):
+                        #
+                        return (False, f"Missing required parameter '{param_name}' in layer {ext_name}")
+
+        #
+        ### 5. Verify that non-inference layers (like Dropout) are excluded ###
+        #
+        inference_layers = [
+            name for name, module in pytorch_layers
+            if module.__class__.__name__ not in ['Dropout', 'Dropout2d', 'Dropout3d', 'BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d']
+        ]
+
+        #
+        if len(inference_layers) != len(extracted_layers):
+            #
+            return (False, f"Non-inference layer filtering issue: {len(inference_layers)} inference layers vs {len(extracted_layers)} extracted layers")
+
+        #
+        return (True, f"Model extraction verification passed: {len(extracted_layers)} layers verified")
+
+
+    #
     def test_code_extractor(self) -> lc.Language_Model:
 
         #
@@ -152,26 +359,7 @@ class Tester:
             return (False, False, False, str(e))
 
         #
-        ### Step 2 - Create a model interpreter. ###
-        #
-        interpreter: li.LanguageModel_ForwardInterpreter = li.LanguageModel_ForwardInterpreter(l_model)
-
-        #
-        ### Step 3 - Verify if model seems to be loaded correctly. ###
-        #
-        validation_issues: list[str] = li.ModelInterpreterUtils.validate_model_structure(l_model)
-
-        #
-        if validation_issues:
-
-            #
-            error_msg: str = "Validation Issues:\n\t" + "\n\t - ".join( validation_issues )
-
-            #
-            return (False, False, False, error_msg)
-
-        #
-        ### Step 4 - Load the pytorch model. ###
+        ### Step 2 - Load the pytorch model. ###
         #
 
         #
@@ -193,6 +381,26 @@ class Tester:
         all_layers_info: dict[str, ll.BaseLayerInfo] = ll.load_layers_dict(filepath="core/layers.json")
 
         #
+        ### Step 3 - Create a model interpreter. ###
+        #
+        interpreter: li.LanguageModel_ForwardInterpreter = li.LanguageModel_ForwardInterpreter(l_model)
+
+        #
+        ### Step 4 - Verify if model seems to be loaded correctly. ###
+        #
+        #
+        validation_issues: list[str] = li.ModelInterpreterUtils.validate_model_structure(l_model)
+
+        #
+        if validation_issues:
+
+            #
+            error_msg: str = "Validation Issues:\n\t" + "\n\t - ".join( validation_issues )
+
+            #
+            return (False, False, False, error_msg)
+
+        #
         ### Step 5 - Try to link the pytorch model weights to the extracted intermediate representation of the model. ###
         #
         try:
@@ -207,7 +415,22 @@ class Tester:
             return (True, False, False, str(e))
 
         #
-        ### Step 6 - Try to execute model. ###
+        ### Step 6 - Verify Extracted Module Structure, Layers and Weighst. ###
+        #
+        res_verif: tuple[bool, str] = self.verify_model_extraction_and_linking(
+            l_model=l_model,
+            pt_model=pt_model,
+            all_layer_infos=all_layers_info
+        )
+
+        #
+        if not res_verif[0]:
+            #
+            return (False, False, False, res_verif[1])
+
+
+        #
+        ### Step 7 - Try to execute model. ###
         #
         test_exec: tuple[bool, str] = self.test_model_execution(l_model=l_model, pt_model=pt_model, interpreter=interpreter)
 
@@ -217,7 +440,7 @@ class Tester:
             return (True, True, False, test_exec[1])
 
         #
-        ### Step 6 - All the tests passed correctly. ###
+        ### Step 8 - All the tests passed correctly. ###
         #
         return (True, True, True, test_exec[1])
 
