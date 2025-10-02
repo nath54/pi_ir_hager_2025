@@ -1,6 +1,8 @@
 #
 import pickle
+
 import numpy as np
+from numpy.typing import NDArray
 import torch
 from torch import nn
 from torch import Tensor
@@ -16,7 +18,7 @@ from model_to_export import Model
 
 
 #
-def export_executorch_model(model: nn.Module, example_inputs: Tensor) -> None:
+def export_executorch_model(model: nn.Module, example_inputs: tuple) -> None:
 
     # --- Standard ExecuTorch Export ---
     try:
@@ -37,7 +39,7 @@ def export_executorch_model(model: nn.Module, example_inputs: Tensor) -> None:
         )
 
         # Save the .pte file
-        output_pte_path = "my_model.pte"
+        output_pte_path = "model_pre_compiled.pte"
         with open(output_pte_path, "wb") as f:
             f.write(executorch_program.buffer)
         print(f"Model exported successfully to {output_pte_path}")
@@ -74,7 +76,7 @@ if __name__ == "__main__":
 
     #
     with open("model_to_export_example_data.pkl", "rb") as f:
-        example_data: list[np.ndarray] = pickle.load( f )
+        example_data: list[NDArray[np.float32]] = pickle.load( f )
 
     #
     input_data1: Tensor = Tensor( example_data[0] ).unsqueeze(dim=0)
@@ -97,3 +99,6 @@ if __name__ == "__main__":
     #
     print( f"\npredictions : {predictions}\n" )
     print( f"\npredictions shape : {predictions.shape}\n" )
+
+    #
+    export_executorch_model( model, (input_data1,) )

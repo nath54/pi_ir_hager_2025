@@ -2,6 +2,7 @@
 *.pth
 *.tch
 *.pkl
+*.pte
 *.bin
 *.zip
 *venv
@@ -10,3 +11,13 @@
 *.
 **/database
 **prompt**
+**/*cache*
+**/build
+
+**/executorch
+**/tensorflow_src
+**/minimal_build
+
+*.onnx
+
+**/st_ai_*

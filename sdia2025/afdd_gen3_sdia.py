@@ -5,7 +5,9 @@ import random
 import pickle
 import glob
 from torch.utils.data import Dataset  # type: ignore
-import numpy as np  # type: ignore
+
+import numpy as np
+from numpy.typing import NDArray
 import math
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

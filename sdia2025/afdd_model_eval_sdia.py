@@ -1,7 +1,9 @@
 import torch  # type: ignore
 from torch.utils.data import Dataset  # type: ignore
 from afdd_gen3_sdia import DeepArcNet, CustomDataset_onRAM_dmp
-import numpy as np  # type: ignore
+
+import numpy as np
+from numpy.typing import NDArray
 
 
 
