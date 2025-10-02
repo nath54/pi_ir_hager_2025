@@ -2709,7 +2709,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         if not self.current_function_visit:
             #
-            print(f"\033[1;31m - WARNING: Expression is not inside a function, skipping. - \033[m")
+            # print(f"\033[1;31m - WARNING: Expression is not inside a function, skipping. - \033[m")
             #
             return
 

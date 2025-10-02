@@ -802,7 +802,7 @@ class LanguageModel_ForwardInterpreter:
         """
 
         #
-        print(f"\033[44mDEBUG | execute instruction = {instruction}\033[m")
+        # print(f"\033[44mDEBUG | execute instruction = {instruction}\033[m")
 
         #
         if isinstance(instruction, lc.FlowControlVariableInit):
@@ -1206,10 +1206,10 @@ class LanguageModel_ForwardInterpreter:
             ### Keep SelfWrapper objects as-is for method call detection. ###
             ### We'll handle unwrapping in the module call logic. ###
             #
-            if hasattr(arg_value, '__class__') and arg_value.__class__.__name__ == 'SelfWrapper':
+            # if hasattr(arg_value, '__class__') and arg_value.__class__.__name__ == 'SelfWrapper':
 
                 #
-                print(f"DEBUG | Preserving SelfWrapper for argument {arg_name} for method call detection")
+                # print(f"DEBUG | Preserving SelfWrapper for argument {arg_name} for method call detection")
 
                 #
                 ### Don't unwrap here - let the module call logic handle it. ###
@@ -1295,7 +1295,7 @@ class LanguageModel_ForwardInterpreter:
                 #
                 ### This is a standard layer (dictionary representation) that should be executed as a layer pass. ###
                 #
-                print(f"DEBUG | Executing standard layer: {instruction.function_called}, type: {module['type']}")
+                # print(f"DEBUG | Executing standard layer: {instruction.function_called}, type: {module['type']}")
 
                 #
                 ### Handle method call with 'self' as first argument. ###
@@ -1739,9 +1739,9 @@ class LanguageModel_ForwardInterpreter:
                     #
                     print(f"DEBUG | IndexError: variable shape: {getattr(variable, 'shape', 'no shape')}, index: {index}, index type: {type(index)}")
                     #
-                    if hasattr(variable, 'ndim'):
+                    # if hasattr(variable, 'ndim'):
                         #
-                        print(f"DEBUG | Variable dimensions: {variable.ndim}")
+                        # print(f"DEBUG | Variable dimensions: {variable.ndim}")
 
                     #
                     ### Handle dimension mismatch: if we have more indices than dimensions, truncate the indices. ###

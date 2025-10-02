@@ -3,6 +3,7 @@
 #
 from typing import Optional, Callable, Any
 #
+import os
 import argparse
 #
 import torch
@@ -11,9 +12,9 @@ from torch import nn, Tensor
 import numpy as np
 from numpy.typing import NDArray
 #
-from .core.lib_impl import lib_classes as lc
-from .core.lib_impl import lib_layers as ll
-from .core.lib_impl import lib_interpretor as li
+import core.lib_impl.lib_classes as lc
+import core.lib_impl.lib_layers as ll
+import core.lib_impl.lib_interpretor as li
 #
 import lib_extract_model_architecture as lema
 import lib_test_link_weights_to_architecture as ltlwta
@@ -156,10 +157,20 @@ class Tester:
                         ext_weight_shape = ext_layer.layer_weights['weight'].shape
 
                         #
-                        if pt_weight_shape != ext_weight_shape:
+                        ### For Linear layers, the weight matrix is transposed during extraction ###
+                        ### PyTorch stores as (out_features, in_features) but we store as (in_features, out_features) ###
+                        #
+                        expected_ext_shape = pt_weight_shape
+                        #
+                        if ext_layer.layer_type == "Linear":
+                            #
+                            expected_ext_shape = (pt_weight_shape[1], pt_weight_shape[0])
+
+                        #
+                        if ext_weight_shape != expected_ext_shape:
 
                             #
-                            return (False, f"Weight shape mismatch in layer {ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}")
+                            return (False, f"Weight shape mismatch in layer {ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}, expected {expected_ext_shape}")
 
                     #
                     if hasattr(pt_module, 'bias') and 'bias' in pt_param_names:
@@ -257,7 +268,7 @@ class Tester:
     def test_code_extractor(self) -> lc.Language_Model:
 
         #
-        l_model: lc.Language_Model = lema.extract_from_file(filepath="", main_block_name="")
+        l_model: lc.Language_Model = lema.extract_from_file(filepath=self.code_path, main_block_name=self.main_block_name)
 
         #
         return l_model
@@ -283,8 +294,11 @@ class Tester:
         #
         ### Get the output from the pytorch model. ###
         #
-        ref_output_pt: Tensor = pt_model.forward(inp)
-        ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
+        with torch.no_grad():
+
+            #
+            ref_output_pt: Tensor = pt_model.forward( torch.from_numpy(inp).to(dtype=torch.float32) )
+            ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
 
         #
         ### Get the output from the extracted model. ###
@@ -309,7 +323,7 @@ class Tester:
             return (False, "No model outputs.")
 
         #
-        extr_output = extr_outputs.values()[0]
+        extr_output = list(extr_outputs.values())[0]
 
         #
         if extr_output is None:
@@ -371,7 +385,7 @@ class Tester:
         pt_model: nn.Module = model_class()
 
         #
-        if self.weights_path not in ["", "NO_WEIGHTS"]:
+        if self.weights_path is not None and self.weights_path not in ["", "NO_WEIGHTS"] and os.path.exists(self.weights_path):
             #
             pt_model.load_state_dict(torch.load(self.weights_path, weights_only=True))  # type: ignore
 
@@ -383,7 +397,14 @@ class Tester:
         #
         ### Step 3 - Create a model interpreter. ###
         #
-        interpreter: li.LanguageModel_ForwardInterpreter = li.LanguageModel_ForwardInterpreter(l_model)
+        try:
+            #
+            interpreter: li.LanguageModel_ForwardInterpreter = li.LanguageModel_ForwardInterpreter(l_model)
+        #
+        except Exception as e:
+            #
+            return (True, True, False, str(e))
+
 
         #
         ### Step 4 - Verify if model seems to be loaded correctly. ###
@@ -474,15 +495,52 @@ if __name__ == "__main__":
     #
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Test parsing, weights linking, and execution of ")
     #
-    parser.add_argument("--code", type=str, help="The Python code that contains the pytorch code.")
+    parser.add_argument("--code", type=str, help="The Python code that contains the pytorch code.", required=True)
+    parser.add_argument("--input_dim", type=str, help="The input dimension used to test the model inference.", required=True)
     parser.add_argument("--main_block", type=str, help="The name of the main block Module", default="")
     parser.add_argument("--weights", type=str, help="The path to weights files.")
     #
     args: argparse.Namespace = parser.parse_args()
 
     #
+    ### Parse Input dim from text to tuple of integers. ###
+    #
+
+    #
+    input_dim_str: str = args.input_dim.strip()
+
+    #
+    ### Remove parentheses if present. ###
+    #
+    if input_dim_str.startswith('(') and input_dim_str.endswith(')'):
+        #
+        input_dim_str = input_dim_str[1:-1]
+
+    #
+    ### Split by comma or whitespace and convert to integers. ###
+    #
+    input_dim: tuple[int, ...]
+    #
+    try:
+        #
+        if ',' in input_dim_str:
+            #
+            input_dim = tuple(int(x.strip()) for x in input_dim_str.split(',') if x.strip())
+        #
+        else:
+            #
+            input_dim = tuple(int(x.strip()) for x in input_dim_str.split() if x.strip())
+    #
+    except ValueError as e:
+        #
+        print(f"Error parsing input dimensions '{args.input_dim}': {e}")
+        #
+        exit(1)
+
+    #
     tester: Tester = Tester(
         code_path=args.code,
+        input_dim=input_dim,
         main_block_name=args.main_block,
         weights_path=args.weights
     )

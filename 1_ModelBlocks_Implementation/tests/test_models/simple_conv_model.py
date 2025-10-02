@@ -8,7 +8,7 @@ import torch.nn as nn
 
 class SimpleConvModel(nn.Module):
     """A simple convolutional model with conv layers, batch norm, and ReLU."""
-    
+
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
@@ -18,7 +18,7 @@ class SimpleConvModel(nn.Module):
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
         self.bn2 = nn.BatchNorm2d(32)
         self.linear = nn.Linear(32 * 8 * 8, 10)
-    
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -32,11 +32,11 @@ class SimpleConvModel(nn.Module):
         return x
 
 
-if __name__ == "__main__":
-    # Test the model
-    model = SimpleConvModel()
-    x = torch.randn(2, 3, 32, 32)
-    output = model(x)
-    print(f"Input shape: {x.shape}")
-    print(f"Output shape: {output.shape}")
-    print(f"Model: {model}")
+# if __name__ == "__main__":
+#     # Test the model
+#     model = SimpleConvModel()
+#     x = torch.randn(2, 3, 32, 32)
+#     output = model(x)
+#     print(f"Input shape: {x.shape}")
+#     print(f"Output shape: {output.shape}")
+#     print(f"Model: {model}")

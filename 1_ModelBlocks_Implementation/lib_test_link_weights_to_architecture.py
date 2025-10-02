@@ -116,7 +116,7 @@ def link_weights(pt_model: nn.Module, l_model: lc.Language_Model, all_layers_inf
             continue
 
         #
-        print(f" \033[34m {layer.layer_weights} | module = {module} \033[m ")
+        # print(f" \033[34m {layer.layer_weights} | module = {module} \033[m ")
 
         #
         ### Get all named parameters. ###
@@ -124,11 +124,21 @@ def link_weights(pt_model: nn.Module, l_model: lc.Language_Model, all_layers_inf
         for p_name, param in module.named_parameters():  # type: ignore
 
             #
-            print(f"Param Name: `{p_name}`, Shape: {param.shape}")  # type: ignore
+            # print(f"Param Name: `{p_name}`, Shape: {param.shape}")  # type: ignore
             # print(param)  # type: ignore
 
             #
-            layer.layer_weights[p_name] = cast( NDArray[np.float32], param.data.cpu().numpy().astype(dtype=np.float32) )  # type: ignore
+            weight_data = param.data.cpu().numpy().astype(dtype=np.float32)
+
+            #
+            ### For Linear layers, transpose the weight matrix to match expected format ###
+            ### PyTorch stores weights as (out_features, in_features) but we expect (in_features, out_features) ###
+            #
+            if layer.layer_type == "Linear" and p_name == "weight":
+                weight_data = weight_data.T
+
+            #
+            layer.layer_weights[p_name] = cast( NDArray[np.float32], weight_data )  # type: ignore
 
     #
     return l_model
