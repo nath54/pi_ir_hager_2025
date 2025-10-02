@@ -13,8 +13,8 @@ TESTS: list[ tuple[str, tuple[int, ...], str, Optional[str]] ] = [
 
     ("test_model_architecture_1_2.py", (4, 10), "Model", None),
     ("test_model_architecture_1.py", (4, 10), "Model", None),
-    ("test_model_architecture_2_1.py", (4, 20), "Model", None),
-    ("test_model_architecture_3_1.py", (4, 20), "Model", None),
+    ("test_model_architecture_2_1.py", (4, 10), "Model", None),
+    ("test_model_architecture_3_1.py", (4, 10), "Model", None),
 
     # ...
 
@@ -24,6 +24,7 @@ TESTS: list[ tuple[str, tuple[int, ...], str, Optional[str]] ] = [
 #
 MSGL: int = 60
 FILEL: int = 40
+OUTDIML: int = 15
 
 
 #
@@ -52,8 +53,8 @@ if __name__ == "__main__":
 
     def print_table_header():
         """Affiche l'en-tête du tableau"""
-        print(f"\n{Colors.BOLD}{Colors.WHITE}{'│':<1} {'MODÈLE':<{FILEL}} {'DIMENSIONS':<12} {'EXT':<6} {'LNK':<6} {'EXE':<6} {'STATUT':<12} {'MESSAGE':<{MSGL}} {'│'}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.WHITE}{'├'}{'─'*FILEL}{'┬'}{'─'*12}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*12}{'┬'}{'─'*MSGL}{'┤'}{Colors.RESET}")
+        print(f"\n{Colors.BOLD}{Colors.WHITE}{'│':<1} {'MODÈLE':<{FILEL}} {'DIMENSIONS':<12} {'EXT':<6} {'LNK':<6} {'EXE':<6} {'STATUT':<12} {'OUT_DIM':<{OUTDIML}} {'MESSAGE':<{MSGL}} {'│'}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.WHITE}{'├'}{'─'*FILEL}{'┬'}{'─'*12}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*12}{'┬'}{'─'*OUTDIML}{'┬'}{'─'*MSGL}{'┤'}{Colors.RESET}")
 
     def get_status_color(extraction: bool, pytorch: bool, execution: bool) -> tuple[str, str]:
         """Retourne la couleur et le texte du statut"""
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
         return lines
 
-    def print_test_result(code_path: str, input_dim: tuple, extraction: bool, pytorch: bool, execution: bool, message: str):
+    def print_test_result(code_path: str, input_dim: tuple, extraction: bool, pytorch: bool, execution: bool, message: str, output_dim: Optional[tuple[int, ...]] = None):
         """Affiche le résultat d'un test"""
         # Couleurs pour chaque étape
         ext_color = Colors.GREEN if extraction else Colors.RED
@@ -110,23 +111,31 @@ if __name__ == "__main__":
         if len(dim_str) > 12:
             dim_str = dim_str[:9] + "..."
 
+        # Formatage des dimensions de sortie
+        if output_dim is not None:
+            out_dim_str = "x".join(map(str, output_dim))
+            if len(out_dim_str) > OUTDIML:
+                out_dim_str = out_dim_str[:OUTDIML-3] + "..."
+        else:
+            out_dim_str = "N/A"
+
         # Wrapping du message
         message_lines = wrap_message(message)
 
         # Affichage de la première ligne
         first_line_msg = message_lines[0] if message_lines else ""
-        print(f"{Colors.WHITE}{'│':<1} {code_path:<{FILEL}} {dim_str:<12} {ext_color}{'✓' if extraction else '✗':<6}{Colors.RESET} {pyt_color}{'✓' if pytorch else '✗':<6}{Colors.RESET} {exec_color}{'✓' if execution else '✗':<6}{Colors.RESET} {status_color}{status_text:<12}{Colors.RESET} {first_line_msg:<{MSGL-2}} {'│'}{Colors.RESET}")
+        print(f"{Colors.WHITE}{'│':<1} {code_path:<{FILEL}} {dim_str:<12} {ext_color}{'✓' if extraction else '✗':<6}{Colors.RESET} {pyt_color}{'✓' if pytorch else '✗':<6}{Colors.RESET} {exec_color}{'✓' if execution else '✗':<6}{Colors.RESET} {status_color}{status_text:<12}{Colors.RESET} {out_dim_str:<{OUTDIML}} {first_line_msg:<{MSGL-2}} {'│'}{Colors.RESET}")
 
         # Affichage des lignes supplémentaires du message
         for i in range(1, len(message_lines)):
-            print(f"{Colors.WHITE}{'│':<1} {'':<{FILEL}} {'':<12} {'':<6} {'':<6} {'':<6} {'':<12} {message_lines[i]:<{MSGL-2}} {'│'}{Colors.RESET}")
+            print(f"{Colors.WHITE}{'│':<1} {'':<{FILEL}} {'':<12} {'':<6} {'':<6} {'':<6} {'':<12} {'':<{OUTDIML}} {message_lines[i]:<{MSGL-2}} {'│'}{Colors.RESET}")
 
         # Ligne de séparation entre les tests
-        print(f"{Colors.WHITE}{'├'}{'─'*FILEL}{'┼'}{'─'*12}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*12}{'┼'}{'─'*MSGL}{'┤'}{Colors.RESET}")
+        print(f"{Colors.WHITE}{'├'}{'─'*FILEL}{'┼'}{'─'*12}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*12}{'┼'}{'─'*OUTDIML}{'┼'}{'─'*MSGL}{'┤'}{Colors.RESET}")
 
     def print_footer(total_tests: int, successful: int, partial: int, failed: int):
         """Affiche le pied du tableau avec les statistiques"""
-        print(f"{Colors.BOLD}{Colors.WHITE}{'└'}{'─'*FILEL}{'┴'}{'─'*12}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*12}{'┴'}{'─'*MSGL}{'┘'}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.WHITE}{'└'}{'─'*FILEL}{'┴'}{'─'*12}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*12}{'┴'}{'─'*OUTDIML}{'┴'}{'─'*MSGL}{'┘'}{Colors.RESET}")
 
         print(f"\n{Colors.BOLD}{Colors.CYAN}{'STATISTIQUES':^120}{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.WHITE}{'─'*120}{Colors.RESET}")
@@ -169,10 +178,10 @@ if __name__ == "__main__":
         )
 
         #
-        res: tuple[bool, bool, bool, str] = tester.test()
+        res: tuple[bool, bool, bool, str, Optional[tuple[int, ...]]] = tester.test()
 
         # Extraction des résultats
-        extraction_success, pytorch_success, execution_success, message = res
+        extraction_success, pytorch_success, execution_success, message, output_dim = res
 
         # Mise à jour des compteurs
         if extraction_success and pytorch_success and execution_success:
@@ -183,7 +192,7 @@ if __name__ == "__main__":
             failed += 1
 
         # Affichage du résultat
-        print_test_result(code_path, input_dim, extraction_success, pytorch_success, execution_success, message)
+        print_test_result(code_path, input_dim, extraction_success, pytorch_success, execution_success, message, output_dim)
 
     # Affichage du pied avec les statistiques
     print_footer(total_tests, successful, partial, failed)

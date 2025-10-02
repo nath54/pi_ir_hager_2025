@@ -106,76 +106,17 @@ class Tester:
         for pt_name, pt_module in pytorch_layers:
 
             #
-            ### Find corresponding extracted layer by name ###
+            ### Use get_model_block_or_layer_from_named_pytorch_layer to find the corresponding extracted layer ###
             #
-            found_match: bool = False
-            matching_ext_layer = None
-            matching_ext_name = None
+            matching_ext_layer = ltlwta.get_model_block_or_layer_from_named_pytorch_layer(
+                path=pt_name,
+                l_model=l_model,
+                current_block=None,
+                all_layers_info=all_layer_infos
+            )
+            matching_ext_name = pt_name  # The path in PyTorch is the same as the lookup path
 
-            #
-            ### First try to find exact name match ###
-            #
-            for ext_name, ext_layer in extracted_layers:
-
-                #
-                ### Extract the layer name from the full path (e.g., "Model.fc1" -> "fc1") ###
-                #
-                ext_layer_name = ext_name.split('.')[-1]
-                #
-                if pt_name == ext_layer_name and pt_module.__class__.__name__ == ext_layer.layer_type:
-                    #
-                    found_match = True
-                    #
-                    matching_ext_layer = ext_layer
-                    matching_ext_name = ext_name
-                    #
-                    break
-
-            #
-            ### If no exact match, try type-based matching (fallback) ###
-            #
-            if not found_match:
-
-                #
-                for ext_name, ext_layer in extracted_layers:
-
-                    #
-                    if pt_module.__class__.__name__ == ext_layer.layer_type:
-
-                        #
-                        ### Check if this extracted layer is not already matched ###
-                        #
-                        already_matched = False
-
-                        #
-                        for other_pt_name, other_pt_module in pytorch_layers:
-
-                            #
-                            if other_pt_name != pt_name:
-
-                                #
-                                other_ext_layer_name = ext_name.split('.')[-1]
-
-                                #
-                                if other_pt_name == other_ext_layer_name and other_pt_module.__class__.__name__ == ext_layer.layer_type:
-
-                                    #
-                                    already_matched = True
-                                    break
-
-                        #
-                        if not already_matched:
-
-                            #
-                            found_match = True
-                            #
-                            matching_ext_layer = ext_layer
-                            matching_ext_name = ext_name
-                            #
-                            break
-
-            #
-            if found_match and matching_ext_layer is not None:
+            if matching_ext_layer is not None:
 
                 #
                 ### Verify layer type ###
@@ -227,7 +168,7 @@ class Tester:
                     if ext_weight_shape != expected_ext_shape:
 
                         #
-                        return (False, f"Weight shape mismatch in layer {matching_ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}, expected {expected_ext_shape}")
+                        return (False, f"Weight shape mismatch in layer {matching_ext_name} | `{pt_name}`: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}, expected {expected_ext_shape}")
 
                 #
                 if hasattr(pt_module, 'bias') and 'bias' in pt_param_names:
@@ -342,7 +283,7 @@ class Tester:
         l_model: lc.Language_Model,
         pt_model: nn.Module,
         interpreter: li.LanguageModel_ForwardInterpreter
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool, str, Optional[tuple[int, ...]]]:
 
         #
         ### Generate a random input. ###
@@ -382,7 +323,7 @@ class Tester:
         #
         if len(extr_outputs) == 0:
             #
-            return (False, "No model outputs.")
+            return (False, "No model outputs.", None)
 
         #
         extr_output = list(extr_outputs.values())[0]
@@ -390,7 +331,7 @@ class Tester:
         #
         if extr_output is None:
             #
-            return (False, "Model output is None.")
+            return (False, "Model output is None.", None)
 
         #
         ### Compare Pytorch Model Output to Extracted Model Output. ###
@@ -402,7 +343,7 @@ class Tester:
         if ref_output.shape != extr_output.shape:
 
             #
-            return (False, f"Model output don't have expected output shape: obtained = {extr_output.shape}, expected = {ref_output.shape} !")
+            return (False, f"Model output don't have expected output shape: obtained = {extr_output.shape}, expected = {ref_output.shape} !", tuple(extr_output.shape))
 
         #
         dist: float = np.linalg.norm(ref_output - extr_output)
@@ -411,14 +352,14 @@ class Tester:
         if dist > 1e-1:
 
             #
-            return (False, f"Model output is too far from reference : {dist} > 1e-1 !")
+            return (False, f"Model output is too far from reference : {dist} > 1e-1 !", tuple(extr_output.shape))
 
         #
-        return (True, f"Distance between reference and inference output is {dist}.")
+        return (True, f"Distance between reference and inference output is {dist}.", tuple(extr_output.shape))
 
 
     #
-    def test(self) -> tuple[bool, bool, bool, str]:
+    def test(self) -> tuple[bool, bool, bool, str, Optional[tuple[int, ...]]]:
 
         #
         ### Step 1 - Try to load language model. ###
@@ -432,7 +373,7 @@ class Tester:
         except Exception as e:
 
             #
-            return (False, False, False, str(e))
+            return (False, False, False, str(e), None)
 
         #
         ### Step 2 - Load the pytorch model. ###
@@ -465,7 +406,7 @@ class Tester:
         #
         except Exception as e:
             #
-            return (True, True, False, str(e))
+            return (True, True, False, str(e), None)
 
 
         #
@@ -481,7 +422,7 @@ class Tester:
             error_msg: str = "Validation Issues:\n\t" + "\n\t - ".join( validation_issues )
 
             #
-            return (False, False, False, error_msg)
+            return (False, False, False, error_msg, None)
 
         #
         ### Step 5 - Try to link the pytorch model weights to the extracted intermediate representation of the model. ###
@@ -495,7 +436,7 @@ class Tester:
         except Exception as e:
 
             #
-            return (True, False, False, str(e))
+            return (True, False, False, str(e), None)
 
         #
         ### Step 6 - Verify Extracted Module Structure, Layers and Weighst. ###
@@ -509,23 +450,23 @@ class Tester:
         #
         if not res_verif[0]:
             #
-            return (False, False, False, res_verif[1])
+            return (False, False, False, res_verif[1], None)
 
 
         #
         ### Step 7 - Try to execute model. ###
         #
-        test_exec: tuple[bool, str] = self.test_model_execution(l_model=l_model, pt_model=pt_model, interpreter=interpreter)
+        test_exec: tuple[bool, str, Optional[tuple[int, ...]]] = self.test_model_execution(l_model=l_model, pt_model=pt_model, interpreter=interpreter)
 
         #
         if not test_exec[0]:
             #
-            return (True, True, False, test_exec[1])
+            return (True, True, False, test_exec[1], test_exec[2])
 
         #
         ### Step 8 - All the tests passed correctly. ###
         #
-        return (True, True, True, test_exec[1])
+        return (True, True, True, test_exec[1], test_exec[2])
 
 
     #
@@ -535,7 +476,7 @@ class Tester:
         input_dim: tuple[int, ...],
         main_block_name: str = "",
         weights_path: Optional[str] = None
-    ) -> tuple[bool, bool, bool, str]:
+    ) -> tuple[bool, bool, bool, str, Optional[tuple[int, ...]]]:
 
         #
         tester: Tester = Tester(
