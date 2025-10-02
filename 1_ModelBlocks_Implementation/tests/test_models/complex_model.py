@@ -24,7 +24,6 @@ class ComplexModel(nn.Module):
         self.bn3 = nn.BatchNorm2d(64)
 
         # Additional layers
-        self.dropout = nn.Dropout(0.5)
         self.layer_norm = nn.LayerNorm(64)
 
         # Final layers
@@ -50,7 +49,6 @@ class ComplexModel(nn.Module):
         x = self.relu(x)
 
         # Final processing
-        x = self.dropout(x)
         x = self.layer_norm(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)

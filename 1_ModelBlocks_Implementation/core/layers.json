@@ -48,7 +48,7 @@
             ]
         },
         "weights": {
-            "weights": ["out_channels", "in_channels_per_group", "kernel_size"],
+            "weight": ["out_channels", "in_channels_per_group", "kernel_size"],
             "bias": ["out_channels"]
         },
         "pytorch_layer_name": "Conv1d"
@@ -112,7 +112,7 @@
             ]
         },
         "weights": {
-            "weights": ["out_channels", "in_channels_per_group", "kernel_size[0]", "kernel_size[1]"],
+            "weight": ["out_channels", "in_channels_per_group", "kernel_size[0]", "kernel_size[1]"],
             "bias": ["out_channels"]
         },
         "pytorch_layer_name": "Conv2d"
@@ -180,7 +180,7 @@
             ]
         },
         "weights": {
-            "weights": ["out_channels", "in_channels_per_group", "kernel_size[0]", "kernel_size[1]", "kernel_size[2]"],
+            "weight": ["out_channels", "in_channels_per_group", "kernel_size[0]", "kernel_size[1]", "kernel_size[2]"],
             "bias": ["out_channels"]
         },
         "pytorch_layer_name": "Conv3d"

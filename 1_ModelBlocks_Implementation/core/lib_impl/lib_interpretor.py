@@ -2098,9 +2098,15 @@ class LanguageModel_ForwardInterpreter:
         #
         elif layer_type == "Softmax":
             #
-            exp_values = np.exp(input_tensor - np.max(input_tensor, axis=-1, keepdims=True))
+            ### Get the dim parameter, default to -1 if not specified ###
             #
-            return exp_values / np.sum(exp_values, axis=-1, keepdims=True)
+            dim = _layer_params.get("dim", -1)
+            #
+            ### Apply softmax along the specified dimension ###
+            #
+            exp_values = np.exp(input_tensor - np.max(input_tensor, axis=dim, keepdims=True))
+            #
+            return exp_values / np.sum(exp_values, axis=dim, keepdims=True)
 
         #
         elif layer_type == "Conv2d":
@@ -2281,6 +2287,983 @@ class LanguageModel_ForwardInterpreter:
             return gamma * normalized + beta
 
         #
+        elif layer_type == "BatchNorm2d":
+
+            #
+            ### Batch Normalization 2D layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            num_features: int = _layer_params.get("num_features", input_tensor.shape[1])
+            eps: float = _layer_params.get("eps", 1e-5)
+            momentum: float = _layer_params.get("momentum", 0.1)
+            affine: bool = _layer_params.get("affine", True)
+            track_running_stats: bool = _layer_params.get("track_running_stats", True)
+
+            #
+            ### Get weights and bias ###
+            #
+            if affine:
+                #
+                gamma = layer_weights.get("weight", np.ones(num_features, dtype=np.float32))
+                beta = layer_weights.get("bias", np.zeros(num_features, dtype=np.float32))
+            #
+            else:
+                #
+                gamma = np.ones(num_features, dtype=np.float32)
+                beta = np.zeros(num_features, dtype=np.float32)
+
+            #
+            ### Get running statistics (for inference) ###
+            #
+            if track_running_stats:
+                #
+                running_mean = layer_weights.get("running_mean", np.zeros(num_features, dtype=np.float32))
+                running_var = layer_weights.get("running_var", np.ones(num_features, dtype=np.float32))
+            #
+            else:
+                #
+                running_mean = np.zeros(num_features, dtype=np.float32)
+                running_var = np.ones(num_features, dtype=np.float32)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Ensure num_features matches the number of channels ###
+            #
+            if channels != num_features:
+                #
+                print(f"WARNING | BatchNorm2d: Expected {num_features} channels, got {channels}")
+                #
+                ### Adjust num_features to match input ###
+                #
+                num_features = channels
+                #
+                ### Resize gamma and beta if needed ###
+                #
+                if len(gamma) != num_features:
+                    #
+                    gamma = np.ones(num_features, dtype=np.float32)
+                #
+                if len(beta) != num_features:
+                    #
+                    beta = np.zeros(num_features, dtype=np.float32)
+                #
+                if len(running_mean) != num_features:
+                    #
+                    running_mean = np.zeros(num_features, dtype=np.float32)
+                #
+                if len(running_var) != num_features:
+                    #
+                    running_var = np.ones(num_features, dtype=np.float32)
+
+            #
+            ### For inference mode (eval), use running statistics ###
+            ### For training mode, compute batch statistics ###
+            ### Since we don't have training/eval mode info, we'll use running stats if available ###
+            #
+            if track_running_stats and np.any(running_var != 1.0):
+                #
+                ### Use running statistics (inference mode) ###
+                #
+                mean = running_mean
+                var = running_var
+            #
+            else:
+                #
+                ### Compute batch statistics (training mode) ###
+                ### Calculate mean and variance across batch, height, and width dimensions ###
+                ### Keep channel dimension separate ###
+                #
+                if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                    #
+                    ### Calculate statistics over batch, height, and width dimensions (axes 0, 2, 3) ###
+                    #
+                    mean = np.mean(input_tensor, axis=(0, 2, 3), keepdims=False)
+                    var = np.var(input_tensor, axis=(0, 2, 3), keepdims=False)
+                #
+                elif len(input_tensor.shape) == 3:  # (batch, channels, spatial)
+                    #
+                    ### Calculate statistics over batch and spatial dimensions (axes 0, 2) ###
+                    #
+                    mean = np.mean(input_tensor, axis=(0, 2), keepdims=False)
+                    var = np.var(input_tensor, axis=(0, 2), keepdims=False)
+                #
+                elif len(input_tensor.shape) == 2:  # (batch, channels)
+                    #
+                    ### Calculate statistics over batch dimension (axis 0) ###
+                    #
+                    mean = np.mean(input_tensor, axis=0, keepdims=False)
+                    var = np.var(input_tensor, axis=0, keepdims=False)
+                #
+                else:
+                    #
+                    ### Fallback: treat as 1D ###
+                    #
+                    mean = np.mean(input_tensor, axis=0, keepdims=False)
+                    var = np.var(input_tensor, axis=0, keepdims=False)
+
+            #
+            ### Normalize the input ###
+            ### Reshape mean and var to broadcast correctly ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                ### Reshape to (1, channels, 1, 1) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1, 1, 1)
+                var_reshaped = var.reshape(1, -1, 1, 1)
+                gamma_reshaped = gamma.reshape(1, -1, 1, 1)
+                beta_reshaped = beta.reshape(1, -1, 1, 1)
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial)
+                #
+                ### Reshape to (1, channels, 1) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1, 1)
+                var_reshaped = var.reshape(1, -1, 1)
+                gamma_reshaped = gamma.reshape(1, -1, 1)
+                beta_reshaped = beta.reshape(1, -1, 1)
+            #
+            elif len(input_tensor.shape) == 2:  # (batch, channels)
+                #
+                ### Reshape to (1, channels) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1)
+                var_reshaped = var.reshape(1, -1)
+                gamma_reshaped = gamma.reshape(1, -1)
+                beta_reshaped = beta.reshape(1, -1)
+            #
+            else:
+                #
+                ### Use as-is for other shapes ###
+                #
+                mean_reshaped = mean
+                var_reshaped = var
+                gamma_reshaped = gamma
+                beta_reshaped = beta
+
+            #
+            ### Apply batch normalization formula: (x - mean) / sqrt(var + eps) * gamma + beta ###
+            #
+            normalized = (input_tensor - mean_reshaped) / np.sqrt(var_reshaped + eps)
+            result = gamma_reshaped * normalized + beta_reshaped
+
+            #
+            return result
+
+        #
+        elif layer_type == "MaxPool2d":
+
+            #
+            ### 2D Max Pooling layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            kernel_size = _layer_params.get("kernel_size", 2)
+            stride = _layer_params.get("stride", kernel_size)  # Default stride equals kernel_size
+            padding = _layer_params.get("padding", 0)
+            dilation = _layer_params.get("dilation", 1)
+            ceil_mode = _layer_params.get("ceil_mode", False)
+
+            #
+            ### Ensure kernel_size is a tuple ###
+            #
+            if isinstance(kernel_size, int):
+                #
+                kernel_size = (kernel_size, kernel_size)
+
+            #
+            ### Ensure stride is a tuple ###
+            #
+            if isinstance(stride, int):
+                #
+                stride = (stride, stride)
+
+            #
+            ### Ensure padding is a tuple ###
+            #
+            if isinstance(padding, int):
+                #
+                padding = (padding, padding)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"MaxPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Apply padding if specified ###
+            #
+            if padding[0] > 0 or padding[1] > 0:
+                #
+                padded_tensor = np.pad(
+                    input_tensor,
+                    ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
+                    mode='constant',
+                    constant_values=-np.inf  # Use -inf for max pooling
+                )
+            #
+            else:
+                #
+                padded_tensor = input_tensor
+
+            #
+            ### Calculate output dimensions ###
+            #
+            padded_height = padded_tensor.shape[2]
+            padded_width = padded_tensor.shape[3]
+
+            #
+            if ceil_mode:
+                #
+                ### Use ceiling division ###
+                #
+                output_height = int(np.ceil((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1))
+                output_width = int(np.ceil((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1))
+            #
+            else:
+                #
+                ### Use floor division (default) ###
+                #
+                output_height = int((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+                output_width = int((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+            #
+            ### Ensure output dimensions are positive ###
+            #
+            output_height = max(1, output_height)
+            output_width = max(1, output_width)
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform max pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            #
+                            h_start = h_out * stride[0]
+                            w_start = w_out * stride[1]
+
+                            #
+                            h_end = min(h_start + kernel_size[0], padded_height)
+                            w_end = min(w_start + kernel_size[1], padded_width)
+
+                            #
+                            ### Handle dilation ###
+                            #
+                            if dilation > 1:
+                                #
+                                ### Sample with dilation ###
+                                #
+                                h_indices = np.arange(h_start, h_end, dilation)
+                                w_indices = np.arange(w_start, w_end, dilation)
+
+                                #
+                                ### Ensure indices are within bounds ###
+                                #
+                                h_indices = h_indices[h_indices < padded_height]
+                                w_indices = w_indices[w_indices < padded_width]
+
+                                #
+                                if len(h_indices) > 0 and len(w_indices) > 0:
+                                    #
+                                    ### Get the region with dilation ###
+                                    #
+                                    region = padded_tensor[b, c][np.ix_(h_indices, w_indices)]
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = np.max(region)
+                                #
+                                else:
+                                    #
+                                    ### No valid indices, use minimum value ###
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+                            #
+                            else:
+                                #
+                                ### Standard pooling without dilation ###
+                                #
+                                if h_start < padded_height and w_start < padded_width:
+                                    #
+                                    region = padded_tensor[b, c, h_start:h_end, w_start:w_end]
+                                    #
+                                    if region.size > 0:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = np.max(region)
+                                    #
+                                    else:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = -np.inf
+                                #
+                                else:
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+            #
+            ### Replace -inf values with 0 (in case of edge cases) ###
+            #
+            output_tensor[output_tensor == -np.inf] = 0.0
+
+            #
+            return output_tensor
+
+        #
+        elif layer_type == "lc.LayerNorm" or layer_type == "LayerNorm":
+
+            #
+            mean = np.mean(input_tensor, axis=-1, keepdims=True)
+            var = np.var(input_tensor, axis=-1, keepdims=True)
+            normalized = (input_tensor - mean) / np.sqrt(var + 1e-5)
+
+            #
+            ### Apply learned parameters if available. ###
+            #
+            gamma = layer_weights.get("weight", np.ones(input_tensor.shape[-1]))
+            beta = layer_weights.get("bias", np.zeros(input_tensor.shape[-1]))
+
+            #
+            return gamma * normalized + beta
+
+        #
+        elif layer_type == "BatchNorm2d":
+
+            #
+            ### Batch Normalization 2D layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            num_features: int = _layer_params.get("num_features", input_tensor.shape[1])
+            eps: float = _layer_params.get("eps", 1e-5)
+            momentum: float = _layer_params.get("momentum", 0.1)
+            affine: bool = _layer_params.get("affine", True)
+            track_running_stats: bool = _layer_params.get("track_running_stats", True)
+
+            #
+            ### Get weights and bias ###
+            #
+            if affine:
+                #
+                gamma = layer_weights.get("weight", np.ones(num_features, dtype=np.float32))
+                beta = layer_weights.get("bias", np.zeros(num_features, dtype=np.float32))
+            #
+            else:
+                #
+                gamma = np.ones(num_features, dtype=np.float32)
+                beta = np.zeros(num_features, dtype=np.float32)
+
+            #
+            ### Get running statistics (for inference) ###
+            #
+            if track_running_stats:
+                #
+                running_mean = layer_weights.get("running_mean", np.zeros(num_features, dtype=np.float32))
+                running_var = layer_weights.get("running_var", np.ones(num_features, dtype=np.float32))
+            #
+            else:
+                #
+                running_mean = np.zeros(num_features, dtype=np.float32)
+                running_var = np.ones(num_features, dtype=np.float32)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Ensure num_features matches the number of channels ###
+            #
+            if channels != num_features:
+                #
+                print(f"WARNING | BatchNorm2d: Expected {num_features} channels, got {channels}")
+                #
+                ### Adjust num_features to match input ###
+                #
+                num_features = channels
+                #
+                ### Resize gamma and beta if needed ###
+                #
+                if len(gamma) != num_features:
+                    #
+                    gamma = np.ones(num_features, dtype=np.float32)
+                #
+                if len(beta) != num_features:
+                    #
+                    beta = np.zeros(num_features, dtype=np.float32)
+                #
+                if len(running_mean) != num_features:
+                    #
+                    running_mean = np.zeros(num_features, dtype=np.float32)
+                #
+                if len(running_var) != num_features:
+                    #
+                    running_var = np.ones(num_features, dtype=np.float32)
+
+            #
+            ### For inference mode (eval), use running statistics ###
+            ### For training mode, compute batch statistics ###
+            ### Since we don't have training/eval mode info, we'll use running stats if available ###
+            #
+            if track_running_stats and np.any(running_var != 1.0):
+                #
+                ### Use running statistics (inference mode) ###
+                #
+                mean = running_mean
+                var = running_var
+            #
+            else:
+                #
+                ### Compute batch statistics (training mode) ###
+                ### Calculate mean and variance across batch, height, and width dimensions ###
+                ### Keep channel dimension separate ###
+                #
+                if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                    #
+                    ### Calculate statistics over batch, height, and width dimensions (axes 0, 2, 3) ###
+                    #
+                    mean = np.mean(input_tensor, axis=(0, 2, 3), keepdims=False)
+                    var = np.var(input_tensor, axis=(0, 2, 3), keepdims=False)
+                #
+                elif len(input_tensor.shape) == 3:  # (batch, channels, spatial)
+                    #
+                    ### Calculate statistics over batch and spatial dimensions (axes 0, 2) ###
+                    #
+                    mean = np.mean(input_tensor, axis=(0, 2), keepdims=False)
+                    var = np.var(input_tensor, axis=(0, 2), keepdims=False)
+                #
+                elif len(input_tensor.shape) == 2:  # (batch, channels)
+                    #
+                    ### Calculate statistics over batch dimension (axis 0) ###
+                    #
+                    mean = np.mean(input_tensor, axis=0, keepdims=False)
+                    var = np.var(input_tensor, axis=0, keepdims=False)
+                #
+                else:
+                    #
+                    ### Fallback: treat as 1D ###
+                    #
+                    mean = np.mean(input_tensor, axis=0, keepdims=False)
+                    var = np.var(input_tensor, axis=0, keepdims=False)
+
+            #
+            ### Normalize the input ###
+            ### Reshape mean and var to broadcast correctly ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                ### Reshape to (1, channels, 1, 1) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1, 1, 1)
+                var_reshaped = var.reshape(1, -1, 1, 1)
+                gamma_reshaped = gamma.reshape(1, -1, 1, 1)
+                beta_reshaped = beta.reshape(1, -1, 1, 1)
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial)
+                #
+                ### Reshape to (1, channels, 1) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1, 1)
+                var_reshaped = var.reshape(1, -1, 1)
+                gamma_reshaped = gamma.reshape(1, -1, 1)
+                beta_reshaped = beta.reshape(1, -1, 1)
+            #
+            elif len(input_tensor.shape) == 2:  # (batch, channels)
+                #
+                ### Reshape to (1, channels) for broadcasting ###
+                #
+                mean_reshaped = mean.reshape(1, -1)
+                var_reshaped = var.reshape(1, -1)
+                gamma_reshaped = gamma.reshape(1, -1)
+                beta_reshaped = beta.reshape(1, -1)
+            #
+            else:
+                #
+                ### Use as-is for other shapes ###
+                #
+                mean_reshaped = mean
+                var_reshaped = var
+                gamma_reshaped = gamma
+                beta_reshaped = beta
+
+            #
+            ### Apply batch normalization formula: (x - mean) / sqrt(var + eps) * gamma + beta ###
+            #
+            normalized = (input_tensor - mean_reshaped) / np.sqrt(var_reshaped + eps)
+            result = gamma_reshaped * normalized + beta_reshaped
+
+            #
+            return result
+
+        #
+        elif layer_type == "MaxPool2d":
+
+            #
+            ### 2D Max Pooling layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            kernel_size = _layer_params.get("kernel_size", 2)
+            stride = _layer_params.get("stride", kernel_size)  # Default stride equals kernel_size
+            padding = _layer_params.get("padding", 0)
+            dilation = _layer_params.get("dilation", 1)
+            ceil_mode = _layer_params.get("ceil_mode", False)
+
+            #
+            ### Ensure kernel_size is a tuple ###
+            #
+            if isinstance(kernel_size, int):
+                #
+                kernel_size = (kernel_size, kernel_size)
+
+            #
+            ### Ensure stride is a tuple ###
+            #
+            if isinstance(stride, int):
+                #
+                stride = (stride, stride)
+
+            #
+            ### Ensure padding is a tuple ###
+            #
+            if isinstance(padding, int):
+                #
+                padding = (padding, padding)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"MaxPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Apply padding if specified ###
+            #
+            if padding[0] > 0 or padding[1] > 0:
+                #
+                padded_tensor = np.pad(
+                    input_tensor,
+                    ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
+                    mode='constant',
+                    constant_values=-np.inf  # Use -inf for max pooling
+                )
+            #
+            else:
+                #
+                padded_tensor = input_tensor
+
+            #
+            ### Calculate output dimensions ###
+            #
+            padded_height = padded_tensor.shape[2]
+            padded_width = padded_tensor.shape[3]
+
+            #
+            if ceil_mode:
+                #
+                ### Use ceiling division ###
+                #
+                output_height = int(np.ceil((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1))
+                output_width = int(np.ceil((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1))
+            #
+            else:
+                #
+                ### Use floor division (default) ###
+                #
+                output_height = int((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+                output_width = int((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+            #
+            ### Ensure output dimensions are positive ###
+            #
+            output_height = max(1, output_height)
+            output_width = max(1, output_width)
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform max pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            #
+                            h_start = h_out * stride[0]
+                            w_start = w_out * stride[1]
+
+                            #
+                            h_end = min(h_start + kernel_size[0], padded_height)
+                            w_end = min(w_start + kernel_size[1], padded_width)
+
+                            #
+                            ### Handle dilation ###
+                            #
+                            if dilation > 1:
+                                #
+                                ### Sample with dilation ###
+                                #
+                                h_indices = np.arange(h_start, h_end, dilation)
+                                w_indices = np.arange(w_start, w_end, dilation)
+
+                                #
+                                ### Ensure indices are within bounds ###
+                                #
+                                h_indices = h_indices[h_indices < padded_height]
+                                w_indices = w_indices[w_indices < padded_width]
+
+                                #
+                                if len(h_indices) > 0 and len(w_indices) > 0:
+                                    #
+                                    ### Get the region with dilation ###
+                                    #
+                                    region = padded_tensor[b, c][np.ix_(h_indices, w_indices)]
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = np.max(region)
+                                #
+                                else:
+                                    #
+                                    ### No valid indices, use minimum value ###
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+                            #
+                            else:
+                                #
+                                ### Standard pooling without dilation ###
+                                #
+                                if h_start < padded_height and w_start < padded_width:
+                                    #
+                                    region = padded_tensor[b, c, h_start:h_end, w_start:w_end]
+                                    #
+                                    if region.size > 0:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = np.max(region)
+                                    #
+                                    else:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = -np.inf
+                                #
+                                else:
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+            #
+            ### Replace -inf values with 0 (in case of edge cases) ###
+            #
+            output_tensor[output_tensor == -np.inf] = 0.0
+
+            #
+            return output_tensor
+
+        #
+        elif layer_type == "AdaptiveAvgPool2d":
+
+            #
+            ### Adaptive Average Pooling 2D layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            output_size = _layer_params.get("output_size", (1, 1))
+
+            #
+            ### Ensure output_size is a tuple ###
+            #
+            if isinstance(output_size, int):
+                #
+                output_size = (output_size, output_size)
+            #
+            elif isinstance(output_size, list):
+                #
+                output_size = tuple(output_size)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"AdaptiveAvgPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Get target output dimensions ###
+            #
+            output_height, output_width = output_size
+
+            #
+            ### Handle None values in output_size (means keep original size) ###
+            #
+            if output_height is None:
+                #
+                output_height = input_height
+            #
+            if output_width is None:
+                #
+                output_width = input_width
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform adaptive average pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            ### For adaptive pooling, we need to map output positions to input regions ###
+                            #
+                            h_start = int(np.floor(h_out * input_height / output_height))
+                            h_end = int(np.ceil((h_out + 1) * input_height / output_height))
+
+                            #
+                            w_start = int(np.floor(w_out * input_width / output_width))
+                            w_end = int(np.ceil((w_out + 1) * input_width / output_width))
+
+                            #
+                            ### Ensure indices are within bounds ###
+                            #
+                            h_start = max(0, min(h_start, input_height - 1))
+                            h_end = max(h_start + 1, min(h_end, input_height))
+                            w_start = max(0, min(w_start, input_width - 1))
+                            w_end = max(w_start + 1, min(w_end, input_width))
+
+                            #
+                            ### Extract the region and compute average ###
+                            #
+                            region = input_tensor[b, c, h_start:h_end, w_start:w_end]
+                            #
+                            if region.size > 0:
+                                #
+                                output_tensor[b, c, h_out, w_out] = np.mean(region)
+                            #
+                            else:
+                                #
+                                output_tensor[b, c, h_out, w_out] = 0.0
+
+            #
+            return output_tensor
+
+        #
         else:
             #
             raise NotImplementedError(f"lc.Layer type '{layer_type}' not implemented")
@@ -2344,13 +3327,32 @@ class LanguageModel_ForwardInterpreter:
             #
             ### torch.size() or tensor.size() ###
             #
-            if hasattr(first_arg, 'shape'):
+            tensor = first_arg
+            #
+            if hasattr(tensor, 'shape'):
                 #
-                return first_arg.shape
+                ### Check if a specific dimension is requested ###
+                #
+                if len(args) > 1:
+                    #
+                    ### size(dim) - return size of specific dimension ###
+                    #
+                    dim_args = list(args.values())[1:]
+                    #
+                    if len(dim_args) == 1:
+                        #
+                        dim = dim_args[0]
+                        #
+                        return tensor.shape[dim]
+                    #
+                #
+                ### size() - return entire shape tuple ###
+                #
+                return tensor.shape
             #
             else:
                 #
-                return np.array(first_arg).shape
+                return np.array(tensor).shape
 
         #
         elif function_name == "shape":
@@ -2772,7 +3774,44 @@ class LanguageModel_ForwardInterpreter:
             ### torch.view() or np.reshape() ###
             #
             tensor = list(args.values())[0]
-            shape = list(args.values())[1:]
+            shape_args = list(args.values())[1:]
+            #
+            ### Handle different ways shape can be passed ###
+            ### Case 1: view(tensor, dim1, dim2, dim3, ...) - multiple args ###
+            ### Case 2: view(tensor, (dim1, dim2, dim3)) - single tuple arg ###
+            ### Case 3: view(tensor, (shape_tuple), -1) - tuple followed by -1 ###
+            #
+            if len(shape_args) == 1 and isinstance(shape_args[0], (tuple, list)):
+                #
+                ### Single tuple/list argument ###
+                #
+                shape = shape_args[0]
+            #
+            elif len(shape_args) == 2 and isinstance(shape_args[0], (tuple, list)) and shape_args[1] == -1:
+                #
+                ### Tuple followed by -1: this is likely an error in extraction ###
+                ### The -1 should be part of the tuple, not separate ###
+                ### For now, just use the tuple part ###
+                #
+                shape = shape_args[0]
+            #
+            else:
+                #
+                ### Multiple arguments - flatten any nested structures ###
+                #
+                flattened_shape = []
+                #
+                for arg in shape_args:
+                    #
+                    if isinstance(arg, (tuple, list)):
+                        #
+                        flattened_shape.extend(arg)
+                    #
+                    else:
+                        #
+                        flattened_shape.append(arg)
+                #
+                shape = flattened_shape
             #
             import numpy as np
             #
@@ -2813,6 +3852,62 @@ class LanguageModel_ForwardInterpreter:
 
             #
             return np.broadcast_to(tensor, final_shape)
+
+        #
+        elif function_name == "permute":
+            #
+            ### torch.permute() or np.transpose() with custom axis order ###
+            #
+            tensor = list(args.values())[0]
+            dims = list(args.values())[1:]
+
+            #
+            ### Handle case where dims is passed as a single tuple/list argument ###
+            #
+            if len(dims) == 1 and isinstance(dims[0], (list, tuple)):
+                #
+                dims = list(dims[0])
+
+            #
+            ### Convert negative indices to positive indices ###
+            #
+            for i in range(len(dims)):
+                #
+                if dims[i] < 0:
+                    #
+                    dims[i] = len(tensor.shape) + dims[i]
+
+            #
+            ### Validate dimensions ###
+            #
+            if len(dims) != len(tensor.shape):
+                #
+                raise ValueError(f"Number of dimensions in permute ({len(dims)}) must match tensor dimensions ({len(tensor.shape)})")
+
+            #
+            ### Check if all dimensions are valid and unique ###
+            #
+            if len(set(dims)) != len(dims):
+                #
+                raise ValueError(f"Repeated dimension in permute: {dims}")
+
+            #
+            for dim in dims:
+                #
+                if dim < 0 or dim >= len(tensor.shape):
+                    #
+                    raise ValueError(f"Dimension {dim} out of range for tensor with {len(tensor.shape)} dimensions")
+
+            #
+            if hasattr(tensor, 'transpose'):
+                #
+                ### Use numpy transpose with the specified axis order ###
+                #
+                return tensor.transpose(tuple(dims))
+            #
+            else:
+                #
+                return np.transpose(tensor, tuple(dims))
 
         #
         elif function_name == "transpose":
@@ -3112,17 +4207,55 @@ class LanguageModel_ForwardInterpreter:
             #
             tensor = list(args.values())[0]
             #
-            start_dim = args.get("start_dim", 0)
+            ### Handle both positional and named arguments ###
+            ### torch.flatten(input, start_dim=0, end_dim=-1) ###
             #
-            end_dim = args.get("end_dim", -1)
+            start_dim = args.get("start_dim", args.get("1", 0))  # Second positional arg or named
+            end_dim = args.get("end_dim", args.get("2", -1))     # Third positional arg or named
             #
-            if hasattr(tensor, 'flatten'):
+            ### This is a numpy array - use numpy's flatten (no start_dim/end_dim support) ###
+            ### For numpy, we need to simulate start_dim/end_dim behavior ###
+            #
+            if start_dim == 0 and end_dim == -1:
                 #
-                return tensor.flatten(start_dim=start_dim, end_dim=end_dim)
+                ### Simple case: flatten everything ###
+                #
+                if hasattr(tensor, "flatten"):
+                    #
+                    result = tensor.flatten()
+                #
+                else:
+                    #
+                    result = np.flatten(tensor)
+                #
+                return result
             #
             else:
                 #
-                return np.flatten(tensor)
+                ### More complex case: need to reshape to simulate start_dim/end_dim ###
+                #
+                shape = tensor.shape
+                #
+                if end_dim == -1:
+                    #
+                    end_dim = len(shape) - 1
+
+                #
+                ### Calculate new shape ###
+                #
+                new_shape = list(shape[:start_dim])
+                #
+                flattened_size = 1
+                #
+                for i in range(start_dim, end_dim + 1):
+                    #
+                    flattened_size *= shape[i]
+                #
+                new_shape.append(flattened_size)
+                new_shape.extend(shape[end_dim + 1:])
+
+                #
+                return tensor.reshape(new_shape)
 
         #
         ### Indexing and slicing functions ###

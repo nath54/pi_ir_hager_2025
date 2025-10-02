@@ -106,96 +106,151 @@ class Tester:
         for pt_name, pt_module in pytorch_layers:
 
             #
-            ### Find corresponding extracted layer ###
+            ### Find corresponding extracted layer by name ###
             #
             found_match: bool = False
+            matching_ext_layer = None
+            matching_ext_name = None
 
+            #
+            ### First try to find exact name match ###
             #
             for ext_name, ext_layer in extracted_layers:
 
                 #
-                if pt_module.__class__.__name__ == ext_layer.layer_type:
-
+                ### Extract the layer name from the full path (e.g., "Model.fc1" -> "fc1") ###
+                #
+                ext_layer_name = ext_name.split('.')[-1]
+                #
+                if pt_name == ext_layer_name and pt_module.__class__.__name__ == ext_layer.layer_type:
                     #
                     found_match = True
-
                     #
-                    ### Verify layer type ###
-                    #
-                    if pt_module.__class__.__name__ != ext_layer.layer_type:
-                        #
-                        return (False, f"Layer type mismatch for {pt_name}: PyTorch has {pt_module.__class__.__name__}, extracted has {ext_layer.layer_type}")
-
-                    #
-                    ### Verify parameters ###
-                    #
-                    pt_params = dict(pt_module.named_parameters())
-                    ext_params = ext_layer.layer_parameters_kwargs
-
-                    #
-                    ### Check if parameter names match (basic check) ###
-                    #
-                    pt_param_names = set(pt_params.keys())
-                    ext_param_names = set(ext_params.keys())
-
-                    #
-                    ### For layers with weights, check if weight parameters are present and dimensions match ###
-                    #
-                    if hasattr(pt_module, 'weight') and 'weight' in pt_param_names:
-
-                        #
-                        if 'weight' not in ext_layer.layer_weights:
-
-                            #
-                            return (False, f"Missing weight parameter in extracted layer {ext_name}")
-
-                        #
-                        ### Verify weight dimensions match ###
-                        #
-                        pt_weight_shape = pt_module.weight.shape
-                        #
-                        ext_weight_shape = ext_layer.layer_weights['weight'].shape
-
-                        #
-                        ### For Linear layers, the weight matrix is transposed during extraction ###
-                        ### PyTorch stores as (out_features, in_features) but we store as (in_features, out_features) ###
-                        #
-                        expected_ext_shape = pt_weight_shape
-                        #
-                        if ext_layer.layer_type == "Linear":
-                            #
-                            expected_ext_shape = (pt_weight_shape[1], pt_weight_shape[0])
-
-                        #
-                        if ext_weight_shape != expected_ext_shape:
-
-                            #
-                            return (False, f"Weight shape mismatch in layer {ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}, expected {expected_ext_shape}")
-
-                    #
-                    if hasattr(pt_module, 'bias') and 'bias' in pt_param_names:
-                        #
-                        if 'bias' not in ext_layer.layer_weights:
-                            #
-                            return (False, f"Missing bias parameter in extracted layer {ext_name}")
-
-                        #
-                        ### Verify bias dimensions match ###
-                        #
-                        pt_bias_shape = pt_module.bias.shape
-                        #
-                        ext_bias_shape = ext_layer.layer_weights['bias'].shape
-
-                        #
-                        if pt_bias_shape != ext_bias_shape:
-                            #
-                            return (False, f"Bias shape mismatch in layer {ext_name}: PyTorch has {pt_bias_shape}, extracted has {ext_bias_shape}")
-
+                    matching_ext_layer = ext_layer
+                    matching_ext_name = ext_name
                     #
                     break
 
             #
+            ### If no exact match, try type-based matching (fallback) ###
+            #
             if not found_match:
+
+                #
+                for ext_name, ext_layer in extracted_layers:
+
+                    #
+                    if pt_module.__class__.__name__ == ext_layer.layer_type:
+
+                        #
+                        ### Check if this extracted layer is not already matched ###
+                        #
+                        already_matched = False
+
+                        #
+                        for other_pt_name, other_pt_module in pytorch_layers:
+
+                            #
+                            if other_pt_name != pt_name:
+
+                                #
+                                other_ext_layer_name = ext_name.split('.')[-1]
+
+                                #
+                                if other_pt_name == other_ext_layer_name and other_pt_module.__class__.__name__ == ext_layer.layer_type:
+
+                                    #
+                                    already_matched = True
+                                    break
+
+                        #
+                        if not already_matched:
+
+                            #
+                            found_match = True
+                            #
+                            matching_ext_layer = ext_layer
+                            matching_ext_name = ext_name
+                            #
+                            break
+
+            #
+            if found_match and matching_ext_layer is not None:
+
+                #
+                ### Verify layer type ###
+                #
+                if pt_module.__class__.__name__ != matching_ext_layer.layer_type:
+                    #
+                    return (False, f"Layer type mismatch for {pt_name}: PyTorch has {pt_module.__class__.__name__}, extracted has {matching_ext_layer.layer_type}")
+
+                #
+                ### Verify parameters ###
+                #
+                pt_params = dict(pt_module.named_parameters())
+                ext_params = matching_ext_layer.layer_parameters_kwargs
+
+                #
+                ### Check if parameter names match (basic check) ###
+                #
+                pt_param_names = set(pt_params.keys())
+                ext_param_names = set(ext_params.keys())
+
+                #
+                ### For layers with weights, check if weight parameters are present and dimensions match ###
+                #
+                if hasattr(pt_module, 'weight') and 'weight' in pt_param_names:
+
+                    #
+                    if 'weight' not in matching_ext_layer.layer_weights:
+                        #
+                        return (False, f"Missing weight parameter in extracted layer {matching_ext_name}")
+
+                    #
+                    ### Verify weight dimensions match ###
+                    #
+                    pt_weight_shape = pt_module.weight.shape
+                    #
+                    ext_weight_shape = matching_ext_layer.layer_weights['weight'].shape
+
+                    #
+                    ### For Linear layers, the weight matrix is transposed during extraction ###
+                    ### PyTorch stores as (out_features, in_features) but we store as (in_features, out_features) ###
+                    #
+                    expected_ext_shape = pt_weight_shape
+                    #
+                    if matching_ext_layer.layer_type == "Linear":
+                        #
+                        expected_ext_shape = (pt_weight_shape[1], pt_weight_shape[0])
+
+                    #
+                    if ext_weight_shape != expected_ext_shape:
+
+                        #
+                        return (False, f"Weight shape mismatch in layer {matching_ext_name}: PyTorch has {pt_weight_shape}, extracted has {ext_weight_shape}, expected {expected_ext_shape}")
+
+                #
+                if hasattr(pt_module, 'bias') and 'bias' in pt_param_names:
+
+                    #
+                    if 'bias' not in matching_ext_layer.layer_weights:
+                        #
+                        return (False, f"Missing bias parameter in extracted layer {matching_ext_name}")
+
+                    #
+                    ### Verify bias dimensions match ###
+                    #
+                    pt_bias_shape = pt_module.bias.shape
+                    #
+                    ext_bias_shape = matching_ext_layer.layer_weights['bias'].shape
+
+                    #
+                    if pt_bias_shape != ext_bias_shape:
+                        #
+                        return (False, f"Bias shape mismatch in layer {matching_ext_name}: PyTorch has {pt_bias_shape}, extracted has {ext_bias_shape}")
+
+            #
+            else:
                 #
                 return (False, f"No matching extracted layer found for PyTorch layer {pt_name} of type {pt_module.__class__.__name__}")
 
@@ -228,6 +283,7 @@ class Tester:
         ### 4. Verify that all extracted layers are valid according to layer definitions ###
         #
         for ext_name, ext_layer in extracted_layers:
+
             #
             if ext_layer.layer_type not in all_layer_infos:
                 #
@@ -252,13 +308,19 @@ class Tester:
         #
         inference_layers = [
             name for name, module in pytorch_layers
-            if module.__class__.__name__ not in ['Dropout', 'Dropout2d', 'Dropout3d', 'BatchNorm1d', 'BatchNorm2d', 'BatchNorm3d']
+            if module.__class__.__name__ not in ['Dropout', 'Dropout2d', 'Dropout3d']
+        ]
+
+        #
+        extracted_layers = [
+            el[0]
+            for el in extracted_layers
         ]
 
         #
         if len(inference_layers) != len(extracted_layers):
             #
-            return (False, f"Non-inference layer filtering issue: {len(inference_layers)} inference layers vs {len(extracted_layers)} extracted layers")
+            return (False, f"Non-inference layer filtering issue: {len(inference_layers)} inference layers vs {len(extracted_layers)} extracted layers -> infe = {inference_layers} | extr = {extracted_layers}.")
 
         #
         return (True, f"Model extraction verification passed: {len(extracted_layers)} layers verified")

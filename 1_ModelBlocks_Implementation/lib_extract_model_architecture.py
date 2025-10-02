@@ -1226,6 +1226,59 @@ def extract_call(
 
 
 #
+### Map positional arguments to parameter names based on layer definition. ###
+#
+def map_positional_args_to_params(
+    layer_type: str,
+    positional_args: list[lc.Expression],
+    keyword_args: dict[str, lc.Expression],
+    analyzer: "ModelAnalyzer"
+) -> dict[str, lc.Expression]:
+    """
+    Map positional arguments to parameter names based on layer definition.
+
+    Args:
+        layer_type (str): The type of the layer (e.g., "Conv2d", "Linear").
+        positional_args (list[lc.Expression]): List of positional arguments.
+        keyword_args (dict[str, lc.Expression]): Dictionary of keyword arguments.
+        analyzer (ModelAnalyzer): The analyzer instance with layer information.
+
+    Returns:
+        dict[str, lc.Expression]: Combined parameters with positional args mapped to names.
+    """
+
+    #
+    ### Get layer information ###
+    #
+    if layer_type not in analyzer.layers:
+        return keyword_args
+
+    layer_info = analyzer.layers[layer_type]
+
+    #
+    ### Get parameter names in order (parameters with null default are required first) ###
+    #
+    param_names = list(layer_info.parameters.keys())
+
+    #
+    ### Start with keyword arguments ###
+    #
+    result_params = keyword_args.copy()
+
+    #
+    ### Map positional arguments to parameter names ###
+    #
+    for i, arg in enumerate(positional_args):
+        if i < len(param_names):
+            param_name = param_names[i]
+            # Only add if not already specified as keyword argument
+            if param_name not in result_params:
+                result_params[param_name] = arg
+
+    return result_params
+
+
+#
 ### Extract Layer call. ###
 #
 def extract_layer_call(
@@ -1262,12 +1315,22 @@ def extract_layer_call(
     _layer_name, layer_call_args, layer_call_keywords = extract_call(node=node, analyzer=analyzer, instructions_to_do_before=instructions_to_do_before)
 
     #
+    ### Map positional arguments to parameter names ###
+    #
+    all_parameters = map_positional_args_to_params(
+        layer_type=layer_type,
+        positional_args=layer_call_args,
+        keyword_args=layer_call_keywords,
+        analyzer=analyzer
+    )
+
+    #
     ### Create the layer with proper parameters. ###
     #
     layer: lc.Layer = lc.Layer(
         layer_var_name=var_name,
         layer_type=layer_type,
-        layer_parameters_kwargs=layer_call_keywords
+        layer_parameters_kwargs=all_parameters
     )
 
     #
@@ -1407,6 +1470,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         ### Create a unique sub-block name. ###
         #
         sub_block_name: str = f"Block{container_type}_{self.current_model_visit[-1]}_{self.sub_block_counter[self.current_model_visit[-1]]}"
+        #
         self.sub_block_counter[self.current_model_visit[-1]] += 1
 
         #

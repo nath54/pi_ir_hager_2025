@@ -17,7 +17,7 @@ class SimpleConvModel(nn.Module):
         self.pool = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
         self.bn2 = nn.BatchNorm2d(32)
-        self.linear = nn.Linear(32 * 8 * 8, 10)
+        self.linear = nn.Linear(8192, 10)
 
     def forward(self, x):
         x = self.conv1(x)
