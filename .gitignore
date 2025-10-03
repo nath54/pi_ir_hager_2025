@@ -13,7 +13,9 @@
 **prompt**
 **/*cache*
 **/build
-
+Lib
+Scripts
+pyvenv.cfg
 **/executorch
 **/tensorflow_src
 **/minimal_build
