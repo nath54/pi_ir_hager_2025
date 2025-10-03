@@ -521,6 +521,33 @@ class ExpressionAttributeAccess(Expression):
         return f"{self.variable}.{self.attribute}"
 
 
+#
+class ExpressionRange(ExpressionList):
+    #
+    def __init__(self, end_value: int | ExpressionVariable, start_value: int | ExpressionVariable = 0, step: int | ExpressionVariable = 1) -> None:
+        """
+        Represents a range expression (a list).
+
+        Args:
+            end_value (int | ExpressionVariable): End value of the range.
+            start_value (int, optional): Start value of the range. Defaults to 0.
+            step (int, optional): Step of the range. Defaults to 1. (Warning: the step can't be 0 because it generates an infinite constant list).
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.end_value: int | ExpressionVariable = end_value
+        self.start_value: int | ExpressionVariable = start_value
+        self.step: int | ExpressionVariable = step
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"Range({str(self.start_value)}, {str(self.end_value)}, {str(self.step)})"
+
+
 # Normally, with the following FlowControlInstructions basic instructions, there is no need to have anything else than ExpressionVariable and ExpressionConstant, because we can decompose any complex instructions in a sequence of basic instructions (we may have to create temporary variables, but aside that, it is good)
 
 # We will constraint the models to not use other types of constants and variables, (like dictionaries or custom objects), and we can convert the tuples into lists.
@@ -885,7 +912,7 @@ class FlowControlBasicUnaryOperation(FlowControlInstruction):
 
 
 #
-class FlowControlForLoop(FlowControlInstruction):
+class FlowControlForEachLoop(FlowControlInstruction):
 
     #
     def __init__(
@@ -918,6 +945,47 @@ class FlowControlForLoop(FlowControlInstruction):
     def __str__(self) -> str:
         #
         return f"\t\t * for {self.iterable_var_name} in {self.iterator} {{\n{"\n".join( [fci.__str__() for fci in self.flow_control_instructions] )}\n}}"
+
+
+#
+class FlowControlForRange(FlowControlInstruction):
+
+    #
+    def __init__(
+        self,
+        iterable_var_name: str,
+        for_range: ExpressionConstantRange,
+        flow_control_instructions: list[FlowControlInstruction]
+    ) -> None:
+
+        """
+        Represents a foor loop.
+
+        Warning: Because of python, the iterable variable and the iterator can have complex types, must check them in the error checking and maybe even restric them.
+
+        Args:
+            iterable_var_name (str): Name of the iterable variable.
+            iterator (str): Value of the Iterator.
+            flow_control_instructions (list[FlowControlInstruction]): The list of the flow control instructions inside the loop.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.iterable_var_name: str = iterable_var_name
+        self.for_range: ExpressionConstantRange = for_range
+        self.flow_control_instructions: list[FlowControlInstruction] = flow_control_instructions
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"\t\t * for {self.iterable_var_name} in {self.iterator} {{\n{"\n".join( [fci.__str__() for fci in self.flow_control_instructions] )}\n}}"
+
+
+#
+### TODO: add other types of for to have better representation, easier code extraction, and easier code interpretation??? (If not, just remove this comment) ###
+#
 
 
 #

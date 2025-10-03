@@ -773,7 +773,7 @@ def extract_expression(
             #
             ### Create the for loop instruction ###
             #
-            for_loop = lc.FlowControlForLoop(
+            for_loop = lc.FlowControlForEachLoop(
                 iterable_var_name=target_vars[0] if len(target_vars) == 1 else f"({', '.join(target_vars)})",
                 iterator=iterable_expr,
                 flow_control_instructions=loop_instructions
@@ -825,7 +825,7 @@ def extract_expression(
             ))
 
             #
-            for_loop = lc.FlowControlForLoop(
+            for_loop = lc.FlowControlForEachLoop(
                 iterable_var_name=target_var,
                 iterator=iterable_expr,
                 flow_control_instructions=loop_instructions
@@ -2744,7 +2744,7 @@ class ModelAnalyzer(ast.NodeVisitor):
         #
         ### Create the for loop instruction. ###
         #
-        for_loop = lc.FlowControlForLoop(
+        for_loop = lc.FlowControlForEachLoop(
             iterable_var_name=target_vars[0] if len(target_vars) == 1 else f"({', '.join(target_vars)})",
             iterator=iterable_expr,
             flow_control_instructions=loop_instructions

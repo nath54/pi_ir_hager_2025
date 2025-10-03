@@ -158,7 +158,7 @@ class DeepArcNet(nn.Module) :
 
         B,WT,FD1,FD2 = x.size() # Batch, Window time , Feature dimension 1 , Feature dimension 2
 
-        output_ConvEncode = [ module_c(xi) for ( xi , module_c) in zip  (x.split(1, dim=1) , self.ConvEncode ) ]
+        output_ConvEncode = [ module_c(xi) for ( xi , module_c) in zip(x.split(1, dim=1) , self.ConvEncode ) ]
 
         concatenated_ConvEncode = torch.cat(output_ConvEncode, dim= -2) # Batch , Window time , Convol feature
 

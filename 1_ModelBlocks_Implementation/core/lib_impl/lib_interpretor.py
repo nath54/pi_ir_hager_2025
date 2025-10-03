@@ -325,10 +325,10 @@ class LanguageModel_ForwardInterpreter:
             #
             context.set_variable(layer_name, lc.VarType("lc.Layer"), layer_obj)
 
-        #
-        ### If this layer is a BlockModuleList, also initialize its individual layers. ###
-        #
-        if "BlockModuleList" in layer.layer_type:
+            #
+            ### If this layer is a BlockModuleList, also initialize its individual layers. ###
+            #
+            if "BlockModuleList" in layer.layer_type:
 
                 #
                 ### This is a BlockModuleList, find the corresponding ModelBlock and initialize its individual layers. ###
@@ -416,6 +416,9 @@ class LanguageModel_ForwardInterpreter:
                     param_name: str = ""
 
                     #
+                    print(f"DEBUG | call of function / layer = {self.layer_type}")
+
+                    #
                     ### Handle both positional and keyword arguments. ###
                     #
                     if args:
@@ -424,9 +427,6 @@ class LanguageModel_ForwardInterpreter:
                         ### Get the parameter names from the function definition. ###
                         #
                         param_names: list[str] = list(forward_function.function_arguments.keys())
-
-                        #
-                        print(f"DEBUG | Module {self.layer_type} forward function parameters: {param_names}")
 
                         #
                         ### Skip 'self' parameter if it exists and use the next parameter. ###
@@ -482,15 +482,11 @@ class LanguageModel_ForwardInterpreter:
                         #
                         ### Handle keyword arguments. ###
                         #
-                        print(f"DEBUG | Module {self.layer_type} called with keyword arguments: {list(kwargs.keys())}")
 
                         #
                         ### Get the parameter names from the function definition. ###
                         #
                         param_names: list[str] = list(forward_function.function_arguments.keys())
-
-                        #
-                        print(f"DEBUG | Module {self.layer_type} forward function parameters: {param_names}")
 
                         #
                         ### Skip 'self' parameter if it exists. ###
@@ -546,8 +542,6 @@ class LanguageModel_ForwardInterpreter:
                     #
                     ### If there's only one return value, return it directly instead of the dictionary. ###
                     #
-                    print(f"DEBUG | ModuleWrapper result_dict: {result_dict}")
-                    print(f"DEBUG | ModuleWrapper result_dict length: {len(result_dict)}")
 
                     #
                     ### Only one value, we return it directly, no dictionary. ###
@@ -556,9 +550,6 @@ class LanguageModel_ForwardInterpreter:
 
                         #
                         result_value: Any = list(result_dict.values())[0]
-                        #
-                        print(f"DEBUG | ModuleWrapper single result type: {type(result_value)}")
-                        print(f"DEBUG | ModuleWrapper single result: {result_value}")
                         #
                         return result_value
 
@@ -585,6 +576,30 @@ class LanguageModel_ForwardInterpreter:
                         #
                         raise IndexError(f"Layer {index} not found in context")
 
+                def __iter__(self):
+                    """
+                    Make ModuleWrapper iterable like PyTorch ModuleList.
+                    """
+
+                    # Look for numbered layers (0, 1, 2, ...)
+                    index = 0
+                    while self.context.has_variable(str(index)):
+
+                        yield self.context.get_variable(str(index))
+                        index += 1
+
+
+                def __len__(self):
+                    """
+                    Return the length of the ModuleList.
+                    """
+                    count = 0
+                    index = 0
+                    while self.context.has_variable(str(index)):
+                        count += 1
+                        index += 1
+                    return count
+
             #
             return ModuleWrapper(layer.layer_type, self, context)
 
@@ -601,17 +616,61 @@ class LanguageModel_ForwardInterpreter:
             }
 
             #
+            ### Evaluate layer parameters. ###
+            #
+            for param_name, param_expr in layer.layer_parameters_kwargs.items():
+                #
+                param_value = self._evaluate_expression(param_expr, context)
+                #
+                ### Apply PyTorch parameter normalization ###
+                #
+                param_value = self._normalize_pytorch_parameter(layer.layer_type, param_name, param_value)
+                #
+                layer_instance["parameters"][param_name] = param_value
+
+            #
             return layer_instance
 
+    #
+    def _normalize_pytorch_parameter(self, layer_type: str, param_name: str, param_value: Any) -> Any:
+        """
+        Normalize PyTorch parameters to match expected formats.
+        
+        PyTorch allows single values for parameters that should be tuples,
+        e.g., stride=(2) should become stride=(2, 2) for Conv2d.
+        
+        Args:
+            layer_type (str): The type of layer (e.g., "Conv2d")
+            param_name (str): The parameter name (e.g., "stride")
+            param_value (Any): The parameter value to normalize
+            
+        Returns:
+            Any: The normalized parameter value
+        """
         #
-        ### Evaluate layer parameters. ###
+        ### Handle Conv2d parameter normalization ###
         #
-        for param_name, param_expr in layer.layer_parameters_kwargs.items():
+        if layer_type == "Conv2d":
             #
-            layer_instance["parameters"][param_name] = self._evaluate_expression(param_expr, context)
-
+            if param_name in ["stride", "padding", "dilation", "kernel_size"]:
+                #
+                ### Convert single values to tuples ###
+                ### PyTorch: stride=(2) -> (2, 2), kernel_size=3 -> (3, 3) ###
+                #
+                if isinstance(param_value, (int, float)):
+                    #
+                    return (param_value, param_value)
+                #
+                elif isinstance(param_value, tuple) and len(param_value) == 1:
+                    #
+                    ### Single-element tuple like (2,) -> (2, 2) ###
+                    #
+                    return (param_value[0], param_value[0])
+        
         #
-        return layer_instance
+        ### Handle other layer types as needed ###
+        #
+        return param_value
 
     #
     def _execute_block_function(
@@ -821,7 +880,7 @@ class LanguageModel_ForwardInterpreter:
             #
             return self._execute_unary_operation(instruction, context)
         #
-        elif isinstance(instruction, lc.FlowControlForLoop):
+        elif isinstance(instruction, lc.FlowControlForEachLoop):
             #
             return self._execute_for_loop(instruction, context)
         #
@@ -1047,7 +1106,7 @@ class LanguageModel_ForwardInterpreter:
     #
     def _execute_for_loop(
         self,
-        instruction: lc.FlowControlForLoop,
+        instruction: lc.FlowControlForEachLoop,
         context: ExecutionContext
     ) -> None:
 
@@ -1055,7 +1114,7 @@ class LanguageModel_ForwardInterpreter:
         Execute for loop.
 
         Args:
-            instruction (lc.FlowControlForLoop): For loop instruction
+            instruction (lc.FlowControlForEachLoop): For loop instruction
             context (ExecutionContext): Execution context
         """
 
@@ -1737,7 +1796,8 @@ class LanguageModel_ForwardInterpreter:
                     #
                     ### Add debug information for indexing errors. ###
                     #
-                    print(f"DEBUG | IndexError: variable shape: {getattr(variable, 'shape', 'no shape')}, index: {index}, index type: {type(index)}")
+                    print(f"DEBUG | IndexError: variable type: {type(variable)} len(variable) = {len(variable)} variable shape: {getattr(variable, 'shape', 'no shape')}, index: {index}, index type: {type(index)}")
+                    print(expression)
                     #
                     # if hasattr(variable, 'ndim'):
                         #
@@ -2039,33 +2099,10 @@ class LanguageModel_ForwardInterpreter:
             ### Check dimension compatibility. ###
             #
             if input_reshaped.shape[-1] != weight.shape[0]:
-
                 #
-                print(f"DEBUG | Dimension mismatch: input has {input_reshaped.shape[-1]} features, weight expects {weight.shape[0]}")
-
-                #
-                ### Try to adjust the input to match the weight matrix. ###
-                #
-                if input_reshaped.shape[-1] < weight.shape[0]:
-
-                    #
-                    ### Pad with zeros. ###
-                    #
-                    padding = np.zeros((input_reshaped.shape[0], weight.shape[0] - input_reshaped.shape[-1]))
-                    #
-                    input_reshaped = np.concatenate([input_reshaped, padding], axis=1)
-                    #
-                    print(f"DEBUG | Padded input shape: {input_reshaped.shape}")
-
-                #
-                else:
-
-                    #
-                    ### Truncate. ###
-                    #
-                    input_reshaped = input_reshaped[:, :weight.shape[0]]
-                    #
-                    print(f"DEBUG | Truncated input shape: {input_reshaped.shape}")
+                raise ValueError(f"Linear layer dimension mismatch: input has {input_reshaped.shape[-1]} features, but weight expects {weight.shape[0]}. "
+                               f"This suggests a mismatch between the extracted model architecture and the actual PyTorch model weights. "
+                               f"Please verify that the model architecture extraction is correct.")
 
             #
             ### Perform matrix multiplication. ###
@@ -2124,6 +2161,7 @@ class LanguageModel_ForwardInterpreter:
             stride = _layer_params.get("stride", 1)
             in_channels = _layer_params.get("in_channels", 1)
             out_channels = _layer_params.get("out_channels", 1)
+            
 
             #
             ### Get weights and bias. ###
@@ -2155,7 +2193,7 @@ class LanguageModel_ForwardInterpreter:
                     #
                     ### If not a perfect square, try to find factors. ###
                     #
-                    factors: list[int] = []
+                    factors: list[tuple[int, int]] = []
                     #
                     for i in range(1, int(np.sqrt(flattened_size)) + 1):
                         #
@@ -2169,17 +2207,14 @@ class LanguageModel_ForwardInterpreter:
                         #
                         ### Use the largest factor. ###
                         #
-                        spatial_size: int = factors[-1][0]
-                        #
-                        spatial_height: int = spatial_size
-                        #
-                        spatial_width: int = flattened_size // spatial_size
+                        spatial_height, spatial_width = factors[-1]
 
                     #
                     else:
-
                         #
-                        spatial_height = spatial_width = spatial_size
+                        raise ValueError(f"Cannot reshape flattened tensor of size {flattened_size} into 2D spatial dimensions. "
+                                       f"No valid factors found for reshaping. This suggests a mismatch between the expected "
+                                       f"and actual tensor shapes in the Conv2d layer.")
 
                 #
                 else:
@@ -2188,83 +2223,102 @@ class LanguageModel_ForwardInterpreter:
                     spatial_height = spatial_width = spatial_size
 
                 #
+                ### Validate that the reshape is mathematically possible ###
+                #
+                expected_total_elements = batch_size * in_channels * spatial_height * spatial_width
+                actual_total_elements = input_tensor.size
+                #
+                if expected_total_elements != actual_total_elements:
+                    #
+                    raise ValueError(f"Conv2d reshape error: cannot reshape tensor of size {actual_total_elements} "
+                                   f"into shape ({batch_size}, {in_channels}, {spatial_height}, {spatial_width}) = {expected_total_elements} elements. "
+                                   f"This suggests a mismatch between the extracted model architecture and the actual PyTorch model weights.")
+
+                #
                 input_tensor = input_tensor.reshape(batch_size, in_channels, spatial_height, spatial_width)
 
             #
-            ### For simplicity, using scipy's correlate function ###
-            ### This is a basic implementation - in practice, you'd want a more efficient conv2d ###
+            ### Calculate output spatial dimensions using PyTorch's formula ###
+            ### output_size = (input_size + 2*padding - kernel_size) // stride + 1 ###
+            ### For now, assume padding=0 (no padding) ###
             #
-            output_list = []
+            input_height, input_width = input_tensor.shape[2], input_tensor.shape[3]
+            kernel_h, kernel_w = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+            stride_h, stride_w = stride if isinstance(stride, tuple) else (stride, stride)
+            
+            #
+            ### PyTorch's Conv2d output size formula ###
+            ### output_size = (input_size + 2*padding - kernel_size) // stride + 1 ###
+            ### With padding=0: output_size = (input_size - kernel_size) // stride + 1 ###
+            #
+            output_height = (input_height - kernel_h) // stride_h + 1
+            output_width = (input_width - kernel_w) // stride_w + 1
+            
+            
+            #
+            ### Validate output dimensions are positive ###
+            #
+            if output_height <= 0 or output_width <= 0:
+                #
+                raise ValueError(f"Conv2d output dimensions are invalid: ({output_height}, {output_width}). "
+                               f"Input: ({input_height}, {input_width}), Kernel: {kernel_size}, Stride: {stride}. "
+                               f"This suggests the input spatial dimensions are too small for the kernel and stride.")
+            
+            #
+            ### Initialize output tensor with correct dimensions ###
+            #
+            result = np.zeros((batch_size, out_channels, output_height, output_width), dtype=np.float32)
+            
+            #
+            ### Perform convolution for each batch and output channel ###
             #
             for b in range(batch_size):
-
-                #
-                batch_output = []
-
                 #
                 for out_ch in range(out_channels):
-
-                    #
-                    ### Initialize output with the correct spatial dimensions ###
-                    ### The output spatial size depends on the convolution operation ###
-                    ### For now, use the same spatial size as input (assuming no padding) ###
-                    #
-                    spatial_shape = input_tensor[b, 0].shape
-                    #
-                    channel_output = np.zeros(spatial_shape)
                     #
                     for in_ch in range(in_channels):
-
                         #
-                        ### Perform convolution (correlation in scipy) ###
+                        input_slice = input_tensor[b, in_ch]  # (H, W)
+                        weight_slice = weight[out_ch, in_ch]  # (kH, kW)
+                        
                         #
-                        input_slice = input_tensor[b, in_ch]
+                        ### Manual convolution with proper stride ###
                         #
-                        weight_slice = weight[out_ch, in_ch]
-
-                        #
-                        ### For 2D convolution, we need to specify axes=(0, 1) for height and width dimensions ###
-                        ### But first check if we have enough dimensions ###
-                        #
-                        if len(input_slice.shape) == 2:
+                        for oh in range(output_height):
                             #
-                            conv_result = correlate(input_slice, weight_slice, mode='constant', axes=(0, 1))
-
-                        #
-                        elif len(input_slice.shape) == 1:
-                            #
-                            conv_result = correlate(input_slice, weight_slice, mode='constant', axes=(0,))
-
-                        #
-                        else:
-                            #
-                            ### Fallback: let scipy determine axes automatically. ###
-                            #
-                            conv_result = correlate(input_slice, weight_slice, mode='constant')
-
-                        #
-                        channel_output += conv_result
-
+                            for ow in range(output_width):
+                                #
+                                ### Calculate input position ###
+                                #
+                                ih_start = oh * stride_h
+                                iw_start = ow * stride_w
+                                ih_end = ih_start + kernel_h
+                                iw_end = iw_start + kernel_w
+                                
+                                
+                                #
+                                ### Extract input patch ###
+                                #
+                                if ih_end <= input_height and iw_end <= input_width:
+                                    #
+                                    input_patch = input_slice[ih_start:ih_end, iw_start:iw_end]
+                                    #
+                                    ### Validate patch shape matches kernel shape ###
+                                    #
+                                    if input_patch.shape != weight_slice.shape:
+                                        #
+                                        raise ValueError(f"Conv2d patch shape mismatch: input patch shape {input_patch.shape} "
+                                                       f"does not match kernel shape {weight_slice.shape}. "
+                                                       f"This suggests incorrect output size calculation or stride handling.")
+                                    #
+                                    ### Compute dot product ###
+                                    #
+                                    result[b, out_ch, oh, ow] += np.sum(input_patch * weight_slice)
+                    
                     #
-                    ### Add bias. ###
+                    ### Add bias ###
                     #
-                    channel_output += bias[out_ch]
-
-                    #
-                    ### Apply stride by subsampling. ###
-                    #
-                    if stride > 1:
-                        #
-                        channel_output = channel_output[::stride, ::stride]
-
-                    #
-                    batch_output.append(channel_output)
-
-                #
-                output_list.append(np.stack(batch_output, axis=0))
-
-            #
-            result = np.stack(output_list, axis=0)
+                    result[b, out_ch] += bias[out_ch]
 
             #
             return result
@@ -3323,7 +3377,26 @@ class LanguageModel_ForwardInterpreter:
         #
 
         #
-        if function_name == "size":
+        if function_name == "print":
+
+            #
+            # print( args )
+            #
+            pass
+
+        #
+        elif function_name == "len":
+
+            #
+            if len(args) == 0:
+                #
+                return 0
+
+            #
+            return len(args[list(args.keys())[0]])
+
+        #
+        elif function_name == "size":
             #
             ### torch.size() or tensor.size() ###
             #
@@ -3498,7 +3571,13 @@ class LanguageModel_ForwardInterpreter:
                     #
                     if isinstance(tensor, np.ndarray):
                         #
-                        result = np.split(tensor, split_size, axis=dim)
+                        ### 1. Calculate the indices for the split ###
+                        ### The indices will be [3, 6, 9, ...] ###
+                        #
+                        indices = np.arange(split_size, tensor.shape[dim], split_size)
+
+                        # 2. Use numpy.split with the calculated indices
+                        result = np.split(tensor, indices, axis=dim)
 
                         #
                         return result
@@ -3509,8 +3588,19 @@ class LanguageModel_ForwardInterpreter:
                         ### Convert to numpy and split ###
                         #
                         np_tensor = np.array(tensor)
+
                         #
-                        result = np.split(np_tensor, split_size, axis=dim)
+                        ### 1. Calculate the indices for the split ###
+                        ### The indices will be [3, 6, 9, ...] ###
+                        #
+                        indices = np.arange(split_size, np_tensor.shape[dim], split_size)
+
+                        # 2. Use numpy.split with the calculated indices
+                        result = np.split(np_tensor, indices, axis=dim)
+
+                        #
+                        return result
+
                         #
                         return result
 
@@ -3708,6 +3798,10 @@ class LanguageModel_ForwardInterpreter:
             if isinstance(tensors, list):
                 #
                 import numpy as np
+                #
+                # Handle empty list case
+                if len(tensors) == 0:
+                    raise ValueError(f"Cannot concatenate empty list of tensors. Function: {function_name}, Args: {args}")
                 #
                 result = np.concatenate(tensors, axis=axis)
                 #
