@@ -309,14 +309,14 @@ class Tester:
         #
         print(f"\n\n\033[31m========================= END OF TRUTH PYTORCH EXECUTION =========================\033[m\n\n")
 
-        # #
-        # print(f"\n\n\033[33m========================= DEBUG EXTRACTED MODEL =========================\033[m\n\n")
+        #
+        print(f"\n\n\033[33m========================= DEBUG EXTRACTED MODEL =========================\033[m\n\n")
 
-        # #
-        # print(l_model)
+        #
+        print(l_model)
 
-        # #
-        # print(f"\n\n\033[33m========================= END OF DEBUG EXTRACTED MODEL =========================\033[m\n\n")
+        #
+        print(f"\n\n\033[33m========================= END OF DEBUG EXTRACTED MODEL =========================\033[m\n\n")
 
         #
         ### Get the output from the extracted model. ###

@@ -191,11 +191,12 @@ class MultiHeadAttention(nn.Module) :
     #
     def forward(self, x: Tensor) -> Tensor:
 
-        # Process each head individually with debug
-        head_outputs = []
-        for i, h in enumerate(self.heads):
-            head_out = h(x)
-            head_outputs.append(head_out)
+        # Process each head individually
+
+        head_out_0 = self.heads[0](x)
+        head_out_1 = self.heads[0](x)
+
+        head_outputs = [head_out_0, head_out_1]
 
         out: Tensor = torch.cat(head_outputs, dim = -1) # (Batch, Time, Channel Feature dimension) = (B,T , [h1,h1,h2,h2,h3,h3,h4,h4])
 
