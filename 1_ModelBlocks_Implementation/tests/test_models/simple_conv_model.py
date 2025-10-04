@@ -21,43 +21,15 @@ class SimpleConvModel(nn.Module):
 
     def forward(self, x):
 
-        print("0 | x.shape = ", x.shape)
-
         x = self.conv1(x)
-
-        print("1 | x.shape = ", x.shape)
-
         x = self.bn1(x)
-
-        print("2 | x.shape = ", x.shape)
-
         x = self.relu(x)
-
-        print("3 | x.shape = ", x.shape)
-
         x = self.pool(x)
-
-        print("4 | x.shape = ", x.shape)
-
         x = self.conv2(x)
-
-        print("5 | x.shape = ", x.shape)
-
         x = self.bn2(x)
-
-        print("6 | x.shape = ", x.shape)
-
         x = self.relu(x)
-
-        print("7 | x.shape = ", x.shape)
-
         x = x.view(x.size(0), -1)
-
-        print("8 | x.shape = ", x.shape)
-
         x = self.linear(x)
-
-        print("9 | x.shape = ", x.shape)
 
         return x
 

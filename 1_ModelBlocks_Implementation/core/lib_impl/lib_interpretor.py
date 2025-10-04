@@ -581,24 +581,29 @@ class LanguageModel_ForwardInterpreter:
                     Make ModuleWrapper iterable like PyTorch ModuleList.
                     """
 
-                    # Look for numbered layers (0, 1, 2, ...)
-                    index = 0
-                    while self.context.has_variable(str(index)):
-
-                        yield self.context.get_variable(str(index))
-                        index += 1
+                    # Get the layers defined in the BlockModuleList block
+                    if self.layer_type in self.interpreter.language_model.model_blocks:
+                        model_block = self.interpreter.language_model.model_blocks[self.layer_type]
+                        # Iterate over the layers in the order they are defined in the block
+                        for layer_name in sorted(model_block.block_layers.keys()):
+                            if self.context.has_variable(layer_name):
+                                yield self.context.get_variable(layer_name)
 
 
                 def __len__(self):
                     """
                     Return the length of the ModuleList.
                     """
-                    count = 0
-                    index = 0
-                    while self.context.has_variable(str(index)):
-                        count += 1
-                        index += 1
-                    return count
+                    # Get the layers defined in the BlockModuleList block
+                    if self.layer_type in self.interpreter.language_model.model_blocks:
+                        model_block = self.interpreter.language_model.model_blocks[self.layer_type]
+                        # Count only the layers that are actually in the context
+                        count = 0
+                        for layer_name in model_block.block_layers.keys():
+                            if self.context.has_variable(layer_name):
+                                count += 1
+                        return count
+                    return 0
 
             #
             return ModuleWrapper(layer.layer_type, self, context)
@@ -1206,7 +1211,7 @@ class LanguageModel_ForwardInterpreter:
             for var_name, value in loop_context.variables.items():
 
                 #
-                if context.has_variable(var_name):
+                if context.has_variable(var_name) and var_name in loop_context.variable_types:
 
                     #
                     context.set_variable(var_name, loop_context.variable_types[var_name], value)
@@ -2159,6 +2164,7 @@ class LanguageModel_ForwardInterpreter:
             #
             kernel_size = _layer_params.get("kernel_size", (3, 3))
             stride = _layer_params.get("stride", 1)
+            padding = _layer_params.get("padding", 0)
             in_channels = _layer_params.get("in_channels", 1)
             out_channels = _layer_params.get("out_channels", 1)
             
@@ -2240,19 +2246,18 @@ class LanguageModel_ForwardInterpreter:
             #
             ### Calculate output spatial dimensions using PyTorch's formula ###
             ### output_size = (input_size + 2*padding - kernel_size) // stride + 1 ###
-            ### For now, assume padding=0 (no padding) ###
             #
             input_height, input_width = input_tensor.shape[2], input_tensor.shape[3]
             kernel_h, kernel_w = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
             stride_h, stride_w = stride if isinstance(stride, tuple) else (stride, stride)
+            padding_h, padding_w = padding if isinstance(padding, tuple) else (padding, padding)
             
             #
             ### PyTorch's Conv2d output size formula ###
             ### output_size = (input_size + 2*padding - kernel_size) // stride + 1 ###
-            ### With padding=0: output_size = (input_size - kernel_size) // stride + 1 ###
             #
-            output_height = (input_height - kernel_h) // stride_h + 1
-            output_width = (input_width - kernel_w) // stride_w + 1
+            output_height = (input_height + 2 * padding_h - kernel_h) // stride_h + 1
+            output_width = (input_width + 2 * padding_w - kernel_w) // stride_w + 1
             
             
             #
@@ -2264,6 +2269,25 @@ class LanguageModel_ForwardInterpreter:
                                f"Input: ({input_height}, {input_width}), Kernel: {kernel_size}, Stride: {stride}. "
                                f"This suggests the input spatial dimensions are too small for the kernel and stride.")
             
+            #
+            ### Apply padding to input tensor if needed ###
+            #
+            if padding_h > 0 or padding_w > 0:
+                #
+                ### Apply zero padding ###
+                #
+                padded_input = np.zeros((batch_size, in_channels, 
+                                       input_height + 2 * padding_h, 
+                                       input_width + 2 * padding_w), dtype=np.float32)
+                padded_input[:, :, padding_h:padding_h + input_height, 
+                           padding_w:padding_w + input_width] = input_tensor
+                input_tensor = padded_input
+                #
+                ### Update input dimensions after padding ###
+                #
+                input_height += 2 * padding_h
+                input_width += 2 * padding_w
+
             #
             ### Initialize output tensor with correct dimensions ###
             #

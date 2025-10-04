@@ -70,8 +70,15 @@ class ConvEncode(nn.Module):
         b: int = tmp[0]
         #
         # b, wt, fd1, fd2 = x.size()
+
+        #
+        print("DDD 0 | x.shape = ", x.shape)
+
         #
         x_conv: Tensor = self.conv(x)
+
+        #
+        print("DDD 1 | x.shape = ", x.shape)
 
         #
         ### Feature dimension 1 time encode each sample from 0 to 38. ###
@@ -119,26 +126,32 @@ class Head(nn.Module) :
     #
     def forward(self, x: Tensor) -> Tensor:
 
+        print("DEBUG | Head forward start, x.shape =", x.shape)
+        
         #
         # _b, _t, _c = x.shape
 
         #
         k: Tensor = self.key(x) # (_b, _t, head_size)
         q: Tensor = self.query(x) # (_b, _t, head_size)
+        print("DEBUG | Head k.shape =", k.shape, "q.shape =", q.shape)
 
         #
         ### compute attention score ('affinities'). ###
         #
         wei: Tensor = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5 # (B, T, hs) @ (B, hs, T) to (B, T, T)
         wei = F.softmax(wei, dim = -1)
+        print("DEBUG | Head wei.shape =", wei.shape)
 
         #
         ### perform the weighted aggregation of the values. ###
         #
         v: Tensor = self.value(x)
+        print("DEBUG | Head v.shape =", v.shape)
 
         #
         out: Tensor = wei @ v
+        print("DEBUG | Head final out.shape =", out.shape)
 
         #
         return out
@@ -170,8 +183,19 @@ class MultiHeadAttention(nn.Module) :
     #
     def forward(self, x: Tensor) -> Tensor:
 
-        #
-        out: Tensor = torch.cat( [h(x) for h in self.heads], dim = -1 ) # (Batch, Time, Channel Feature dimension) = (B,T , [h1,h1,h2,h2,h3,h3,h4,h4])
+        print("DEBUG | MultiHeadAttention forward start, x.shape =", x.shape)
+        
+        # Process each head individually with debug
+        head_outputs = []
+        for i, h in enumerate(self.heads):
+            print("DEBUG | Processing head", i, "with input shape", x.shape)
+            head_out = h(x)
+            print("DEBUG | Head", i, "output shape =", head_out.shape)
+            head_outputs.append(head_out)
+        
+        print("DEBUG | Concatenating", len(head_outputs), "head outputs")
+        out: Tensor = torch.cat(head_outputs, dim = -1) # (Batch, Time, Channel Feature dimension) = (B,T , [h1,h1,h2,h2,h3,h3,h4,h4])
+        print("DEBUG | MultiHeadAttention final output shape =", out.shape)
 
         #
         return out
@@ -322,6 +346,15 @@ class DeepArcNet(nn.Module) :
         module3: ConvEncode = self.ConvEncode[3]
         module4: ConvEncode = self.ConvEncode[4]
         module5: ConvEncode = self.ConvEncode[5]
+
+        #
+        print("DDD 4 | x0.shape = ", x0.shape)
+        print("DDD 4 | x1.shape = ", x1.shape)
+        print("DDD 4 | x2.shape = ", x2.shape)
+        print("DDD 4 | x3.shape = ", x3.shape)
+        print("DDD 4 | x4.shape = ", x4.shape)
+        print("DDD 4 | x5.shape = ", x5.shape)
+
         #
         res0: Tensor = module0(x0)
         res1: Tensor = module1(x1)
@@ -329,6 +362,15 @@ class DeepArcNet(nn.Module) :
         res3: Tensor = module3(x3)
         res4: Tensor = module4(x4)
         res5: Tensor = module5(x5)
+
+        #
+        print("DDD 5 | res0.shape = ", res0.shape)
+        print("DDD 5 | res1.shape = ", res1.shape)
+        print("DDD 5 | res2.shape = ", res2.shape)
+        print("DDD 5 | res3.shape = ", res3.shape)
+        print("DDD 5 | res4.shape = ", res4.shape)
+        print("DDD 5 | res5.shape = ", res5.shape)
+
         #
         output_ConvEncode: list[Tensor] = [res0, res1, res2, res3, res4, res5]
 
@@ -336,7 +378,13 @@ class DeepArcNet(nn.Module) :
         concatenated_ConvEncode: Tensor = torch.cat(output_ConvEncode, dim= -2) # (Batch, Window_time, Convol_feature)
 
         #
+        print("DDD 2 | concatenated_ConvEncode.shape = ", concatenated_ConvEncode.shape)
+
+        #
         self_attention_output: Tensor = self.blocks(concatenated_ConvEncode)
+
+        #
+        print("DDD 3 | self_attention_output.shape = ", self_attention_output.shape)
 
         #
         layer_norm_output: Tensor = self.ln_f(self_attention_output) # (B,T,C)
