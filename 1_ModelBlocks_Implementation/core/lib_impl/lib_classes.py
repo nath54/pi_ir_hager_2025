@@ -171,6 +171,31 @@ class ExpressionConstantNumeric(ExpressionConstant):
         return f"{self.constant}"
 
 
+
+#
+class ExpressionConstantBoolean(ExpressionConstant):
+    #
+    def __init__(self, constant: bool) -> None:
+        """
+        Represents a numerical constant expression.
+        (for assignments or conditions, like : A = 5 -> Assignment(A, ExpressionConstant(5)))
+
+        Args:
+            constant (bool): Constant boolean value
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.constant: bool = constant
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.constant}"
+
+
 #
 class ExpressionConstantString(ExpressionConstant):
     #
@@ -552,6 +577,84 @@ class ExpressionRange(ExpressionList):
 
 # We will constraint the models to not use other types of constants and variables, (like dictionaries or custom objects), and we can convert the tuples into lists.
 # We should constraint a list to have the same typing too.
+
+
+#
+class ExpressionBinaryOperation(Expression):
+    #
+    def __init__(self, left: Expression, operator: str, right: Expression) -> None:
+        """
+        Represents a binary operation expression.
+
+        Args:
+            left (Expression): Left operand
+            operator (str): Binary operator (+, -, *, /, etc.)
+            right (Expression): Right operand
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.left: Expression = left
+        self.operator: str = operator
+        self.right: Expression = right
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"({str(self.left)} {self.operator} {str(self.right)})"
+
+
+#
+class ExpressionUnaryOperation(Expression):
+    #
+    def __init__(self, operator: str, operand: Expression) -> None:
+        """
+        Represents a unary operation expression.
+
+        Args:
+            operator (str): Unary operator (+, -, not, etc.)
+            operand (Expression): Operand
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.operator: str = operator
+        self.operand: Expression = operand
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.operator}({str(self.operand)})"
+
+
+#
+class ExpressionFunctionCall(Expression):
+    #
+    def __init__(self, function_name: str, function_arguments: list[Expression]) -> None:
+        """
+        Represents a function call expression.
+
+        Args:
+            function_name (str): Name of the function to call
+            function_arguments (list[Expression]): Function arguments
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.function_name: str = function_name
+        self.function_arguments: list[Expression] = function_arguments
+
+    #
+    def __str__(self) -> str:
+        #
+        args_str = ", ".join(str(arg) for arg in self.function_arguments)
+        return f"{self.function_name}({args_str})"
 
 
 ####################################################################

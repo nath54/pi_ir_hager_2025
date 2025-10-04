@@ -85,8 +85,15 @@ class ConvEncode(nn.Module):
         #
         time_tensor: Tensor = torch.arange(x_conv.shape[2], device = device)
 
+
+        #
+        print("DDDD 9 | time_tensor.shape = ", time_tensor.shape)
+
         #
         time_embedded: Tensor = self.posembd(time_tensor)
+
+        #
+        print("DDDD 8 | time_embedded.shape = ", time_embedded.shape)
 
         #
         ### Duplicate the time vector along the batch dimension. ###
@@ -94,7 +101,14 @@ class ConvEncode(nn.Module):
         time_embedded2: Tensor = time_embedded.unsqueeze(0).unsqueeze(1).expand(b, -1, -1, -1)
 
         #
+        print("DDDD 7 | x_conv.shape = ", x_conv.shape)
+
+        #
         x_emb: Tensor = self.linearembd(x_conv)
+
+        #
+        print("DDDD 6 | x_emb.shape = ", x_emb.shape)
+        print("DDDD 6 | time_embedded2.shape = ", time_embedded2.shape)
 
         #
         x_code: Tensor = time_embedded2 + x_emb
@@ -126,32 +140,26 @@ class Head(nn.Module) :
     #
     def forward(self, x: Tensor) -> Tensor:
 
-        print("DEBUG | Head forward start, x.shape =", x.shape)
-        
         #
         # _b, _t, _c = x.shape
 
         #
         k: Tensor = self.key(x) # (_b, _t, head_size)
         q: Tensor = self.query(x) # (_b, _t, head_size)
-        print("DEBUG | Head k.shape =", k.shape, "q.shape =", q.shape)
 
         #
         ### compute attention score ('affinities'). ###
         #
         wei: Tensor = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5 # (B, T, hs) @ (B, hs, T) to (B, T, T)
         wei = F.softmax(wei, dim = -1)
-        print("DEBUG | Head wei.shape =", wei.shape)
 
         #
         ### perform the weighted aggregation of the values. ###
         #
         v: Tensor = self.value(x)
-        print("DEBUG | Head v.shape =", v.shape)
 
         #
         out: Tensor = wei @ v
-        print("DEBUG | Head final out.shape =", out.shape)
 
         #
         return out
@@ -183,19 +191,13 @@ class MultiHeadAttention(nn.Module) :
     #
     def forward(self, x: Tensor) -> Tensor:
 
-        print("DEBUG | MultiHeadAttention forward start, x.shape =", x.shape)
-        
         # Process each head individually with debug
         head_outputs = []
         for i, h in enumerate(self.heads):
-            print("DEBUG | Processing head", i, "with input shape", x.shape)
             head_out = h(x)
-            print("DEBUG | Head", i, "output shape =", head_out.shape)
             head_outputs.append(head_out)
-        
-        print("DEBUG | Concatenating", len(head_outputs), "head outputs")
+
         out: Tensor = torch.cat(head_outputs, dim = -1) # (Batch, Time, Channel Feature dimension) = (B,T , [h1,h1,h2,h2,h3,h3,h4,h4])
-        print("DEBUG | MultiHeadAttention final output shape =", out.shape)
 
         #
         return out
