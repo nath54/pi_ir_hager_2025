@@ -861,7 +861,7 @@ class LanguageModel_ForwardInterpreter:
         """
 
         #
-        # print(f"\033[44mDEBUG | execute instruction = {instruction}\033[m")
+        print(f"\033[44mDEBUG | execute instruction = {instruction}\033[m")
 
         #
         if isinstance(instruction, lc.FlowControlVariableInit):
@@ -3380,7 +3380,7 @@ class LanguageModel_ForwardInterpreter:
         if function_name == "print":
 
             #
-            # print( args )
+            print( args )
             #
             pass
 
