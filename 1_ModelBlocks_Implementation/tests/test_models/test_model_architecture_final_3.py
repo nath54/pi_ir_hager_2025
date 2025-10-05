@@ -72,28 +72,15 @@ class ConvEncode(nn.Module):
         # b, wt, fd1, fd2 = x.size()
 
         #
-        print("DDD 0 | x.shape = ", x.shape)
-
-        #
         x_conv: Tensor = self.conv(x)
-
-        #
-        print("DDD 1 | x.shape = ", x.shape)
 
         #
         ### Feature dimension 1 time encode each sample from 0 to 38. ###
         #
         time_tensor: Tensor = torch.arange(x_conv.shape[2], device = device)
 
-
-        #
-        print("DDDD 9 | time_tensor.shape = ", time_tensor.shape)
-
         #
         time_embedded: Tensor = self.posembd(time_tensor)
-
-        #
-        print("DDDD 8 | time_embedded.shape = ", time_embedded.shape)
 
         #
         ### Duplicate the time vector along the batch dimension. ###
@@ -101,14 +88,7 @@ class ConvEncode(nn.Module):
         time_embedded2: Tensor = time_embedded.unsqueeze(0).unsqueeze(1).expand(b, -1, -1, -1)
 
         #
-        print("DDDD 7 | x_conv.shape = ", x_conv.shape)
-
-        #
         x_emb: Tensor = self.linearembd(x_conv)
-
-        #
-        print("DDDD 6 | x_emb.shape = ", x_emb.shape)
-        print("DDDD 6 | time_embedded2.shape = ", time_embedded2.shape)
 
         #
         x_code: Tensor = time_embedded2 + x_emb
@@ -351,14 +331,6 @@ class DeepArcNet(nn.Module) :
         module5: ConvEncode = self.ConvEncode[5]
 
         #
-        print("DDD 4 | x0.shape = ", x0.shape)
-        print("DDD 4 | x1.shape = ", x1.shape)
-        print("DDD 4 | x2.shape = ", x2.shape)
-        print("DDD 4 | x3.shape = ", x3.shape)
-        print("DDD 4 | x4.shape = ", x4.shape)
-        print("DDD 4 | x5.shape = ", x5.shape)
-
-        #
         res0: Tensor = module0(x0)
         res1: Tensor = module1(x1)
         res2: Tensor = module2(x2)
@@ -367,27 +339,13 @@ class DeepArcNet(nn.Module) :
         res5: Tensor = module5(x5)
 
         #
-        print("DDD 5 | res0.shape = ", res0.shape)
-        print("DDD 5 | res1.shape = ", res1.shape)
-        print("DDD 5 | res2.shape = ", res2.shape)
-        print("DDD 5 | res3.shape = ", res3.shape)
-        print("DDD 5 | res4.shape = ", res4.shape)
-        print("DDD 5 | res5.shape = ", res5.shape)
-
-        #
         output_ConvEncode: list[Tensor] = [res0, res1, res2, res3, res4, res5]
 
         #
         concatenated_ConvEncode: Tensor = torch.cat(output_ConvEncode, dim= -2) # (Batch, Window_time, Convol_feature)
 
         #
-        print("DDD 2 | concatenated_ConvEncode.shape = ", concatenated_ConvEncode.shape)
-
-        #
         self_attention_output: Tensor = self.blocks(concatenated_ConvEncode)
-
-        #
-        print("DDD 3 | self_attention_output.shape = ", self_attention_output.shape)
 
         #
         layer_norm_output: Tensor = self.ln_f(self_attention_output) # (B,T,C)

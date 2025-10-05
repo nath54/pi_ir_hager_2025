@@ -491,7 +491,6 @@ class LanguageModel_ForwardInterpreter_Debug(LanguageModel_ForwardInterpreter):
                 self.__class__._getattr_depth += 1
                 try:
                     if self.context.has_variable(name):
-                        print(f"DEBUG: Found {name} in context")
                         return self.context.get_variable(name)
                 except RecursionError:
                     print(f"DEBUG: RecursionError in SelfWrapper.__getattr__ for {name}")

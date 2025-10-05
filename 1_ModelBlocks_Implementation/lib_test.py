@@ -295,9 +295,6 @@ class Tester:
         }
 
         #
-        print(f"\n\n\033[31m========================= START OF TRUTH PYTORCH EXECUTION =========================\033[m\n\n")
-
-        #
         ### Get the output from the pytorch model. ###
         #
         with torch.no_grad():
@@ -305,18 +302,6 @@ class Tester:
             #
             ref_output_pt: Tensor = pt_model.forward( torch.from_numpy(inp).to(dtype=torch.float32) )
             ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
-
-        #
-        print(f"\n\n\033[31m========================= END OF TRUTH PYTORCH EXECUTION =========================\033[m\n\n")
-
-        #
-        print(f"\n\n\033[33m========================= DEBUG EXTRACTED MODEL =========================\033[m\n\n")
-
-        #
-        print(l_model)
-
-        #
-        print(f"\n\n\033[33m========================= END OF DEBUG EXTRACTED MODEL =========================\033[m\n\n")
 
         #
         ### Get the output from the extracted model. ###

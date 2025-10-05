@@ -6,15 +6,15 @@ from lib_test import Tester
 #
 TESTS: list[ tuple[str, tuple[int, ...], str, Optional[str]] ] = [
 
-    # ("simple_linear_model.py", (2, 10), "SimpleLinearModel", None),
-    # ("simple_linear_model_2.py", (2, 10), "SimpleLinearModel", None),
-    # ("simple_conv_model.py", (2, 3, 32, 32), "SimpleConvModel", None),
-    # ("complex_model.py", (1, 3, 224, 224), "ComplexModel", None),
+    ("simple_linear_model.py", (2, 10), "SimpleLinearModel", None),
+    ("simple_linear_model_2.py", (2, 10), "SimpleLinearModel", None),
+    ("simple_conv_model.py", (2, 3, 32, 32), "SimpleConvModel", None),
+    ("complex_model.py", (1, 3, 224, 224), "ComplexModel", None),
 
-    # # ("test_model_architecture_1_2.py", (4, 10), "Model", None),
-    # ("test_model_architecture_1.py", (4, 10), "Model", None),
-    # ("test_model_architecture_2_1.py", (4, 10), "Model", None),
-    # ("test_model_architecture_3_1.py", (4, 10), "Model", None),
+    # ("test_model_architecture_1_2.py", (4, 10), "Model", None),
+    ("test_model_architecture_1.py", (4, 10), "Model", None),
+    ("test_model_architecture_2_1.py", (4, 10), "Model", None),
+    ("test_model_architecture_3_1.py", (4, 10), "Model", None),
 
     ("test_model_architecture_final_3.py", (1, 1030, 38, 5), "DeepArcNet", "/home/nathan/github/pi_hager_2025/sdia2025/model.pth")
 

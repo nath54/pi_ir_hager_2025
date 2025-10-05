@@ -1192,8 +1192,6 @@ class LanguageModel_ForwardInterpreter:
                     #
                     if self.context.has_variable(name):
                         #
-                        print(f"DEBUG: Found {name} in context")
-                        #
                         return self.context.get_variable(name)
                 #
                 except RecursionError:
@@ -1343,7 +1341,7 @@ class LanguageModel_ForwardInterpreter:
         """
 
         #
-        print(f"\033[44m DEBUG | Execute instruction : {instruction}\033[m")
+        # print(f"\033[44m DEBUG | Execute instruction : {instruction}\033[m")
 
         #
         if isinstance(instruction, lc.FlowControlVariableInit):
@@ -1507,7 +1505,13 @@ class LanguageModel_ForwardInterpreter:
             #
             result = input1 ** input2
         #
-        elif instruction.operation == "@":
+        elif instruction.operation == "^":
+            #
+            ### Caret used in extracted IR to denote power. ###
+            #
+            result = input1 ** input2
+        #
+        elif instruction.operation == "@" or instruction.operation == "matmult":
             #
             ### Matrix multiplication. ###
             #
@@ -2341,7 +2345,11 @@ class LanguageModel_ForwardInterpreter:
                     #
                 return left_value ** right_value
             #
-            elif expression.operator == "@":
+            elif expression.operator == "^":
+                    #
+                return left_value ** right_value
+            #
+            elif expression.operator == "@" or expression.operator == "matmult":
                 #
                 return left_value @ right_value
             #
@@ -2750,6 +2758,8 @@ class LanguageModel_ForwardInterpreter:
         #
         ### Convert to numpy array if needed. ###
         #
+        import numpy as np
+        #
         if not isinstance(input_tensor, np.ndarray):
             #
             input_tensor = np.array(input_tensor)
@@ -2845,6 +2855,19 @@ class LanguageModel_ForwardInterpreter:
                 result = input_tensor * 0.5
 
         #
+        elif layer_type == "Softmax":
+            #
+            ### Get the dim parameter, default to -1 if not specified ###
+            #
+            dim = _layer_params.get("dim", -1)
+            #
+            ### Apply softmax along the specified dimension ###
+            #
+            exp_values = np.exp(input_tensor - np.max(input_tensor, axis=dim, keepdims=True))
+            #
+            return exp_values / np.sum(exp_values, axis=dim, keepdims=True)
+
+        #
         elif layer_type == "Linear":
             #
             ### Linear layer. ###
@@ -2919,6 +2942,536 @@ class LanguageModel_ForwardInterpreter:
             ### Tanh activation. ###
             #
             result = np.tanh(input_tensor)
+
+        #
+        elif layer_type == "BatchNorm2d":
+            #
+            ### Batch Normalization 2D layer. ###
+            #
+            num_features = int(_layer_params.get("num_features", input_tensor.shape[1]))
+            eps = float(_layer_params.get("eps", 1e-5))
+            momentum = float(_layer_params.get("momentum", 0.1))
+            affine = bool(_layer_params.get("affine", True))
+            track_running_stats = bool(_layer_params.get("track_running_stats", True))
+
+            # Weights
+            if affine:
+                weight = layer_weights.get("weight")
+                bias_weight = layer_weights.get("bias")
+                if weight is None:
+                    weight = np.ones((num_features,), dtype=np.float32)
+                else:
+                    if hasattr(weight, "detach"):
+                        weight = weight.detach().cpu().numpy()
+                    weight = weight.astype(np.float32)
+                if bias_weight is None:
+                    bias_weight = np.zeros((num_features,), dtype=np.float32)
+                else:
+                    if hasattr(bias_weight, "detach"):
+                        bias_weight = bias_weight.detach().cpu().numpy()
+                    bias_weight = bias_weight.astype(np.float32)
+            else:
+                weight = np.ones((num_features,), dtype=np.float32)
+                bias_weight = np.zeros((num_features,), dtype=np.float32)
+
+            # Running stats
+            if track_running_stats:
+                running_mean = layer_weights.get("running_mean")
+                running_var = layer_weights.get("running_var")
+                if running_mean is None:
+                    running_mean = np.zeros((num_features,), dtype=np.float32)
+                else:
+                    if hasattr(running_mean, "detach"):
+                        running_mean = running_mean.detach().cpu().numpy()
+                    running_mean = running_mean.astype(np.float32)
+                if running_var is None:
+                    running_var = np.ones((num_features,), dtype=np.float32)
+                else:
+                    if hasattr(running_var, "detach"):
+                        running_var = running_var.detach().cpu().numpy()
+                    running_var = running_var.astype(np.float32)
+            else:
+                running_mean = np.zeros((num_features,), dtype=np.float32)
+                running_var = np.ones((num_features,), dtype=np.float32)
+
+            x = input_tensor
+            # Expect NCHW; compute mean/var over N,H,W for each channel
+            if x.ndim == 4:
+                mean = x.mean(axis=(0, 2, 3))
+                var = x.var(axis=(0, 2, 3))
+                mean_reshaped = mean.reshape(1, -1, 1, 1)
+                var_reshaped = var.reshape(1, -1, 1, 1)
+                gamma = weight.reshape(1, -1, 1, 1)
+                beta = bias_weight.reshape(1, -1, 1, 1)
+            elif x.ndim == 3:
+                mean = x.mean(axis=(0, 2))
+                var = x.var(axis=(0, 2))
+                mean_reshaped = mean.reshape(1, -1, 1)
+                var_reshaped = var.reshape(1, -1, 1)
+                gamma = weight.reshape(1, -1, 1)
+                beta = bias_weight.reshape(1, -1, 1)
+            elif x.ndim == 2:
+                mean = x.mean(axis=0)
+                var = x.var(axis=0)
+                mean_reshaped = mean.reshape(1, -1)
+                var_reshaped = var.reshape(1, -1)
+                gamma = weight.reshape(1, -1)
+                beta = bias_weight.reshape(1, -1)
+            else:
+                mean = x.mean(axis=0)
+                var = x.var(axis=0)
+                mean_reshaped = mean
+                var_reshaped = var
+                gamma = weight
+                beta = bias_weight
+
+            normalized = (x - mean_reshaped) / np.sqrt(var_reshaped + eps)
+            result = normalized * gamma + beta
+
+        #
+        elif layer_type == "MaxPool2d":
+
+            #
+            ### 2D Max Pooling layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            kernel_size = _layer_params.get("kernel_size", 2)
+            stride = _layer_params.get("stride", kernel_size)  # Default stride equals kernel_size
+            padding = _layer_params.get("padding", 0)
+            dilation = _layer_params.get("dilation", 1)
+            ceil_mode = _layer_params.get("ceil_mode", False)
+
+            #
+            ### Ensure kernel_size is a tuple ###
+            #
+            if isinstance(kernel_size, int):
+                #
+                kernel_size = (kernel_size, kernel_size)
+
+            #
+            ### Ensure stride is a tuple ###
+            #
+            if isinstance(stride, int):
+                #
+                stride = (stride, stride)
+
+            #
+            ### Ensure padding is a tuple ###
+            #
+            if isinstance(padding, int):
+                #
+                padding = (padding, padding)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"MaxPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Apply padding if specified ###
+            #
+            if padding[0] > 0 or padding[1] > 0:
+                #
+                padded_tensor = np.pad(
+                    input_tensor,
+                    ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
+                    mode='constant',
+                    constant_values=-np.inf  # Use -inf for max pooling
+                )
+            #
+            else:
+                #
+                padded_tensor = input_tensor
+
+            #
+            ### Calculate output dimensions ###
+            #
+            padded_height = padded_tensor.shape[2]
+            padded_width = padded_tensor.shape[3]
+
+            #
+            if ceil_mode:
+                #
+                ### Use ceiling division ###
+                #
+                output_height = int(np.ceil((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1))
+                output_width = int(np.ceil((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1))
+            #
+            else:
+                #
+                ### Use floor division (default) ###
+                #
+                output_height = int((padded_height - dilation * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+                output_width = int((padded_width - dilation * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+            #
+            ### Ensure output dimensions are positive ###
+            #
+            output_height = max(1, output_height)
+            output_width = max(1, output_width)
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform max pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            #
+                            h_start = h_out * stride[0]
+                            w_start = w_out * stride[1]
+
+                            #
+                            h_end = min(h_start + kernel_size[0], padded_height)
+                            w_end = min(w_start + kernel_size[1], padded_width)
+
+                            #
+                            ### Handle dilation ###
+                            #
+                            if dilation > 1:
+                                #
+                                ### Sample with dilation ###
+                                #
+                                h_indices = np.arange(h_start, h_end, dilation)
+                                w_indices = np.arange(w_start, w_end, dilation)
+
+                                #
+                                ### Ensure indices are within bounds ###
+                                #
+                                h_indices = h_indices[h_indices < padded_height]
+                                w_indices = w_indices[w_indices < padded_width]
+
+                                #
+                                if len(h_indices) > 0 and len(w_indices) > 0:
+                                    #
+                                    ### Get the region with dilation ###
+                                    #
+                                    region = padded_tensor[b, c][np.ix_(h_indices, w_indices)]
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = np.max(region)
+                                #
+                                else:
+                                    #
+                                    ### No valid indices, use minimum value ###
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+                            #
+                            else:
+                                #
+                                ### Standard pooling without dilation ###
+                                #
+                                if h_start < padded_height and w_start < padded_width:
+                                    #
+                                    region = padded_tensor[b, c, h_start:h_end, w_start:w_end]
+                                    #
+                                    if region.size > 0:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = np.max(region)
+                                    #
+                                    else:
+                                        #
+                                        output_tensor[b, c, h_out, w_out] = -np.inf
+                                #
+                                else:
+                                    #
+                                    output_tensor[b, c, h_out, w_out] = -np.inf
+
+            #
+            ### Replace -inf values with 0 (in case of edge cases) ###
+            #
+            output_tensor[output_tensor == -np.inf] = 0.0
+
+            #
+            return output_tensor
+
+        #
+        elif layer_type == "AdaptiveAvgPool2d":
+
+            #
+            ### Adaptive Average Pooling 2D layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            output_size = _layer_params.get("output_size", (1, 1))
+
+            #
+            ### Ensure output_size is a tuple ###
+            #
+            if isinstance(output_size, int):
+                #
+                output_size = (output_size, output_size)
+            #
+            elif isinstance(output_size, list):
+                #
+                output_size = tuple(output_size)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"AdaptiveAvgPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Get target output dimensions ###
+            #
+            output_height, output_width = output_size
+
+            #
+            ### Handle None values in output_size (means keep original size) ###
+            #
+            if output_height is None:
+                #
+                output_height = input_height
+            #
+            if output_width is None:
+                #
+                output_width = input_width
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform adaptive average pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            ### For adaptive pooling, we need to map output positions to input regions ###
+                            #
+                            h_start = int(np.floor(h_out * input_height / output_height))
+                            h_end = int(np.ceil((h_out + 1) * input_height / output_height))
+
+                            #
+                            w_start = int(np.floor(w_out * input_width / output_width))
+                            w_end = int(np.ceil((w_out + 1) * input_width / output_width))
+
+                            #
+                            ### Ensure indices are within bounds ###
+                            #
+                            h_start = max(0, min(h_start, input_height - 1))
+                            h_end = max(h_start + 1, min(h_end, input_height))
+                            w_start = max(0, min(w_start, input_width - 1))
+                            w_end = max(w_start + 1, min(w_end, input_width))
+
+                            #
+                            ### Extract the region and compute average ###
+                            #
+                            region = input_tensor[b, c, h_start:h_end, w_start:w_end]
+                            #
+                            if region.size > 0:
+                                #
+                                output_tensor[b, c, h_out, w_out] = np.mean(region)
+                            #
+                            else:
+                                #
+                                output_tensor[b, c, h_out, w_out] = 0.0
+
+            #
+            return output_tensor
+
+        #
+        elif layer_type == "LayerNorm" or layer_type == "lc.LayerNorm":
+            #
+            ### Layer Normalization (over last normalized_shape dims). ###
+            #
+            # Parameters
+            normalized_shape = _layer_params.get("normalized_shape")
+            eps = float(_layer_params.get("eps", 1e-5))
+            elementwise_affine = bool(_layer_params.get("elementwise_affine", True))
+
+            # If normalized_shape is a sequence, derive number of reduced axes; if int, it's count of last dims
+            if isinstance(normalized_shape, (list, tuple)):
+                num_dims = len(normalized_shape)
+            else:
+                num_dims = 1
+
+            # Axes to reduce: the last num_dims axes
+            axes = tuple(range(input_tensor.ndim - num_dims, input_tensor.ndim))
+
+            mean = input_tensor.mean(axis=axes, keepdims=True)
+            var = input_tensor.var(axis=axes, keepdims=True)
+            normalized = (input_tensor - mean) / np.sqrt(var + eps)
+
+            if elementwise_affine:
+                weight = layer_weights.get("weight")
+                bias_weight = layer_weights.get("bias")
+
+                if weight is not None:
+                    if hasattr(weight, "detach"):
+                        weight = weight.detach().cpu().numpy()
+                    weight = weight.astype(np.float32)
+                    # Reshape weight to broadcast over reduced axes
+                    # Expect weight shape == normalized_shape (flatten if single int)
+                    if not isinstance(normalized_shape, (list, tuple)):
+                        shape = [1] * input_tensor.ndim
+                        shape[-1] = normalized.shape[-1]
+                        weight = weight.reshape(shape)
+                    else:
+                        shape = [1] * input_tensor.ndim
+                        for i in range(1, num_dims + 1):
+                            shape[-i] = normalized.shape[-i]
+                        weight = weight.reshape(shape)
+                    normalized = normalized * weight
+
+                if bias_weight is not None:
+                    if hasattr(bias_weight, "detach"):
+                        bias_weight = bias_weight.detach().cpu().numpy()
+                    bias_weight = bias_weight.astype(np.float32)
+                    if not isinstance(normalized_shape, (list, tuple)):
+                        shape = [1] * input_tensor.ndim
+                        shape[-1] = normalized.shape[-1]
+                        bias_weight = bias_weight.reshape(shape)
+                    else:
+                        shape = [1] * input_tensor.ndim
+                        for i in range(1, num_dims + 1):
+                            shape[-i] = normalized.shape[-i]
+                        bias_weight = bias_weight.reshape(shape)
+                    normalized = normalized + bias_weight
+
+            result = normalized.astype(np.float32)
 
         #
         else:
@@ -3015,6 +3568,64 @@ class LanguageModel_ForwardInterpreter:
                 #
                 return np.stack(tensors, axis=dim)
 
+
+        #
+        elif function_name == "permute":
+            #
+            ### torch.permute() or np.transpose() with custom axis order ###
+            #
+            tensor = list(args.values())[0]
+            dims = list(args.values())[1:]
+
+            #
+            ### Handle case where dims is passed as a single tuple/list argument ###
+            #
+            if len(dims) == 1 and isinstance(dims[0], (list, tuple)):
+                #
+                dims = list(dims[0])
+
+            #
+            ### Convert negative indices to positive indices ###
+            #
+            for i in range(len(dims)):
+                #
+                if dims[i] < 0:
+                    #
+                    dims[i] = len(tensor.shape) + dims[i]
+
+            #
+            ### Validate dimensions ###
+            #
+            if len(dims) != len(tensor.shape):
+                #
+                raise ValueError(f"Number of dimensions in permute ({len(dims)}) must match tensor dimensions ({len(tensor.shape)})")
+
+            #
+            ### Check if all dimensions are valid and unique ###
+            #
+            if len(set(dims)) != len(dims):
+                #
+                raise ValueError(f"Repeated dimension in permute: {dims}")
+
+            #
+            for dim in dims:
+                #
+                if dim < 0 or dim >= len(tensor.shape):
+                    #
+                    raise ValueError(f"Dimension {dim} out of range for tensor with {len(tensor.shape)} dimensions")
+
+            #
+            if hasattr(tensor, 'transpose'):
+                #
+                ### Use numpy transpose with the specified axis order ###
+                #
+                return tensor.transpose(tuple(dims))
+            #
+            else:
+                #
+                return np.transpose(tensor, tuple(dims))
+
+
         #
         elif function_name == "torch.transpose" or function_name == "transpose":
 
@@ -3092,6 +3703,24 @@ class LanguageModel_ForwardInterpreter:
                 ### Apply tanh. ###
                 #
                 return np.tanh(tensor)
+
+        #
+        # Support tensor method-style dtype casts, e.g., x.float()
+        # We approximate this by handling a pseudo external call name 'Tensor.float'
+        # which can be produced by the extractor for method calls.
+        #
+        elif function_name == ".float" or function_name.endswith(".float"):
+
+            #
+            ### Cast to float32 elementwise. ###
+            #
+            if len(args) >= 1:
+
+                #
+                tensor = get_arg(0)
+
+                #
+                return np.array(tensor).astype(np.float32)
 
         #
         elif function_name == "torch.nn.functional.sigmoid" or function_name == "sigmoid" or function_name == "F.sigmoid":
@@ -3884,7 +4513,15 @@ class LanguageModel_ForwardInterpreter:
             #
             if len(args) >= 1:
                 #
-                return float(get_arg(0))
+                val = get_arg(0)
+                # If numpy array or list-like, cast elementwise to float32
+                if isinstance(val, np.ndarray):
+                    return val.astype(np.float32)
+                try:
+                    return float(val)
+                except Exception:
+                    # Fallback: try numpy array conversion
+                    return np.array(val).astype(np.float32)
 
         #
         elif function_name == "str":
