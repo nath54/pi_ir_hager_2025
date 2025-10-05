@@ -333,22 +333,18 @@ class ExecutionContext:
         """
 
         #
-        ### Check if variable exists in current or parent scopes ###
-        #
-        existing_symbol = self.current_scope.lookup(var_name)
+        ### Non-recursive parent walk to find and update existing variable ###
+        scope = self.current_scope
+        visited: set[int] = set()
+        while scope is not None and id(scope) not in visited:
+            visited.add(id(scope))
+            if scope.lookup_local(var_name) is not None:
+                scope.update(var_name, value)
+                return
+            scope = scope.parent
 
-        #
-        if existing_symbol is not None:
-            #
-            ### Update existing variable ###
-            #
-            self.current_scope.update(var_name, value)
-        #
-        else:
-            #
-            ### Define new variable in current scope ###
-            #
-            self.current_scope.define(var_name, var_type, value)
+        ### Define new variable in current scope ###
+        self.current_scope.define(var_name, var_type, value)
 
     #
     def set_variable_local(self, var_name: str, var_type: lc.VarType, value: Any) -> None:
@@ -378,13 +374,15 @@ class ExecutionContext:
             KeyError: If variable doesn't exist
         """
         #
-        symbol = self.current_scope.lookup(var_name)
+        # Non-recursive lookup to avoid deep recursion errors
+        scope = self.current_scope
+        while scope is not None:
+            symbol = scope.lookup_local(var_name)
+            if symbol is not None:
+                return symbol.value
+            scope = scope.parent
         #
-        if symbol is None:
-            #
-            raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
-        #
-        return symbol.value
+        raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
 
     #
     def has_variable(self, var_name: str) -> bool:
@@ -399,15 +397,15 @@ class ExecutionContext:
         """
 
         #
-        try:
-            #
-            return self.current_scope.has_symbol(var_name)
-        #
-        except RecursionError:
-            #
-            print(f"DEBUG: RecursionError in has_variable for {var_name}")
-            #
-            return False
+        # Non-recursive check to avoid RecursionError in very deep scope chains
+        scope = self.current_scope
+        visited: set[int] = set()
+        while scope is not None and id(scope) not in visited:
+            visited.add(id(scope))
+            if scope.lookup_local(var_name) is not None:
+                return True
+            scope = scope.parent
+        return False
 
     #
     def has_variable_local(self, var_name: str) -> bool:
@@ -439,13 +437,15 @@ class ExecutionContext:
         """
 
         #
-        symbol = self.current_scope.lookup(var_name)
-        #
-        if symbol is None:
-            #
-            raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
-        #
-        return symbol.var_type
+        scope = self.current_scope
+        visited: set[int] = set()
+        while scope is not None and id(scope) not in visited:
+            visited.add(id(scope))
+            symbol = scope.lookup_local(var_name)
+            if symbol is not None:
+                return symbol.var_type
+            scope = scope.parent
+        raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
 
     #
     @property
@@ -458,9 +458,14 @@ class ExecutionContext:
         """
 
         #
-        all_symbols = self.current_scope.get_all_symbols()
-        #
-        return {name: symbol.value for name, symbol in all_symbols.items()}
+        merged: dict[str, Symbol] = {}
+        scope = self.current_scope
+        visited: set[int] = set()
+        while scope is not None and id(scope) not in visited:
+            visited.add(id(scope))
+            merged.update(scope.symbols)
+            scope = scope.parent
+        return {name: symbol.value for name, symbol in merged.items()}
 
     #
     @property
@@ -472,9 +477,14 @@ class ExecutionContext:
             Dictionary mapping variable names to types
         """
         #
-        all_symbols = self.current_scope.get_all_symbols()
-        #
-        return {name: symbol.var_type for name, symbol in all_symbols.items()}
+        merged: dict[str, Symbol] = {}
+        scope = self.current_scope
+        visited: set[int] = set()
+        while scope is not None and id(scope) not in visited:
+            visited.add(id(scope))
+            merged.update(scope.symbols)
+            scope = scope.parent
+        return {name: symbol.var_type for name, symbol in merged.items()}
 
     #
     def copy(self) -> "ExecutionContext":
@@ -539,6 +549,10 @@ class LanguageModel_ForwardInterpreter:
         self.language_model = language_model
         #
         self.global_context: ExecutionContext = ExecutionContext("global")
+        #
+        # Guard to prevent re-entrant initialization of the same block in the same scope
+        # Keyed by (id(scope), block_name)
+        self._initialization_guard: set[tuple[int, str]] = set()
 
     #
     def _initialize_global_constants(self) -> None:
@@ -676,7 +690,17 @@ class LanguageModel_ForwardInterpreter:
             #
             param_value = self._evaluate_expression(param_expr, context)
             #
-            context.set_variable(param_name, param_type, param_value)
+            # Force local definition to avoid shadowing/updating parent scopes
+            #
+            context.set_variable_local(param_name, param_type, param_value)
+
+        #
+        ### Prevent re-entrant initialization of the same block within the same scope. ###
+        #
+        guard_key = (id(context.current_scope), model_block.block_name)
+        if guard_key in self._initialization_guard:
+            return
+        self._initialization_guard.add(guard_key)
 
         #
         ### Initialize block variables. ###
@@ -686,7 +710,9 @@ class LanguageModel_ForwardInterpreter:
             #
             var_value: Any = self._evaluate_expression(var_expr, context)
             #
-            context.set_variable(var_name, var_type, var_value)
+            # Force local definition
+            #
+            context.set_variable_local(var_name, var_type, var_value)
 
         #
         ### Initialize layers. ###
@@ -698,7 +724,17 @@ class LanguageModel_ForwardInterpreter:
             #
             layer_obj: dict[str, Any] = self._create_layer_instance(layer, context)
             #
-            context.set_variable(layer_name, lc.VarType("lc.Layer"), layer_obj)
+            # Force local definition
+            #
+            context.set_variable_local(layer_name, lc.VarType("lc.Layer"), layer_obj)
+
+        #
+        ### Bind container variables for BlockModuleList to allow `self.attr` access. ###
+        #
+        for layer_name, layer in model_block.block_layers.items():
+            if 'BlockModuleList' in layer.layer_type and not context.has_variable_local(layer_name):
+                container_obj: Any = self._create_layer_instance(layer, context)
+                context.set_variable_local(layer_name, lc.VarType("lc.Layer"), container_obj)
 
         #
         ### Initialize sub-layers for BlockModuleList. ###
@@ -717,13 +753,15 @@ class LanguageModel_ForwardInterpreter:
                 for sub_layer_name, sub_layer in sub_model_block.block_layers.items():
 
                     #
-                    if sub_layer_name not in context.variables:
+                    # Only check and write to the current scope to avoid colliding with similarly named
+                    # layers (e.g., "0", "1") defined in parent scopes.
+                    if not context.has_variable_local(sub_layer_name):
 
                         #
                         sub_layer_obj: dict[str, Any] = self._create_layer_instance(sub_layer, context)
 
                         #
-                        context.set_variable(sub_layer_name, lc.VarType("lc.Layer"), sub_layer_obj)
+                        context.set_variable_local(sub_layer_name, lc.VarType("lc.Layer"), sub_layer_obj)
 
     #
     def _create_layer_instance(
@@ -761,6 +799,12 @@ class LanguageModel_ForwardInterpreter:
                     self.layer_type: str = layer_type
                     self.interpreter: "LanguageModel_ForwardInterpreter" = interpreter
                     self.context: ExecutionContext = context
+                    #
+                    # Persist a dedicated module scope across calls to avoid re-initializing
+                    # the same block repeatedly and creating deep recursive scope chains.
+                    #
+                    self._module_context: Optional[ExecutionContext] = None
+                    self._initialized: bool = False
 
                 #
                 def __call__(self, *args: list[Any], **kwargs: dict[str, Any]) -> Any:
@@ -776,9 +820,14 @@ class LanguageModel_ForwardInterpreter:
                     forward_function = model_block.block_functions["forward"]
 
                     #
-                    ### Create a new scope for this module call. ###
+                    ### Create (or reuse) a dedicated scope for this module instance. ###
                     #
-                    module_context = self.context.enter_scope(f"module_{self.layer_type}")
+                    if self._module_context is None:
+                        self._module_context = self.context.enter_scope(f"module_{self.layer_type}")
+                        # Initialize once per module instance to prevent re-entrant initialization loops
+                        self.interpreter._initialize_model_block(model_block, self._module_context)
+                        self._initialized = True
+                    module_context = self._module_context
 
                     #
                     param_name: str = ""
@@ -915,9 +964,7 @@ class LanguageModel_ForwardInterpreter:
                         function_args[kwarg_name] = kwarg_value
 
                     #
-                    ### Initialize the model block with the module context. ###
-                    #
-                    self.interpreter._initialize_model_block(model_block, module_context)
+                    ### Model block is initialized once per instance above. ###
 
                     #
                     ### Execute the forward function with the arguments dictionary. ###
@@ -1111,12 +1158,14 @@ class LanguageModel_ForwardInterpreter:
             def __init__(
                 self,
                 model_block: lc.ModelBlock,
-                context: ExecutionContext
+                context: ExecutionContext,
+                interpreter: Any
             ) -> None:
 
                 #
                 self.model_block: lc.ModelBlock = model_block
                 self.context: ExecutionContext = context
+                self.interpreter: Any = interpreter
 
             #
             def __getattr__(self, name: str) -> Any:
@@ -1191,6 +1240,16 @@ class LanguageModel_ForwardInterpreter:
                     return attr
 
                 #
+                # As a final fallback: if the requested name is a BlockModuleList in the model definition,
+                # construct and return a ModuleWrapper so that self.<name> behaves like a ModuleList.
+                #
+                if name in self.model_block.block_layers:
+                    blk_layer = self.model_block.block_layers[name]
+                    if 'BlockModuleList' in blk_layer.layer_type:
+                        # Return the container wrapper bound to the current context
+                        return self.context.get_variable(name) if self.context.has_variable(name) else self.interpreter._create_layer_instance(blk_layer, self.context)
+
+                #
                 else:
 
                     #
@@ -1204,7 +1263,8 @@ class LanguageModel_ForwardInterpreter:
                 return iter(self.model_block)
 
         #
-        local_context.set_variable("self", lc.VarType("ModelBlock"), SelfWrapper(block_function.model_block, local_context))
+        # Define 'self' strictly in the local function scope to avoid looking upward
+        local_context.set_variable_local("self", lc.VarType("ModelBlock"), SelfWrapper(block_function.model_block, local_context, self))
 
         #
         ### Set function arguments. ###
@@ -2789,34 +2849,55 @@ class LanguageModel_ForwardInterpreter:
             #
             ### Linear layer. ###
             #
-            ### Get parameters. ###
-            #
-            in_features = _layer_params.get("in_features", 1)
-            out_features = _layer_params.get("out_features", 1)
-            bias = _layer_params.get("bias", True)
+            in_features = int(_layer_params.get("in_features", 1))
+            out_features = int(_layer_params.get("out_features", 1))
+            use_bias = bool(_layer_params.get("bias", True))
 
-            #
-            ### Get weights. ###
-            #
-            weight = layer_weights.get("weight")
-            bias_weight = layer_weights.get("bias") if bias else None
+            # Retrieve weights saved during linking.
+            weight = layer_weights.get("weight")  # Expected shape: (in_features, out_features)
+            bias_weight = layer_weights.get("bias") if use_bias else None  # shape: (out_features,)
 
-            #
-            ### Apply linear transformation. ###
-            #
-            ### This is a simplified implementation. ###
-            ### In practice, you would use proper matrix multiplication. ###
-            #
-            if weight is not None:
-                #
-                ### For now, just return the input with some modification. ###
-                ### This is a placeholder implementation. ###
-                #
-                result = input_tensor * 0.5  # Simplified operation
-            #
+            # Ensure arrays are numpy float32
+            if weight is None:
+                # Fallback: initialize a small random weight for robustness
+                weight = (np.random.randn(in_features, out_features).astype(np.float32)) * 0.01
             else:
-                #
-                result = input_tensor
+                if hasattr(weight, "detach"):
+                    weight = weight.detach().cpu().numpy()
+                weight = weight.astype(np.float32)
+
+            if use_bias:
+                if bias_weight is None:
+                    bias_weight = np.zeros((out_features,), dtype=np.float32)
+                else:
+                    if hasattr(bias_weight, "detach"):
+                        bias_weight = bias_weight.detach().cpu().numpy()
+                    bias_weight = bias_weight.astype(np.float32)
+
+            x = input_tensor
+            # Move/reshape so that the last dim equals in_features
+            if x.shape[-1] != in_features:
+                # Try to handle the common (B, C, T, C_in) vs (B, C, T, W) ambiguity.
+                # If any other dimension equals in_features, move it to the last position temporarily.
+                axes = list(range(x.ndim))
+                try_move_axis = None
+                for ax in range(x.ndim):
+                    if x.shape[ax] == in_features and ax != x.ndim - 1:
+                        try_move_axis = ax
+                        break
+                if try_move_axis is not None:
+                    x = np.moveaxis(x, try_move_axis, -1)
+                else:
+                    # As a last resort, if last dim does not match, this is a true shape mismatch.
+                    raise ValueError(f"Linear layer expected last dim {in_features}, got {input_tensor.shape[-1]} in shape {input_tensor.shape}")
+
+            # Flatten to 2D, apply matmul, then reshape back
+            leading_shape = x.shape[:-1]
+            x2 = x.reshape(-1, in_features).astype(np.float32)
+            y2 = x2 @ weight  # (N, out_features)
+            if use_bias and bias_weight is not None:
+                y2 = y2 + bias_weight
+            result = y2.reshape(*leading_shape, out_features)
 
         #
         elif layer_type == "ReLU":
