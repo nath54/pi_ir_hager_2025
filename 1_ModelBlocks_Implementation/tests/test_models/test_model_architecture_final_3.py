@@ -194,7 +194,7 @@ class MultiHeadAttention(nn.Module) :
         # Process each head individually
 
         head_out_0 = self.heads[0](x)
-        head_out_1 = self.heads[0](x)
+        head_out_1 = self.heads[1](x)
 
         head_outputs = [head_out_0, head_out_1]
 

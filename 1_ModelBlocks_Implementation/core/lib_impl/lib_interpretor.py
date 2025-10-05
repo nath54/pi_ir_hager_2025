@@ -21,12 +21,14 @@ from . import lib_classes as lc
 #
 
 
+#
 class Symbol:
     """
     Represents a symbol in the symbol table.
     Stores variable name, type, and value.
     """
 
+    #
     def __init__(self, name: str, var_type: lc.VarType, value: Any) -> None:
         """
         Initialize a symbol.
@@ -36,20 +38,26 @@ class Symbol:
             var_type: Variable type
             value: Variable value
         """
+
+        #
         self.name: str = name
         self.var_type: lc.VarType = var_type
         self.value: Any = value
 
+    #
     def __repr__(self) -> str:
+        #
         return f"Symbol({self.name}, {self.var_type}, {type(self.value).__name__})"
 
 
+#
 class Scope:
     """
     Represents a single scope level in the hierarchical scope system.
     Each scope maintains its own symbol table and can have a parent scope.
     """
 
+    #
     def __init__(self, name: str, parent: Optional["Scope"] = None) -> None:
         """
         Initialize a new scope.
@@ -58,11 +66,15 @@ class Scope:
             name: Name of the scope (e.g., "global", "function_forward", "loop_0")
             parent: Parent scope for hierarchical lookups
         """
+
+        #
         self.name: str = name
         self.parent: Optional["Scope"] = parent
         self.symbols: dict[str, Symbol] = {}
         self.scope_level: int = 0 if parent is None else parent.scope_level + 1
 
+
+    #
     def define(self, name: str, var_type: lc.VarType, value: Any) -> None:
         """
         Define a new symbol in this scope.
@@ -72,8 +84,11 @@ class Scope:
             var_type: Variable type
             value: Variable value
         """
+
+        #
         self.symbols[name] = Symbol(name, var_type, value)
 
+    #
     def lookup_local(self, name: str) -> Optional[Symbol]:
         """
         Look up a symbol in the current scope only (no parent lookup).
@@ -84,29 +99,70 @@ class Scope:
         Returns:
             Symbol if found in current scope, None otherwise
         """
+
+        #
         return self.symbols.get(name)
 
-    def lookup(self, name: str) -> Optional[Symbol]:
+    #
+    def lookup(self, name: str, depth: int = 0, visited: set = None) -> Optional[Symbol]:
         """
         Look up a symbol in the current scope and parent scopes.
 
         Args:
             name: Symbol name
+            depth: Current recursion depth
+            visited: Set of visited scopes to prevent circular references
 
         Returns:
             Symbol if found, None otherwise
         """
-        # First check current scope
+
+        #
+        if visited is None:
+            #
+            visited = set()
+
+        #
+        ### Prevent infinite recursion ###
+        #
+        if depth > 100:
+            #
+            print(f"WARNING: Maximum recursion depth exceeded in scope {self.name}")
+            #
+            return None
+
+        #
+        ### Check for circular reference ###
+        #
+        if id(self) in visited:
+            #
+            print(f"WARNING: Circular reference detected in scope {self.name}")
+            #
+            return None
+
+        #
+        visited.add(id(self))
+
+        #
+        ### First check current scope ###
+        #
         symbol = self.symbols.get(name)
+        #
         if symbol is not None:
+            #
             return symbol
 
-        # Then check parent scope recursively
+        #
+        ### Then check parent scope recursively ###
+        #
         if self.parent is not None:
-            return self.parent.lookup(name)
+            #
+            return self.parent.lookup(name, depth + 1, visited)
 
+        #
         return None
 
+    #
     def update(self, name: str, value: Any) -> bool:
         """
         Update a symbol's value. Searches current and parent scopes.
@@ -118,17 +174,27 @@ class Scope:
         Returns:
             True if symbol was found and updated, False otherwise
         """
-        # First check current scope
+
+        #
+        ### First check current scope ###
+        #
         if name in self.symbols:
+            #
             self.symbols[name].value = value
+            #
             return True
 
-        # Then check parent scope recursively
+        #
+        ### Then check parent scope recursively ###
+        #
         if self.parent is not None:
+            #
             return self.parent.update(name, value)
 
+        #
         return False
 
+    #
     def has_symbol(self, name: str) -> bool:
         """
         Check if symbol exists in current or parent scopes.
@@ -139,8 +205,11 @@ class Scope:
         Returns:
             True if symbol exists, False otherwise
         """
+
+        #
         return self.lookup(name) is not None
 
+    #
     def has_symbol_local(self, name: str) -> bool:
         """
         Check if symbol exists in current scope only.
@@ -151,8 +220,11 @@ class Scope:
         Returns:
             True if symbol exists in current scope, False otherwise
         """
+
+        #
         return name in self.symbols
 
+    #
     def get_all_symbols(self) -> dict[str, Symbol]:
         """
         Get all symbols accessible from this scope (including parent scopes).
@@ -160,27 +232,39 @@ class Scope:
         Returns:
             Dictionary of all accessible symbols
         """
-        # Start with parent symbols
+        #
+        ### Start with parent symbols ###
+        #
         if self.parent is not None:
+            #
             all_symbols = self.parent.get_all_symbols().copy()
+        #
         else:
+            #
             all_symbols = {}
 
-        # Override with current scope symbols
+        #
+        ### Override with current scope symbols ###
+        #
         all_symbols.update(self.symbols)
 
+        #
         return all_symbols
 
+    #
     def __repr__(self) -> str:
+        #
         return f"Scope(name={self.name}, level={self.scope_level}, symbols={len(self.symbols)})"
 
 
+#
 class ExecutionContext:
     """
     Manages the execution context with hierarchical scoping.
     Uses a scope stack to maintain proper variable resolution.
     """
 
+    #
     def __init__(self, scope_name: str = "global", parent_scope: Optional[Scope] = None) -> None:
         """
         Initialize execution context with a new scope.
@@ -189,9 +273,12 @@ class ExecutionContext:
             scope_name: Name for the initial scope
             parent_scope: Optional parent scope for hierarchical lookups
         """
+
+        #
         self.current_scope: Scope = Scope(scope_name, parent_scope)
         self.scope_stack: list[Scope] = [self.current_scope]
 
+    #
     def enter_scope(self, scope_name: str) -> "ExecutionContext":
         """
         Create a new nested scope (for functions, loops, blocks).
@@ -202,11 +289,16 @@ class ExecutionContext:
         Returns:
             New ExecutionContext with the nested scope
         """
+
+        #
         new_context = ExecutionContext.__new__(ExecutionContext)
         new_context.current_scope = Scope(scope_name, self.current_scope)
         new_context.scope_stack = self.scope_stack + [new_context.current_scope]
+
+        #
         return new_context
 
+    #
     def exit_scope(self) -> Optional["ExecutionContext"]:
         """
         Exit the current scope and return to parent scope.
@@ -214,14 +306,21 @@ class ExecutionContext:
         Returns:
             ExecutionContext with parent scope, or None if at global scope
         """
+
+        #
         if len(self.scope_stack) <= 1:
+            #
             return None
 
+        #
         parent_context = ExecutionContext.__new__(ExecutionContext)
         parent_context.scope_stack = self.scope_stack[:-1]
         parent_context.current_scope = parent_context.scope_stack[-1]
+
+        #
         return parent_context
 
+    #
     def set_variable(self, var_name: str, var_type: lc.VarType, value: Any) -> None:
         """
         Set a variable in the current scope.
@@ -232,16 +331,26 @@ class ExecutionContext:
             var_type: Type of the variable
             value: Value to assign
         """
-        # Check if variable exists in current or parent scopes
+
+        #
+        ### Check if variable exists in current or parent scopes ###
+        #
         existing_symbol = self.current_scope.lookup(var_name)
 
+        #
         if existing_symbol is not None:
-            # Update existing variable
+            #
+            ### Update existing variable ###
+            #
             self.current_scope.update(var_name, value)
+        #
         else:
-            # Define new variable in current scope
+            #
+            ### Define new variable in current scope ###
+            #
             self.current_scope.define(var_name, var_type, value)
 
+    #
     def set_variable_local(self, var_name: str, var_type: lc.VarType, value: Any) -> None:
         """
         Set a variable in the current scope only (forces local definition).
@@ -251,8 +360,10 @@ class ExecutionContext:
             var_type: Type of the variable
             value: Value to assign
         """
+        #
         self.current_scope.define(var_name, var_type, value)
 
+    #
     def get_variable(self, var_name: str) -> Any:
         """
         Get a variable from the current or parent scopes.
@@ -266,11 +377,16 @@ class ExecutionContext:
         Raises:
             KeyError: If variable doesn't exist
         """
+        #
         symbol = self.current_scope.lookup(var_name)
+        #
         if symbol is None:
+            #
             raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
+        #
         return symbol.value
 
+    #
     def has_variable(self, var_name: str) -> bool:
         """
         Check if variable exists in current or parent scopes.
@@ -281,8 +397,19 @@ class ExecutionContext:
         Returns:
             True if variable exists
         """
-        return self.current_scope.has_symbol(var_name)
 
+        #
+        try:
+            #
+            return self.current_scope.has_symbol(var_name)
+        #
+        except RecursionError:
+            #
+            print(f"DEBUG: RecursionError in has_variable for {var_name}")
+            #
+            return False
+
+    #
     def has_variable_local(self, var_name: str) -> bool:
         """
         Check if variable exists in current scope only.
@@ -293,8 +420,10 @@ class ExecutionContext:
         Returns:
             True if variable exists in current scope
         """
+        #
         return self.current_scope.has_symbol_local(var_name)
 
+    #
     def get_variable_type(self, var_name: str) -> lc.VarType:
         """
         Get the type of a variable from the current or parent scopes.
@@ -308,11 +437,17 @@ class ExecutionContext:
         Raises:
             KeyError: If variable doesn't exist
         """
+
+        #
         symbol = self.current_scope.lookup(var_name)
+        #
         if symbol is None:
+            #
             raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
+        #
         return symbol.var_type
 
+    #
     @property
     def variables(self) -> dict[str, Any]:
         """
@@ -321,9 +456,13 @@ class ExecutionContext:
         Returns:
             Dictionary mapping variable names to values
         """
+
+        #
         all_symbols = self.current_scope.get_all_symbols()
+        #
         return {name: symbol.value for name, symbol in all_symbols.items()}
 
+    #
     @property
     def variable_types(self) -> dict[str, lc.VarType]:
         """
@@ -332,9 +471,12 @@ class ExecutionContext:
         Returns:
             Dictionary mapping variable names to types
         """
+        #
         all_symbols = self.current_scope.get_all_symbols()
+        #
         return {name: symbol.var_type for name, symbol in all_symbols.items()}
 
+    #
     def copy(self) -> "ExecutionContext":
         """
         Create a shallow copy of the execution context for backward compatibility.
@@ -345,18 +487,27 @@ class ExecutionContext:
         Returns:
             New ExecutionContext with the same variables in a new scope
         """
-        # Create a new scope at the same level (sibling scope)
+
+        #
+        ### Create a new scope at the same level (sibling scope) ###
+        #
         new_context = ExecutionContext.__new__(ExecutionContext)
         new_context.current_scope = Scope(f"{self.current_scope.name}_copy", self.current_scope.parent)
         new_context.scope_stack = self.scope_stack[:-1] + [new_context.current_scope]
 
-        # Copy all symbols from current scope to new scope
+        #
+        ### Copy all symbols from current scope to new scope ###
+        #
         for name, symbol in self.current_scope.symbols.items():
+            #
             new_context.current_scope.define(name, symbol.var_type, symbol.value)
 
+        #
         return new_context
 
+    #
     def __repr__(self) -> str:
+        #
         return f"ExecutionContext(scope={self.current_scope.name}, level={self.current_scope.scope_level}, vars={len(self.current_scope.symbols)})"
 
 
@@ -426,7 +577,7 @@ class LanguageModel_ForwardInterpreter:
 
         #
         ### Initialize global constants. ###
-            #
+        #
         self._initialize_global_constants()
 
         #
@@ -445,8 +596,11 @@ class LanguageModel_ForwardInterpreter:
         ### Use the main_block attribute if it's set, otherwise use the first block. ###
         #
         if self.language_model.main_block and self.language_model.main_block in self.language_model.model_blocks:
+            #
             main_block = self.language_model.model_blocks[self.language_model.main_block]
+        #
         else:
+            #
             main_block = list(self.language_model.model_blocks.values())[0]
 
         #
@@ -546,7 +700,7 @@ class LanguageModel_ForwardInterpreter:
             #
             context.set_variable(layer_name, lc.VarType("lc.Layer"), layer_obj)
 
-            #
+        #
         ### Initialize sub-layers for BlockModuleList. ###
         #
         for layer_name, layer in model_block.block_layers.items():
@@ -654,29 +808,29 @@ class LanguageModel_ForwardInterpreter:
                             #
                             param_name = param_names[1]
 
-                            #
+                        #
                         elif len(param_names) > 0:
 
                             #
                             param_name = param_names[0]
 
-                            #
+                        #
                         else:
 
-                        #
+                            #
                             raise ValueError(f"No parameters found in forward function of {self.layer_type}")
 
-                            #
+                        #
                         ### Handle single positional argument. ###
-                            #
+                        #
                         if len(args) == 1:
 
                             #
                             arg_value = args[0]
 
-                        #
+                            #
                             ### Check if the argument is a numpy array. ###
-                        #
+                            #
                             if not isinstance(arg_value, np.ndarray):
 
                                 #
@@ -707,18 +861,30 @@ class LanguageModel_ForwardInterpreter:
                             for i, arg_value in enumerate(args):
 
                                 #
-                                # Map argument index to parameter name
+                                ### Map argument index to parameter name ###
+                                #
                                 if param_names[0] == 'self':
-                                    # Skip 'self' parameter, map to remaining parameters
+                                    #
+                                    ### Skip 'self' parameter, map to remaining parameters ###
+                                    #
                                     if i + 1 < len(param_names):
+                                        #
                                         param_name = param_names[i + 1]
+                                    #
                                     else:
+                                        #
                                         raise ValueError(f"Too many arguments for function {self.layer_type}.forward")
+                                #
                                 else:
-                                    # No 'self' parameter, map directly
+                                    #
+                                    ### No 'self' parameter, map directly ###
+                                    #
                                     if i < len(param_names):
+                                        #
                                         param_name = param_names[i]
+                                    #
                                     else:
+                                        #
                                         raise ValueError(f"Too many arguments for function {self.layer_type}.forward")
 
                                 #
@@ -774,7 +940,6 @@ class LanguageModel_ForwardInterpreter:
 
                 #
                 def __getitem__(self, index: int) -> Any:
-
                     """
                     Allow indexing into ModuleList-like structures.
                     """
@@ -791,33 +956,57 @@ class LanguageModel_ForwardInterpreter:
                         #
                         raise IndexError(f"Layer {index} not found in context")
 
+                #
                 def __iter__(self):
                     """
                     Make ModuleWrapper iterable like PyTorch ModuleList.
                     """
 
-                    # Get the layers defined in the BlockModuleList block
+                    #
+                    ### Get the layers defined in the BlockModuleList block ###
+                    #
                     if self.layer_type in self.interpreter.language_model.model_blocks:
+
+                        #
                         model_block = self.interpreter.language_model.model_blocks[self.layer_type]
-                        # Iterate over the layers in the order they are defined in the block
+
+                        #
+                        ### Iterate over the layers in the order they are defined in the block ###
+                        #
                         for layer_name in sorted(model_block.block_layers.keys()):
+
+                            #
                             if self.context.has_variable(layer_name):
+                                #
                                 yield self.context.get_variable(layer_name)
 
-
+                #
                 def __len__(self):
                     """
                     Return the length of the ModuleList.
                     """
-                    # Get the layers defined in the BlockModuleList block
+
+                    #
+                    ### Get the layers defined in the BlockModuleList block ###
+                    #
                     if self.layer_type in self.interpreter.language_model.model_blocks:
+                        #
                         model_block = self.interpreter.language_model.model_blocks[self.layer_type]
-                        # Count only the layers that are actually in the context
+                        #
+                        ### Count only the layers that are actually in the context ###
+                        #
                         count = 0
+                        #
                         for layer_name in model_block.block_layers.keys():
+                            #
                             if self.context.has_variable(layer_name):
+                                #
                                 count += 1
+
+                        #
                         return count
+
+                    #
                     return 0
 
             #
@@ -852,7 +1041,12 @@ class LanguageModel_ForwardInterpreter:
             return layer_instance
 
     #
-    def _normalize_pytorch_parameter(self, layer_type: str, param_name: str, param_value: Any) -> Any:
+    def _normalize_pytorch_parameter(
+        self,
+        layer_type: str,
+        param_name: str,
+        param_value: Any
+    ) -> Any:
 
         """
         Normalize PyTorch parameter names and values to match the expected format.
@@ -926,18 +1120,47 @@ class LanguageModel_ForwardInterpreter:
 
             #
             def __getattr__(self, name: str) -> Any:
+                #
+                ### Prevent infinite recursion ###
+                #
+                if not hasattr(self.__class__, '_getattr_depth'):
+                    #
+                    self.__class__._getattr_depth = 0
+                #
+                if self.__class__._getattr_depth > 10:
+                    #
+                    print(f"DEBUG: RecursionError in SelfWrapper.__getattr__ for {name}")
+                    #
+                    return None
+
+                #
+                self.__class__._getattr_depth += 1
 
                 #
                 ### First try to get from the execution context (layer instances). ###
                 #
-                if self.context.has_variable(name):
+                try:
                     #
-                    return self.context.get_variable(name)
+                    if self.context.has_variable(name):
+                        #
+                        print(f"DEBUG: Found {name} in context")
+                        #
+                        return self.context.get_variable(name)
+                #
+                except RecursionError:
+                    #
+                    print(f"DEBUG: RecursionError in SelfWrapper.__getattr__ for {name}")
+                    #
+                    return None
+                #
+                finally:
+                    #
+                    self.__class__._getattr_depth -= 1
 
                 #
                 ### Then try to get from the model block. ###
                 #
-                elif hasattr(self.model_block, name):
+                if hasattr(self.model_block, name):
 
                     #
                     attr: Any = getattr(self.model_block, name)
@@ -1348,7 +1571,7 @@ class LanguageModel_ForwardInterpreter:
 
             #
             ### Set iterator variable(s). ###
-            # Handle tuple unpacking for cases like (var_1, var_2, ..., var_i)
+            ### Handle tuple unpacking for cases like (var_1, var_2, ..., var_i) ###
             #
             if instruction.iterable_var_name.startswith("(") and instruction.iterable_var_name.endswith(")"):
 
@@ -1406,9 +1629,13 @@ class LanguageModel_ForwardInterpreter:
             ### Update parent context with variables that were modified in the loop. ###
             #
             for var_name in loop_context.current_scope.symbols:
+                #
                 symbol = loop_context.current_scope.symbols[var_name]
-                # Only update variables that existed in parent context
+                #
+                ### Only update variables that existed in parent context ###
+                #
                 if context.has_variable(var_name):
+                    #
                     context.set_variable(var_name, symbol.var_type, symbol.value)
 
     #
@@ -1448,9 +1675,13 @@ class LanguageModel_ForwardInterpreter:
             ### Update parent context with variables that were modified in the loop. ###
             #
             for var_name in loop_context.current_scope.symbols:
+                #
                 symbol = loop_context.current_scope.symbols[var_name]
-                # Only update variables that existed in parent context
+                #
+                ### Only update variables that existed in parent context ###
+                #
                 if context.has_variable(var_name):
+                    #
                     context.set_variable(var_name, symbol.var_type, symbol.value)
 
             #
@@ -1496,19 +1727,22 @@ class LanguageModel_ForwardInterpreter:
                 #
                 args: list[Any] = []
 
-            #
-                # Sort arguments by numeric key to maintain order
+                #
+                ### Sort arguments by numeric key to maintain order ###*
+                #
                 sorted_args = sorted(instruction.function_arguments.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0)
 
-        #
+                #
                 for arg_name, arg_expr in sorted_args:
 
                     #
                     arg_value = self._evaluate_expression(arg_expr, context)
 
                     #
-                    # Skip 'self' argument as it's handled implicitly by the ModuleWrapper
+                    ### Skip 'self' argument as it's handled implicitly by the ModuleWrapper ###
+                    #
                     if isinstance(arg_expr, lc.ExpressionVariable) and arg_expr.var_name == 'self':
+                        #
                         continue
 
                     #
@@ -1565,9 +1799,12 @@ class LanguageModel_ForwardInterpreter:
                 #
                 ### This is a standard layer (dictionary representation) that should be executed as a layer pass. ###
                 #
-                # Evaluate function arguments
+                ### Evaluate function arguments ###
+                #
                 args: dict[str, Any] = {}
+                #
                 for arg_name, arg_expr in instruction.function_arguments.items():
+                    #
                     args[arg_name] = self._evaluate_expression(arg_expr, context)
 
                 #
@@ -1611,7 +1848,7 @@ class LanguageModel_ForwardInterpreter:
                     #
                     raise ValueError(f"Standard layer {instruction.function_called} called without arguments")
 
-            #
+                #
                 ### Store result if output variables are specified. ###
                 #
                 if instruction.output_variables:
@@ -1630,11 +1867,15 @@ class LanguageModel_ForwardInterpreter:
             #
             ### External function call. ###
             #
-            # Evaluate arguments for external function call
+            ### Evaluate arguments for external function call ###
+            #
             args: dict[str, Any] = {}
+            #
             for arg_name, arg_expr in instruction.function_arguments.items():
+                #
                 args[arg_name] = self._evaluate_expression(arg_expr, context)
 
+            #
             result = self._call_external_function(instruction.function_called, args, context)
 
             #
@@ -1649,6 +1890,8 @@ class LanguageModel_ForwardInterpreter:
 
                 #
                 context.set_variable(instruction.output_variables[0], result_type, result)
+                #
+                return result
 
     #
     def _execute_sub_block_function_call(
@@ -1697,23 +1940,34 @@ class LanguageModel_ForwardInterpreter:
         args: dict[str, Any] = {}
 
         #
-        # Get the function parameter names
+        ### Get the function parameter names ###
+        #
         param_names = list(function.function_arguments.keys())
 
         #
         for arg_name, arg_expr in instruction.function_arguments.items():
 
             #
-            # Map numeric argument keys to parameter names
+            ### Map numeric argument keys to parameter names ###
+            #
             if arg_name.isdigit():
+                #
                 arg_index = int(arg_name)
+                #
                 if arg_index < len(param_names):
+                    #
                     param_name = param_names[arg_index]
+                    #
                     args[param_name] = self._evaluate_expression(arg_expr, context)
+                #
                 else:
+                    #
                     raise ValueError(f"Argument index {arg_index} out of range for function {instruction.function_name}")
+            #
             else:
-                # Use the argument name directly if it's not numeric
+                #
+                ### Use the argument name directly if it's not numeric ###
+                #
                 args[arg_name] = self._evaluate_expression(arg_expr, context)
 
         #
@@ -1763,24 +2017,28 @@ class LanguageModel_ForwardInterpreter:
         for arg_name, arg_expr in instruction.layer_arguments.items():
             #
             arg_value = self._evaluate_expression(arg_expr, context)
-            #
+        #
             args.append(arg_value)
 
         #
         ### Call the layer. ###
         #
-        # Check if this is a ModuleWrapper (callable) or a dictionary (standard layer)
+        ### Check if this is a ModuleWrapper (callable) or a dictionary (standard layer) ###
+        #
         if hasattr(layer_instance, '__call__'):
             #
             ### This is a ModuleWrapper (custom block) ###
             #
             result = layer_instance(*args)
+        #
         else:
             #
             ### This is a standard PyTorch layer (dictionary) ###
             #
-            # Convert args list to dictionary format expected by _execute_layer_forward
+            ### Convert args list to dictionary format expected by _execute_layer_forward ###
+            #
             layer_args = {"x": args[0]} if args else {}
+            #
             result = self._execute_layer_forward(layer_instance, layer_args)
 
         #
@@ -1799,7 +2057,9 @@ class LanguageModel_ForwardInterpreter:
             if len(instruction.output_variables) == 1:
                 #
                 context.set_variable(instruction.output_variables[0], result_type, result)
-                # Verify storage
+                #
+                ### Verify storage ###
+                #
                 stored_value = context.get_variable(instruction.output_variables[0])
 
             #
@@ -1926,7 +2186,6 @@ class LanguageModel_ForwardInterpreter:
             ### Check if it's a variable in the context. ###
             #
             if context.has_variable(expression):
-
                 #
                 return context.get_variable(expression)
 
@@ -1939,7 +2198,6 @@ class LanguageModel_ForwardInterpreter:
         ### Handle numeric constants. ###
         #
         elif isinstance(expression, (int, float)):
-
             #
             return expression
 
@@ -1947,7 +2205,6 @@ class LanguageModel_ForwardInterpreter:
         ### Handle boolean constants. ###
         #
         elif isinstance(expression, bool):
-
             #
             return expression
 
@@ -1955,56 +2212,51 @@ class LanguageModel_ForwardInterpreter:
         ### Handle None. ###
         #
         elif expression is None:
-
             #
             return None
 
         #
         ### Handle ExpressionConstantNumeric. ###
-            #
-        elif isinstance(expression, lc.ExpressionConstantNumeric):
-
         #
+        elif isinstance(expression, lc.ExpressionConstantNumeric):
+            #
             return expression.constant
 
-            #
-        ### Handle ExpressionConstantString. ###
-            #
-        elif isinstance(expression, lc.ExpressionConstantString):
-
         #
+        ### Handle ExpressionConstantString. ###
+        #
+        elif isinstance(expression, lc.ExpressionConstantString):
+            #
             return expression.constant
 
         #
         ### Handle ExpressionConstantBoolean. ###
-            #
-        elif isinstance(expression, lc.ExpressionConstantBoolean):
-
         #
+        elif isinstance(expression, lc.ExpressionConstantBoolean):
+            #
             return expression.constant
 
         #
         ### Handle ExpressionVariable. ###
-            #
-        elif isinstance(expression, lc.ExpressionVariable):
-
         #
+        elif isinstance(expression, lc.ExpressionVariable):
+            #
             return context.get_variable(expression.var_name)
 
-            #
+        #
         ### Handle ExpressionBinaryOperation. ###
-            #
+        #
         elif isinstance(expression, lc.ExpressionBinaryOperation):
 
             #
             left_value = self._evaluate_expression(expression.left, context)
             right_value = self._evaluate_expression(expression.right, context)
 
-                #
+            #
             if expression.operator == "+":
                 #
                 return left_value + right_value
-                #
+            #
             elif expression.operator == "-":
                 #
                 return left_value - right_value
@@ -2012,27 +2264,27 @@ class LanguageModel_ForwardInterpreter:
             elif expression.operator == "*":
                 #
                 return left_value * right_value
-                #
+            #
             elif expression.operator == "/":
                 #
                 return left_value / right_value
-                #
+            #
             elif expression.operator == "//":
                 #
                 return left_value // right_value
-                    #
+            #
             elif expression.operator == "%":
                     #
                 return left_value % right_value
-                    #
+            #
             elif expression.operator == "**":
                     #
                 return left_value ** right_value
-                        #
+            #
             elif expression.operator == "@":
-                    #
+                #
                 return left_value @ right_value
-                        #
+            #
             elif expression.operator == "==":
                 #
                 return left_value == right_value
@@ -2152,10 +2404,6 @@ class LanguageModel_ForwardInterpreter:
             ### Handle attribute access like tensor.shape ###
             #
             variable = self._evaluate_expression(expression.variable, context)
-            if variable is None:
-                print(f"DEBUG: Variable is None when accessing {expression.attribute}")
-                print(f"DEBUG: expression.variable = {expression.variable}")
-                print(f"DEBUG: context variables = {[name for name in context.get_all_variable_names()]}")
             #
             return getattr(variable, expression.attribute)
 
@@ -2283,11 +2531,11 @@ class LanguageModel_ForwardInterpreter:
         #
         if isinstance(condition, lc.ConditionComparison):
 
-        #
+            #
             left_value = self._evaluate_expression(condition.left, context)
             right_value = self._evaluate_expression(condition.right, context)
 
-        #
+            #
             if condition.operator == "==":
                 #
                 return left_value == right_value
@@ -2475,40 +2723,68 @@ class LanguageModel_ForwardInterpreter:
             #
             ### Simplified implementation that produces correct output shape ###
             #
-            # Calculate output dimensions
+            ### Calculate output dimensions ###
+            #
             input_shape = input_tensor.shape
 
-            # Handle kernel_size as tuple or int
+            #
+            ### Handle kernel_size as tuple or int ###
+            #
             if isinstance(kernel_size, (tuple, list)):
+                #
                 kernel_h, kernel_w = kernel_size
+            #
             else:
+                #
                 kernel_h = kernel_w = kernel_size
 
-            # Handle stride as tuple or int
+            #
+            ### Handle stride as tuple or int ###
+            #
             if isinstance(stride, (tuple, list)):
+                #
                 stride_h, stride_w = stride
+            #
             else:
+                #
                 stride_h = stride_w = stride
 
-            # Handle padding as tuple or int
+            #
+            ### Handle padding as tuple or int ###
+            #
             if isinstance(padding, (tuple, list)):
+                #
                 pad_h, pad_w = padding
+            #
             else:
+                #
                 pad_h = pad_w = padding
 
-            # Calculate output dimensions using convolution formula
-            # output_size = (input_size + 2*padding - kernel_size) / stride + 1
+            #
+            ### Calculate output dimensions using convolution formula ###
+            ### output_size = (input_size + 2*padding - kernel_size) / stride + 1 ###
+            #
             if len(input_shape) >= 4:  # (batch, channels, height, width)
+
+                #
                 output_h = (input_shape[2] + 2*pad_h - kernel_h) // stride_h + 1
                 output_w = (input_shape[3] + 2*pad_w - kernel_w) // stride_w + 1
 
-                # Create output tensor with correct shape
+                #
+                ### Create output tensor with correct shape ###
+                #
                 output_shape = (input_shape[0], out_channels, output_h, output_w)
+                #
                 result = np.random.randn(*output_shape).astype(np.float32) * 0.1
+
+            #
             else:
-                # Fallback for other shapes
+                #
+                ### Fallback for other shapes ###
+                #
                 result = input_tensor * 0.5
 
+        #
         elif layer_type == "Linear":
             #
             ### Linear layer. ###
@@ -2537,28 +2813,33 @@ class LanguageModel_ForwardInterpreter:
                 ### This is a placeholder implementation. ###
                 #
                 result = input_tensor * 0.5  # Simplified operation
+            #
             else:
                 #
                 result = input_tensor
 
+        #
         elif layer_type == "ReLU":
             #
             ### ReLU activation. ###
             #
             result = np.maximum(0, input_tensor)
 
+        #
         elif layer_type == "Sigmoid":
             #
             ### Sigmoid activation. ###
             #
             result = 1 / (1 + np.exp(-input_tensor))
 
+        #
         elif layer_type == "Tanh":
             #
             ### Tanh activation. ###
             #
             result = np.tanh(input_tensor)
 
+        #
         else:
             #
             ### Unknown layer type. ###
@@ -2595,11 +2876,18 @@ class LanguageModel_ForwardInterpreter:
         #
         def get_args_list():
             """Convert dictionary arguments to positional arguments list."""
+
+            #
             return list(args.values())
 
+        #
         def get_arg(index: int, default=None):
             """Get argument by index from dictionary."""
+
+            #
             args_list = get_args_list()
+
+            #
             return args_list[index] if index < len(args_list) else default
 
         #
@@ -2607,7 +2895,7 @@ class LanguageModel_ForwardInterpreter:
         #
         if function_name == "torch.cat" or function_name == "cat":
 
-            #
+            #                    #
             ### Concatenate tensors. ###
             #
             if len(args) >= 1:
@@ -2688,6 +2976,7 @@ class LanguageModel_ForwardInterpreter:
                 ### Compute softmax. ###
                 #
                 exp_tensor = np.exp(tensor - np.max(tensor, axis=dim, keepdims=True))
+
                 #
                 return exp_tensor / np.sum(exp_tensor, axis=dim, keepdims=True)
 
@@ -2827,7 +3116,15 @@ class LanguageModel_ForwardInterpreter:
                         numeric_args.append(value)
 
                 #
-                if len(numeric_args) == 2:
+                if len(numeric_args) == 1:
+                    #
+                    ### arange(end) ###
+                    #
+                    end = numeric_args[0]
+                    #
+                    return np.arange(end, dtype=np.float32)
+                #
+                elif len(numeric_args) == 2:
                     #
                     ### arange(start, end) ###
                     #
@@ -2847,12 +3144,12 @@ class LanguageModel_ForwardInterpreter:
                     #
                     return np.arange(start, end, step, dtype=np.float32)
 
+            #
+            else:
                 #
-                else:
-                    #
-                    ### Fallback to single argument ###
-                    #
-                    return np.arange(numeric_args[0], dtype=np.float32)
+                ### Fallback to single argument ###
+                #
+                return np.arange(numeric_args[0], dtype=np.float32)
 
         #
         elif function_name == "torch.unsqueeze" or function_name == "unsqueeze":
@@ -2948,8 +3245,12 @@ class LanguageModel_ForwardInterpreter:
             ### Handle -1 values which mean "keep existing dimension size" ###
             #
             tensor = get_arg(0)
-            new_shape = get_args_list()[1:]  # All remaining arguments are shape dimensions
-            
+
+            #
+            ### All remaining arguments are shape dimensions. ###
+            #
+            new_shape = get_args_list()[1:]
+
             #
             ### Replace -1 with the corresponding dimension size from the original tensor ###
             #
@@ -2963,22 +3264,33 @@ class LanguageModel_ForwardInterpreter:
                     ### Total elements / product of other specified dimensions ###
                     #
                     total_elements = tensor.size
+                    #
                     other_dims = [d for j, d in enumerate(new_shape) if j != i and d != -1]
+                    #
                     if other_dims:
+                        #
                         other_product = np.prod(other_dims)
                         final_shape.append(total_elements // other_product)
+                    #
                     else:
+                        #
                         final_shape.append(total_elements)
                 #
                 else:
                     #
                     final_shape.append(dim_size)
-            
-            # Convert to numpy and reshape
+
+            #
+            ### Convert to numpy and reshape ###
+            #
             if isinstance(tensor, np.ndarray):
+                #
                 result = tensor.reshape(final_shape)
+            #
             else:
+                #
                 result = tensor
+            #
             return result
 
         #
@@ -3041,25 +3353,26 @@ class LanguageModel_ForwardInterpreter:
                     #
                     return np.sum(tensor)
 
-                    #
+        #
         elif function_name == "torch.mean" or function_name == "mean":
 
-                    #
+            #
             ### Mean tensor. ###
-                        #
+            #
             if len(args) >= 1:
 
-                            #
+                #
                 tensor = get_arg(0)
 
-                    #
+                #
                 if len(args) >= 2:
-                        #
+                    #
                     dim = get_arg(1)
-                        #
+                    #
                     keepdim = get_arg(2) if len(args) > 2 else False
-                        #
+                    #
                     return np.mean(tensor, axis=dim, keepdims=keepdim)
+
                 #
                 else:
                     #
@@ -3078,10 +3391,13 @@ class LanguageModel_ForwardInterpreter:
 
                 #
                 if len(args) >= 2:
+
                     #
                     second_arg = get_arg(1)
 
-                    # Check if this is a value comparison (both args are scalars) or tensor operation
+                    #
+                    ### Check if this is a value comparison (both args are scalars) or tensor operation ###
+                    #
                     if (isinstance(first_arg, (int, float)) and isinstance(second_arg, (int, float))):
                         #
                         ### Value comparison ###
@@ -3119,7 +3435,9 @@ class LanguageModel_ForwardInterpreter:
                     #
                     second_arg = get_arg(1)
 
-                    # Check if this is a value comparison (both args are scalars) or tensor operation
+                    #
+                    ### Check if this is a value comparison (both args are scalars) or tensor operation ###
+                    #
                     if (isinstance(first_arg, (int, float)) and isinstance(second_arg, (int, float))):
                         #
                         ### Value comparison ###
@@ -3175,10 +3493,10 @@ class LanguageModel_ForwardInterpreter:
                     #
                     if len(dim_args) == 1:
                         #
-                        dim = dim_get_arg(0)
+                        dim = dim_args[0]
                         #
                         return tensor.shape[dim]
-                    #
+
                 #
                 ### size() - return entire shape tuple ###
                 #
@@ -3187,6 +3505,7 @@ class LanguageModel_ForwardInterpreter:
             else:
                 #
                 result = np.array(tensor).shape
+                #
                 return result
 
         #
@@ -3218,7 +3537,9 @@ class LanguageModel_ForwardInterpreter:
                         ### The indices will be [3, 6, 9, ...] ###
                         #
                         indices = np.arange(split_size, tensor.shape[dim], split_size)
-                        # 2. Use numpy.split with the calculated indices
+                        #
+                        ### 2. Use numpy.split with the calculated indices ###
+                        #
                         result = np.split(tensor, indices, axis=dim)
                         #
                         return result
@@ -3283,45 +3604,43 @@ class LanguageModel_ForwardInterpreter:
         #
         elif function_name == "zip":
 
-        #
+            #
             ### Zip function. ###
             #
             if len(args) >= 1:
-
-            #
+                #
                 return list(zip(*args))
 
-                #
+        #
         elif function_name == "print":
 
             #
             ### Print function. ###
-                #
+            #
             print(args)
 
-        #
+            #
             return None
 
-            #
+        #
         elif function_name == "type":
 
             #
             ### Type function. ###
-                #
-            if len(args) >= 1:
-
             #
+            if len(args) >= 1:
+                #
                 return type(get_arg(0))
 
-                #
+        #
         elif function_name == "isinstance":
 
-        #
+            #
             ### Isinstance function. ###
             #
             if len(args) >= 2:
 
-            #
+                #
                 obj = get_arg(0)
                 class_or_tuple = get_arg(1)
 
@@ -3385,7 +3704,6 @@ class LanguageModel_ForwardInterpreter:
             ### Sin function. ###
             #
             if len(args) >= 1:
-
                 #
                 return np.sin(get_arg(0))
 
@@ -3396,7 +3714,6 @@ class LanguageModel_ForwardInterpreter:
             ### Cos function. ###
             #
             if len(args) >= 1:
-
                 #
                 return np.cos(get_arg(0))
 
@@ -3415,28 +3732,27 @@ class LanguageModel_ForwardInterpreter:
             #
             else:
                 #
-                    return np.cos(get_arg(0))
-
-            #
-        elif function_name == "torch.exp" or function_name == "exp":
+                return np.cos(get_arg(0))
 
         #
+        elif function_name == "torch.exp" or function_name == "exp":
+
+            #
             ### Exp function. ###
             #
             if len(args) >= 1:
 
-            #
+                #
                 return np.exp(get_arg(0))
 
-            #
+        #
         elif function_name == "log":
 
             #
             ### Log function. ###
-                #
+            #
             if len(args) >= 1:
-
-                    #
+                #
                 return np.log(get_arg(0))
 
         #
@@ -3446,7 +3762,6 @@ class LanguageModel_ForwardInterpreter:
             ### Abs function. ###
             #
             if len(args) >= 1:
-
                 #
                 return np.abs(get_arg(0))
 
@@ -3457,7 +3772,6 @@ class LanguageModel_ForwardInterpreter:
             ### Power function. ###
             #
             if len(args) >= 2:
-
                 #
                 return np.power(get_arg(0), get_arg(1))
 
@@ -3468,7 +3782,6 @@ class LanguageModel_ForwardInterpreter:
             ### Sqrt function. ###
             #
             if len(args) >= 1:
-
                 #
                 return np.sqrt(get_arg(0))
 
@@ -3479,7 +3792,6 @@ class LanguageModel_ForwardInterpreter:
             ### Int conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return int(get_arg(0))
 
@@ -3490,7 +3802,6 @@ class LanguageModel_ForwardInterpreter:
             ### Float conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return float(get_arg(0))
 
@@ -3501,7 +3812,6 @@ class LanguageModel_ForwardInterpreter:
             ### String conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return str(get_arg(0))
 
@@ -3512,7 +3822,6 @@ class LanguageModel_ForwardInterpreter:
             ### Bool conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return bool(get_arg(0))
 
@@ -3523,7 +3832,6 @@ class LanguageModel_ForwardInterpreter:
             ### List conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return list(get_arg(0))
 
@@ -3534,7 +3842,6 @@ class LanguageModel_ForwardInterpreter:
             ### Tuple conversion. ###
             #
             if len(args) >= 1:
-
                 #
                 return tuple(get_arg(0))
 
@@ -3553,7 +3860,6 @@ class LanguageModel_ForwardInterpreter:
             ### Set creation. ###
             #
             if len(args) >= 1:
-
                 #
                 return set(get_arg(0))
 
@@ -3564,7 +3870,6 @@ class LanguageModel_ForwardInterpreter:
             ### Sorted function. ###
             #
             if len(args) >= 1:
-
                 #
                 return sorted(get_arg(0))
 
@@ -3575,7 +3880,6 @@ class LanguageModel_ForwardInterpreter:
             ### Reversed function. ###
             #
             if len(args) >= 1:
-
                 #
                 return list(reversed(get_arg(0)))
 
@@ -3586,7 +3890,6 @@ class LanguageModel_ForwardInterpreter:
             ### All function. ###
             #
             if len(args) >= 1:
-
                 #
                 return all(get_arg(0))
 
@@ -3597,7 +3900,6 @@ class LanguageModel_ForwardInterpreter:
             ### Any function. ###
             #
             if len(args) >= 1:
-
                 #
                 return any(get_arg(0))
 
