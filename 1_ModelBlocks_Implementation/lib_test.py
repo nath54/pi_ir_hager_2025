@@ -282,83 +282,101 @@ class Tester:
         self,
         l_model: lc.Language_Model,
         pt_model: nn.Module,
-        interpreter: li.LanguageModel_ForwardInterpreter
+        interpreter: li.LanguageModel_ForwardInterpreter,
+        nb_exec_test: int = 20
     ) -> tuple[bool, str, Optional[tuple[int, ...]]]:
 
         #
-        ### Generate a random input. ###
-        #
-        inp: NDArray[np.float32] = np.random.rand(*self.input_dim)
-        #
-        inputs_dict: dict[str, NDArray[np.float32]] = {
-            "x": inp
-        }
+        distances: list[float] = []
 
         #
-        ### Get the output from the pytorch model. ###
-        #
-        with torch.no_grad():
+        for _ in range(nb_exec_test):
 
             #
-            ref_output_pt: Tensor = pt_model.forward( torch.from_numpy(inp).to(dtype=torch.float32) )
-            ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
-
-        #
-        ### Get the output from the extracted model. ###
-        #
-        extr_outputs: dict[str, NDArray[np.float32]] = interpreter.forward(inputs=inputs_dict)
-
-        #
-        extr_output: Optional[NDArray[np.float32]] = None
-        #
-        for var_name in ["output", "y", "x"]:
+            ### TODO: reset internal state of (interpreter: li.LanguageModel_ForwardInterpreter) ###
+            #
+            interpreter.reset_state()
 
             #
-            if var_name in extr_outputs:
+            ### Generate a random input. ###
+            #
+            inp: NDArray[np.float32] = np.random.rand(*self.input_dim)
+            #
+            inputs_dict: dict[str, NDArray[np.float32]] = {
+                "x": inp
+            }
+
+            #
+            ### Get the output from the pytorch model. ###
+            #
+            with torch.no_grad():
+
                 #
-                extr_output = extr_outputs[var_name]
+                ref_output_pt: Tensor = pt_model.forward( torch.from_numpy(inp).to(dtype=torch.float32) )
+                ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
+
+            #
+            ### Get the output from the extracted model. ###
+            #
+            extr_outputs: dict[str, NDArray[np.float32]] = interpreter.forward(inputs=inputs_dict)
+
+            #
+            extr_output: Optional[NDArray[np.float32]] = None
+            #
+            for var_name in ["output", "y", "x"]:
+
                 #
-                break
-
-        #
-        if len(extr_outputs) == 0:
-            #
-            return (False, "No model outputs.", None)
-
-        #
-        extr_output = list(extr_outputs.values())[0]
-
-        #
-        if extr_output is None:
-            #
-            return (False, "Model output is None.", None)
-
-        #
-        ### Compare Pytorch Model Output to Extracted Model Output. ###
-        #
-
-        #
-        ### Compare Shape. ###
-        #
-        if ref_output.shape != extr_output.shape:
+                if var_name in extr_outputs:
+                    #
+                    extr_output = extr_outputs[var_name]
+                    #
+                    break
 
             #
-            return (False, f"Model output don't have expected output shape: obtained = {extr_output.shape}, expected = {ref_output.shape} !", tuple(extr_output.shape))
+            if len(extr_outputs) == 0:
+                #
+                return (False, "No model outputs.", None)
+
+            #
+            extr_output = list(extr_outputs.values())[0]
+
+            #
+            if extr_output is None:
+                #
+                return (False, "Model output is None.", None)
+
+            #
+            ### Compare Pytorch Model Output to Extracted Model Output. ###
+            #
+
+            #
+            ### Compare Shape. ###
+            #
+            if ref_output.shape != extr_output.shape:
+
+                #
+                return (False, f"Model output don't have expected output shape: obtained = {extr_output.shape}, expected = {ref_output.shape} !", tuple(extr_output.shape))
+
+            #
+            dist: float = np.linalg.norm(ref_output - extr_output)
+
+            #
+            distances.append( dist )
 
         #
-        dist: float = np.linalg.norm(ref_output - extr_output)
+        mean_dist: float = sum(distances) / float(nb_exec_test)
 
         #
         treshold: float = 1e0
 
         #
-        if dist > treshold:
+        if mean_dist > treshold:
 
             #
-            return (False, f"Model output is too far from reference : {dist} > {treshold} !", tuple(extr_output.shape))
+            return (False, f"Model output is too far from reference : {mean_dist} > {treshold}  ({nb_exec_test} x avg) !", tuple(extr_output.shape))
 
         #
-        return (True, f"Distance between reference and inference output is {dist}.", tuple(extr_output.shape))
+        return (True, f"Distance between reference and inference output is {mean_dist} ({nb_exec_test} x avg).", tuple(extr_output.shape))
 
 
     #

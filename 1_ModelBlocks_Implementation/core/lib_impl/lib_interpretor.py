@@ -555,6 +555,18 @@ class LanguageModel_ForwardInterpreter:
         self._initialization_guard: set[tuple[int, str]] = set()
 
     #
+    def reset_state(self) -> None:
+        """
+        Reset the interpreter internal state so it can execute a new forward pass
+        from a clean context. This clears the global execution context and any
+        initialization guards accumulated during a previous run.
+        """
+        # Fresh global execution context
+        self.global_context = ExecutionContext("global")
+        # Clear re-entrancy guards keyed by prior scope ids
+        self._initialization_guard.clear()
+
+    #
     def _initialize_global_constants(self) -> None:
 
         """
