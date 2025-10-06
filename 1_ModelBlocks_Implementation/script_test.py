@@ -8,13 +8,15 @@ TESTS: list[ tuple[str, tuple[int, ...], str, Optional[str]] ] = [
 
     ("simple_linear_model.py", (2, 10), "SimpleLinearModel", None),
     ("simple_linear_model_2.py", (2, 10), "SimpleLinearModel", None),
-    ("complex_model.py", (1, 3, 224, 224), "ComplexModel", None),
     ("simple_conv_model.py", (2, 3, 32, 32), "SimpleConvModel", None),
+    ("complex_model.py", (1, 3, 224, 224), "ComplexModel", None),
 
-    ("test_model_architecture_1_2.py", (4, 10), "Model", None),
+    # ("test_model_architecture_1_2.py", (4, 10), "Model", None),
     ("test_model_architecture_1.py", (4, 10), "Model", None),
     ("test_model_architecture_2_1.py", (4, 10), "Model", None),
     ("test_model_architecture_3_1.py", (4, 10), "Model", None),
+
+    ("test_model_architecture_final_3.py", (1, 1030, 38, 5), "DeepArcNet", "/home/nathan/github/pi_hager_2025/sdia2025/model.pth")
 
     # ...
 
@@ -27,128 +29,141 @@ FILEL: int = 40
 OUTDIML: int = 15
 
 
+# Couleurs ANSI
+class Colors:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    WHITE = '\033[97m'
+    BG_RED = '\033[101m'
+    BG_GREEN = '\033[102m'
+    BG_YELLOW = '\033[103m'
+
+
+
+def print_header():
+    """Affiche l'en-tête du tableau"""
+    print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}{'RÉSULTATS DES TESTS - MODELBLOCKS IMPLEMENTATION':^120}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}")
+
+def print_table_header():
+    """Affiche l'en-tête du tableau"""
+    print(f"\n{Colors.BOLD}{Colors.WHITE}{'│':<1} {'MODÈLE':<{FILEL}} {'DIMENSIONS':<12} {'EXT':<6} {'LNK':<6} {'EXE':<6} {'STATUT':<12} {'OUT_DIM':<{OUTDIML}} {'MESSAGE':<{MSGL}} {'│'}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.WHITE}{'├'}{'─'*FILEL}{'┬'}{'─'*12}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*12}{'┬'}{'─'*OUTDIML}{'┬'}{'─'*MSGL}{'┤'}{Colors.RESET}")
+
+def get_status_color(extraction: bool, pytorch: bool, execution: bool) -> tuple[str, str]:
+    """Retourne la couleur et le texte du statut"""
+    if extraction and pytorch and execution:
+        return Colors.GREEN, "✓ SUCCÈS"
+    elif extraction and pytorch:
+        return Colors.YELLOW, "⚠ PARTIEL"
+    elif extraction:
+        return Colors.RED, "✗ ÉCHEC"
+    else:
+        return Colors.RED, "✗ CRITIQUE"
+
+def wrap_message(message: str, max_len: int = MSGL-2) -> list[str]:
+    """Divise le message en plusieurs lignes si nécessaire"""
+    if len(message) <= max_len:
+        return [message]
+
+    words = message.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        if len(current_line + " " + word) <= max_len:
+            if current_line:
+                current_line += " " + word
+            else:
+                current_line = word
+        else:
+            if current_line:
+                lines.append(current_line)
+                current_line = word
+            else:
+                # Si un seul mot est trop long, on le coupe
+                lines.append(word[:max_len-3] + "...")
+                current_line = ""
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+def print_test_result(
+    code_path: str,
+    input_dim: tuple,
+    extraction: bool,
+    pytorch: bool,
+    execution: bool,
+    message: str,
+    output_dim: Optional[tuple[int, ...]] = None
+) -> None:
+    """Affiche le résultat d'un test"""
+    # Couleurs pour chaque étape
+    ext_color = Colors.GREEN if extraction else Colors.RED
+    pyt_color = Colors.GREEN if pytorch else Colors.RED
+    exec_color = Colors.GREEN if execution else Colors.RED
+
+    # Statut global
+    status_color, status_text = get_status_color(extraction, pytorch, execution)
+
+    # Formatage des dimensions
+    dim_str = "x".join(map(str, input_dim))
+    if len(dim_str) > 12:
+        dim_str = dim_str[:9] + "..."
+
+    # Formatage des dimensions de sortie
+    if output_dim is not None:
+        out_dim_str = "x".join(map(str, output_dim))
+        if len(out_dim_str) > OUTDIML:
+            out_dim_str = out_dim_str[:OUTDIML-3] + "..."
+    else:
+        out_dim_str = "N/A"
+
+    # Wrapping du message
+    message_lines = wrap_message(message)
+
+    # Affichage de la première ligne
+    first_line_msg = message_lines[0] if message_lines else ""
+    print(f"{Colors.WHITE}{'│':<1} {code_path:<{FILEL}} {dim_str:<12} {ext_color}{'✓' if extraction else '✗':<6}{Colors.RESET} {pyt_color}{'✓' if pytorch else '✗':<6}{Colors.RESET} {exec_color}{'✓' if execution else '✗':<6}{Colors.RESET} {status_color}{status_text:<12}{Colors.RESET} {out_dim_str:<{OUTDIML}} {first_line_msg:<{MSGL-2}} {'│'}{Colors.RESET}")
+
+    # Affichage des lignes supplémentaires du message
+    for i in range(1, len(message_lines)):
+        print(f"{Colors.WHITE}{'│':<1} {'':<{FILEL}} {'':<12} {'':<6} {'':<6} {'':<6} {'':<12} {'':<{OUTDIML}} {message_lines[i]:<{MSGL-2}} {'│'}{Colors.RESET}")
+
+    # Ligne de séparation entre les tests
+    print(f"{Colors.WHITE}{'├'}{'─'*FILEL}{'┼'}{'─'*12}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*12}{'┼'}{'─'*OUTDIML}{'┼'}{'─'*MSGL}{'┤'}{Colors.RESET}")
+
+def print_footer(total_tests: int, successful: int, partial: int, failed: int):
+    """Affiche le pied du tableau avec les statistiques"""
+    print(f"{Colors.BOLD}{Colors.WHITE}{'└'}{'─'*FILEL}{'┴'}{'─'*12}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*12}{'┴'}{'─'*OUTDIML}{'┴'}{'─'*MSGL}{'┘'}{Colors.RESET}")
+
+    print(f"\n{Colors.BOLD}{Colors.CYAN}{'STATISTIQUES':^120}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.WHITE}{'─'*120}{Colors.RESET}")
+
+    success_rate = (successful / total_tests * 100) if total_tests > 0 else 0
+    partial_rate = (partial / total_tests * 100) if total_tests > 0 else 0
+    fail_rate = (failed / total_tests * 100) if total_tests > 0 else 0
+
+    print(f"{Colors.GREEN}✓ Tests réussis:     {successful:>3}/{total_tests} ({success_rate:>5.1f}%){Colors.RESET}")
+    print(f"{Colors.YELLOW}⚠ Tests partiels:    {partial:>3}/{total_tests} ({partial_rate:>5.1f}%){Colors.RESET}")
+    print(f"{Colors.RED}✗ Tests échoués:     {failed:>3}/{total_tests} ({fail_rate:>5.1f}%){Colors.RESET}")
+
+    print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}\n")
+
+
+
+
 #
 if __name__ == "__main__":
-
-    # Couleurs ANSI
-    class Colors:
-        RESET = '\033[0m'
-        BOLD = '\033[1m'
-        RED = '\033[91m'
-        GREEN = '\033[92m'
-        YELLOW = '\033[93m'
-        BLUE = '\033[94m'
-        MAGENTA = '\033[95m'
-        CYAN = '\033[96m'
-        WHITE = '\033[97m'
-        BG_RED = '\033[101m'
-        BG_GREEN = '\033[102m'
-        BG_YELLOW = '\033[103m'
-
-    def print_header():
-        """Affiche l'en-tête du tableau"""
-        print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.CYAN}{'RÉSULTATS DES TESTS - MODELBLOCKS IMPLEMENTATION':^120}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}")
-
-    def print_table_header():
-        """Affiche l'en-tête du tableau"""
-        print(f"\n{Colors.BOLD}{Colors.WHITE}{'│':<1} {'MODÈLE':<{FILEL}} {'DIMENSIONS':<12} {'EXT':<6} {'LNK':<6} {'EXE':<6} {'STATUT':<12} {'OUT_DIM':<{OUTDIML}} {'MESSAGE':<{MSGL}} {'│'}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.WHITE}{'├'}{'─'*FILEL}{'┬'}{'─'*12}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*6}{'┬'}{'─'*12}{'┬'}{'─'*OUTDIML}{'┬'}{'─'*MSGL}{'┤'}{Colors.RESET}")
-
-    def get_status_color(extraction: bool, pytorch: bool, execution: bool) -> tuple[str, str]:
-        """Retourne la couleur et le texte du statut"""
-        if extraction and pytorch and execution:
-            return Colors.GREEN, "✓ SUCCÈS"
-        elif extraction and pytorch:
-            return Colors.YELLOW, "⚠ PARTIEL"
-        elif extraction:
-            return Colors.RED, "✗ ÉCHEC"
-        else:
-            return Colors.RED, "✗ CRITIQUE"
-
-    def wrap_message(message: str, max_len: int = MSGL-2) -> list[str]:
-        """Divise le message en plusieurs lignes si nécessaire"""
-        if len(message) <= max_len:
-            return [message]
-
-        words = message.split()
-        lines = []
-        current_line = ""
-
-        for word in words:
-            if len(current_line + " " + word) <= max_len:
-                if current_line:
-                    current_line += " " + word
-                else:
-                    current_line = word
-            else:
-                if current_line:
-                    lines.append(current_line)
-                    current_line = word
-                else:
-                    # Si un seul mot est trop long, on le coupe
-                    lines.append(word[:max_len-3] + "...")
-                    current_line = ""
-
-        if current_line:
-            lines.append(current_line)
-
-        return lines
-
-    def print_test_result(code_path: str, input_dim: tuple, extraction: bool, pytorch: bool, execution: bool, message: str, output_dim: Optional[tuple[int, ...]] = None):
-        """Affiche le résultat d'un test"""
-        # Couleurs pour chaque étape
-        ext_color = Colors.GREEN if extraction else Colors.RED
-        pyt_color = Colors.GREEN if pytorch else Colors.RED
-        exec_color = Colors.GREEN if execution else Colors.RED
-
-        # Statut global
-        status_color, status_text = get_status_color(extraction, pytorch, execution)
-
-        # Formatage des dimensions
-        dim_str = "x".join(map(str, input_dim))
-        if len(dim_str) > 12:
-            dim_str = dim_str[:9] + "..."
-
-        # Formatage des dimensions de sortie
-        if output_dim is not None:
-            out_dim_str = "x".join(map(str, output_dim))
-            if len(out_dim_str) > OUTDIML:
-                out_dim_str = out_dim_str[:OUTDIML-3] + "..."
-        else:
-            out_dim_str = "N/A"
-
-        # Wrapping du message
-        message_lines = wrap_message(message)
-
-        # Affichage de la première ligne
-        first_line_msg = message_lines[0] if message_lines else ""
-        print(f"{Colors.WHITE}{'│':<1} {code_path:<{FILEL}} {dim_str:<12} {ext_color}{'✓' if extraction else '✗':<6}{Colors.RESET} {pyt_color}{'✓' if pytorch else '✗':<6}{Colors.RESET} {exec_color}{'✓' if execution else '✗':<6}{Colors.RESET} {status_color}{status_text:<12}{Colors.RESET} {out_dim_str:<{OUTDIML}} {first_line_msg:<{MSGL-2}} {'│'}{Colors.RESET}")
-
-        # Affichage des lignes supplémentaires du message
-        for i in range(1, len(message_lines)):
-            print(f"{Colors.WHITE}{'│':<1} {'':<{FILEL}} {'':<12} {'':<6} {'':<6} {'':<6} {'':<12} {'':<{OUTDIML}} {message_lines[i]:<{MSGL-2}} {'│'}{Colors.RESET}")
-
-        # Ligne de séparation entre les tests
-        print(f"{Colors.WHITE}{'├'}{'─'*FILEL}{'┼'}{'─'*12}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*6}{'┼'}{'─'*12}{'┼'}{'─'*OUTDIML}{'┼'}{'─'*MSGL}{'┤'}{Colors.RESET}")
-
-    def print_footer(total_tests: int, successful: int, partial: int, failed: int):
-        """Affiche le pied du tableau avec les statistiques"""
-        print(f"{Colors.BOLD}{Colors.WHITE}{'└'}{'─'*FILEL}{'┴'}{'─'*12}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*6}{'┴'}{'─'*12}{'┴'}{'─'*OUTDIML}{'┴'}{'─'*MSGL}{'┘'}{Colors.RESET}")
-
-        print(f"\n{Colors.BOLD}{Colors.CYAN}{'STATISTIQUES':^120}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.WHITE}{'─'*120}{Colors.RESET}")
-
-        success_rate = (successful / total_tests * 100) if total_tests > 0 else 0
-        partial_rate = (partial / total_tests * 100) if total_tests > 0 else 0
-        fail_rate = (failed / total_tests * 100) if total_tests > 0 else 0
-
-        print(f"{Colors.GREEN}✓ Tests réussis:     {successful:>3}/{total_tests} ({success_rate:>5.1f}%){Colors.RESET}")
-        print(f"{Colors.YELLOW}⚠ Tests partiels:    {partial:>3}/{total_tests} ({partial_rate:>5.1f}%){Colors.RESET}")
-        print(f"{Colors.RED}✗ Tests échoués:     {failed:>3}/{total_tests} ({fail_rate:>5.1f}%){Colors.RESET}")
-
-        print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*120}{Colors.RESET}\n")
 
     # Compteurs pour les statistiques
     total_tests = len(TESTS)

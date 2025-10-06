@@ -20,6 +20,7 @@ class SimpleConvModel(nn.Module):
         self.linear = nn.Linear(8192, 10)
 
     def forward(self, x):
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -29,6 +30,7 @@ class SimpleConvModel(nn.Module):
         x = self.relu(x)
         x = x.view(x.size(0), -1)
         x = self.linear(x)
+
         return x
 
 

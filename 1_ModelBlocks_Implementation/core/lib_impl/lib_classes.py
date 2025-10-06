@@ -171,6 +171,31 @@ class ExpressionConstantNumeric(ExpressionConstant):
         return f"{self.constant}"
 
 
+
+#
+class ExpressionConstantBoolean(ExpressionConstant):
+    #
+    def __init__(self, constant: bool) -> None:
+        """
+        Represents a numerical constant expression.
+        (for assignments or conditions, like : A = 5 -> Assignment(A, ExpressionConstant(5)))
+
+        Args:
+            constant (bool): Constant boolean value
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.constant: bool = constant
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.constant}"
+
+
 #
 class ExpressionConstantString(ExpressionConstant):
     #
@@ -521,10 +546,115 @@ class ExpressionAttributeAccess(Expression):
         return f"{self.variable}.{self.attribute}"
 
 
+#
+class ExpressionRange(ExpressionList):
+    #
+    def __init__(self, end_value: int | ExpressionVariable, start_value: int | ExpressionVariable = 0, step: int | ExpressionVariable = 1) -> None:
+        """
+        Represents a range expression (a list).
+
+        Args:
+            end_value (int | ExpressionVariable): End value of the range.
+            start_value (int, optional): Start value of the range. Defaults to 0.
+            step (int, optional): Step of the range. Defaults to 1. (Warning: the step can't be 0 because it generates an infinite constant list).
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.end_value: int | ExpressionVariable = end_value
+        self.start_value: int | ExpressionVariable = start_value
+        self.step: int | ExpressionVariable = step
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"Range({str(self.start_value)}, {str(self.end_value)}, {str(self.step)})"
+
+
 # Normally, with the following FlowControlInstructions basic instructions, there is no need to have anything else than ExpressionVariable and ExpressionConstant, because we can decompose any complex instructions in a sequence of basic instructions (we may have to create temporary variables, but aside that, it is good)
 
 # We will constraint the models to not use other types of constants and variables, (like dictionaries or custom objects), and we can convert the tuples into lists.
 # We should constraint a list to have the same typing too.
+
+
+#
+class ExpressionBinaryOperation(Expression):
+    #
+    def __init__(self, left: Expression, operator: str, right: Expression) -> None:
+        """
+        Represents a binary operation expression.
+
+        Args:
+            left (Expression): Left operand
+            operator (str): Binary operator (+, -, *, /, etc.)
+            right (Expression): Right operand
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.left: Expression = left
+        self.operator: str = operator
+        self.right: Expression = right
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"({str(self.left)} {self.operator} {str(self.right)})"
+
+
+#
+class ExpressionUnaryOperation(Expression):
+    #
+    def __init__(self, operator: str, operand: Expression) -> None:
+        """
+        Represents a unary operation expression.
+
+        Args:
+            operator (str): Unary operator (+, -, not, etc.)
+            operand (Expression): Operand
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.operator: str = operator
+        self.operand: Expression = operand
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"{self.operator}({str(self.operand)})"
+
+
+#
+class ExpressionFunctionCall(Expression):
+    #
+    def __init__(self, function_name: str, function_arguments: list[Expression]) -> None:
+        """
+        Represents a function call expression.
+
+        Args:
+            function_name (str): Name of the function to call
+            function_arguments (list[Expression]): Function arguments
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.function_name: str = function_name
+        self.function_arguments: list[Expression] = function_arguments
+
+    #
+    def __str__(self) -> str:
+        #
+        args_str = ", ".join(str(arg) for arg in self.function_arguments)
+        return f"{self.function_name}({args_str})"
 
 
 ####################################################################
@@ -885,7 +1015,7 @@ class FlowControlBasicUnaryOperation(FlowControlInstruction):
 
 
 #
-class FlowControlForLoop(FlowControlInstruction):
+class FlowControlForEachLoop(FlowControlInstruction):
 
     #
     def __init__(
@@ -918,6 +1048,47 @@ class FlowControlForLoop(FlowControlInstruction):
     def __str__(self) -> str:
         #
         return f"\t\t * for {self.iterable_var_name} in {self.iterator} {{\n{"\n".join( [fci.__str__() for fci in self.flow_control_instructions] )}\n}}"
+
+
+#
+class FlowControlForRange(FlowControlInstruction):
+
+    #
+    def __init__(
+        self,
+        iterable_var_name: str,
+        for_range: ExpressionConstantRange,
+        flow_control_instructions: list[FlowControlInstruction]
+    ) -> None:
+
+        """
+        Represents a foor loop.
+
+        Warning: Because of python, the iterable variable and the iterator can have complex types, must check them in the error checking and maybe even restric them.
+
+        Args:
+            iterable_var_name (str): Name of the iterable variable.
+            iterator (str): Value of the Iterator.
+            flow_control_instructions (list[FlowControlInstruction]): The list of the flow control instructions inside the loop.
+        """
+
+        #
+        super().__init__()
+
+        #
+        self.iterable_var_name: str = iterable_var_name
+        self.for_range: ExpressionConstantRange = for_range
+        self.flow_control_instructions: list[FlowControlInstruction] = flow_control_instructions
+
+    #
+    def __str__(self) -> str:
+        #
+        return f"\t\t * for {self.iterable_var_name} in {self.iterator} {{\n{"\n".join( [fci.__str__() for fci in self.flow_control_instructions] )}\n}}"
+
+
+#
+### TODO: add other types of for to have better representation, easier code extraction, and easier code interpretation??? (If not, just remove this comment) ###
+#
 
 
 #
