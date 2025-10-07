@@ -29,7 +29,13 @@ class Symbol:
     """
 
     #
-    def __init__(self, name: str, var_type: lc.VarType, value: Any) -> None:
+    def __init__(
+        self,
+        name: str,
+        var_type: lc.VarType,
+        value: Any
+    ) -> None:
+
         """
         Initialize a symbol.
 
@@ -75,7 +81,13 @@ class Scope:
 
 
     #
-    def define(self, name: str, var_type: lc.VarType, value: Any) -> None:
+    def define(
+        self,
+        name: str,
+        var_type: lc.VarType,
+        value: Any
+    ) -> None:
+
         """
         Define a new symbol in this scope.
 
@@ -104,7 +116,13 @@ class Scope:
         return self.symbols.get(name)
 
     #
-    def lookup(self, name: str, depth: int = 0, visited: set = None) -> Optional[Symbol]:
+    def lookup(
+        self,
+        name: str,
+        depth: int = 0,
+        visited: set = None
+    ) -> Optional[Symbol]:
+
         """
         Look up a symbol in the current scope and parent scopes.
 
@@ -232,6 +250,7 @@ class Scope:
         Returns:
             Dictionary of all accessible symbols
         """
+
         #
         ### Start with parent symbols ###
         #
@@ -321,7 +340,13 @@ class ExecutionContext:
         return parent_context
 
     #
-    def set_variable(self, var_name: str, var_type: lc.VarType, value: Any) -> None:
+    def set_variable(
+        self,
+        var_name: str,
+        var_type: lc.VarType,
+        value: Any
+    ) -> None:
+
         """
         Set a variable in the current scope.
         If the variable exists in a parent scope, it updates that instead.
@@ -334,20 +359,41 @@ class ExecutionContext:
 
         #
         ### Non-recursive parent walk to find and update existing variable ###
-        scope = self.current_scope
+        #
+        scope: Scope = self.current_scope
+
+        #
         visited: set[int] = set()
+
+        #
         while scope is not None and id(scope) not in visited:
+
+            #
             visited.add(id(scope))
+
+            #
             if scope.lookup_local(var_name) is not None:
+                #
                 scope.update(var_name, value)
+                #
                 return
+
+            #
             scope = scope.parent
 
+        #
         ### Define new variable in current scope ###
+        #
         self.current_scope.define(var_name, var_type, value)
 
     #
-    def set_variable_local(self, var_name: str, var_type: lc.VarType, value: Any) -> None:
+    def set_variable_local(
+        self,
+        var_name: str,
+        var_type: lc.VarType,
+        value: Any
+    ) -> None:
+
         """
         Set a variable in the current scope only (forces local definition).
 
@@ -356,6 +402,7 @@ class ExecutionContext:
             var_type: Type of the variable
             value: Value to assign
         """
+
         #
         self.current_scope.define(var_name, var_type, value)
 
@@ -373,14 +420,23 @@ class ExecutionContext:
         Raises:
             KeyError: If variable doesn't exist
         """
+
         #
-        # Non-recursive lookup to avoid deep recursion errors
-        scope = self.current_scope
+        ### Non-recursive lookup to avoid deep recursion errors. ###
+        #
+        scope: Scope = self.current_scope
+
+        #
         while scope is not None:
-            symbol = scope.lookup_local(var_name)
+            #
+            symbol: Optional[Symbol] = scope.lookup_local(var_name)
+            #
             if symbol is not None:
+                #
                 return symbol.value
+            #
             scope = scope.parent
+
         #
         raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
 
@@ -397,14 +453,26 @@ class ExecutionContext:
         """
 
         #
-        # Non-recursive check to avoid RecursionError in very deep scope chains
-        scope = self.current_scope
+        ### Non-recursive check to avoid RecursionError in very deep scope chains ###
+        #
+        scope: Scope = self.current_scope
+        #
         visited: set[int] = set()
+
+        #
         while scope is not None and id(scope) not in visited:
+
+            #
             visited.add(id(scope))
+            #
             if scope.lookup_local(var_name) is not None:
+                #
                 return True
+
+            #
             scope = scope.parent
+
+        #
         return False
 
     #
@@ -418,6 +486,7 @@ class ExecutionContext:
         Returns:
             True if variable exists in current scope
         """
+
         #
         return self.current_scope.has_symbol_local(var_name)
 
@@ -437,14 +506,24 @@ class ExecutionContext:
         """
 
         #
-        scope = self.current_scope
+        scope: Scope = self.current_scope
+        #
         visited: set[int] = set()
+
+        #
         while scope is not None and id(scope) not in visited:
+            #
             visited.add(id(scope))
+            #
             symbol = scope.lookup_local(var_name)
+            #
             if symbol is not None:
+                #
                 return symbol.var_type
+            #
             scope = scope.parent
+
+        #
         raise KeyError(f"Variable '{var_name}' not found in execution context (scope: {self.current_scope.name})")
 
     #
@@ -459,12 +538,19 @@ class ExecutionContext:
 
         #
         merged: dict[str, Symbol] = {}
-        scope = self.current_scope
+        #
+        scope: Scope = self.current_scope
+        #
         visited: set[int] = set()
+
+        #
         while scope is not None and id(scope) not in visited:
+            #
             visited.add(id(scope))
             merged.update(scope.symbols)
             scope = scope.parent
+
+        #
         return {name: symbol.value for name, symbol in merged.items()}
 
     #
@@ -476,14 +562,24 @@ class ExecutionContext:
         Returns:
             Dictionary mapping variable names to types
         """
+
         #
         merged: dict[str, Symbol] = {}
-        scope = self.current_scope
+        #
+        scope: Scope = self.current_scope
+        #
         visited: set[int] = set()
+
+        #
         while scope is not None and id(scope) not in visited:
+            #
             visited.add(id(scope))
+            #
             merged.update(scope.symbols)
+            #
             scope = scope.parent
+
+        #
         return {name: symbol.var_type for name, symbol in merged.items()}
 
     #
@@ -549,9 +645,11 @@ class LanguageModel_ForwardInterpreter:
         self.language_model = language_model
         #
         self.global_context: ExecutionContext = ExecutionContext("global")
+
         #
-        # Guard to prevent re-entrant initialization of the same block in the same scope
-        # Keyed by (id(scope), block_name)
+        ### Guard to prevent re-entrant initialization of the same block in the same scope ###
+        ### Keyed by (id(scope), block_name) ###
+        #
         self._initialization_guard: set[tuple[int, str]] = set()
 
     #
@@ -561,9 +659,15 @@ class LanguageModel_ForwardInterpreter:
         from a clean context. This clears the global execution context and any
         initialization guards accumulated during a previous run.
         """
-        # Fresh global execution context
+
+        #
+        ### Fresh global execution context ###
+        #
         self.global_context = ExecutionContext("global")
-        # Clear re-entrancy guards keyed by prior scope ids
+
+        #
+        ### Clear re-entrancy guards keyed by prior scope ids ###
+        #
         self._initialization_guard.clear()
 
     #
@@ -633,7 +737,6 @@ class LanguageModel_ForwardInterpreter:
         ### Set input variables in the context. ###
         #
         for input_name, input_value in inputs.items():
-
             #
             var_type = lc.VarType("Tensor")
             #
@@ -702,16 +805,20 @@ class LanguageModel_ForwardInterpreter:
             #
             param_value = self._evaluate_expression(param_expr, context)
             #
-            # Force local definition to avoid shadowing/updating parent scopes
+            ### Force local definition to avoid shadowing/updating parent scopes ###
             #
             context.set_variable_local(param_name, param_type, param_value)
 
         #
         ### Prevent re-entrant initialization of the same block within the same scope. ###
         #
-        guard_key = (id(context.current_scope), model_block.block_name)
+        guard_key: tuple[int, str] = (id(context.current_scope), model_block.block_name)
+        #
         if guard_key in self._initialization_guard:
+            #
             return
+
+        #
         self._initialization_guard.add(guard_key)
 
         #
@@ -722,7 +829,7 @@ class LanguageModel_ForwardInterpreter:
             #
             var_value: Any = self._evaluate_expression(var_expr, context)
             #
-            # Force local definition
+            ### Force local definition. ###
             #
             context.set_variable_local(var_name, var_type, var_value)
 
@@ -736,7 +843,7 @@ class LanguageModel_ForwardInterpreter:
             #
             layer_obj: dict[str, Any] = self._create_layer_instance(layer, context)
             #
-            # Force local definition
+            ### Force local definition. ###
             #
             context.set_variable_local(layer_name, lc.VarType("lc.Layer"), layer_obj)
 
@@ -744,8 +851,11 @@ class LanguageModel_ForwardInterpreter:
         ### Bind container variables for BlockModuleList to allow `self.attr` access. ###
         #
         for layer_name, layer in model_block.block_layers.items():
+            #
             if 'BlockModuleList' in layer.layer_type and not context.has_variable_local(layer_name):
+                #
                 container_obj: Any = self._create_layer_instance(layer, context)
+                #
                 context.set_variable_local(layer_name, lc.VarType("lc.Layer"), container_obj)
 
         #
@@ -765,8 +875,9 @@ class LanguageModel_ForwardInterpreter:
                 for sub_layer_name, sub_layer in sub_model_block.block_layers.items():
 
                     #
-                    # Only check and write to the current scope to avoid colliding with similarly named
-                    # layers (e.g., "0", "1") defined in parent scopes.
+                    ### Only check and write to the current scope to avoid colliding with similarly named ###
+                    ### layers (e.g., "0", "1") defined in parent scopes. ###
+                    #
                     if not context.has_variable_local(sub_layer_name):
 
                         #
@@ -808,14 +919,16 @@ class LanguageModel_ForwardInterpreter:
                     context: ExecutionContext
                 ) -> None:
 
+                    #
                     self.layer_type: str = layer_type
                     self.interpreter: "LanguageModel_ForwardInterpreter" = interpreter
                     self.context: ExecutionContext = context
                     #
-                    # Persist a dedicated module scope across calls to avoid re-initializing
-                    # the same block repeatedly and creating deep recursive scope chains.
+                    ### Persist a dedicated module scope across calls to avoid re-initializing ###
+                    ### the same block repeatedly and creating deep recursive scope chains. ###
                     #
                     self._module_context: Optional[ExecutionContext] = None
+                    #
                     self._initialized: bool = False
 
                 #
@@ -835,10 +948,16 @@ class LanguageModel_ForwardInterpreter:
                     ### Create (or reuse) a dedicated scope for this module instance. ###
                     #
                     if self._module_context is None:
+                        #
                         self._module_context = self.context.enter_scope(f"module_{self.layer_type}")
-                        # Initialize once per module instance to prevent re-entrant initialization loops
+                        #
+                        ### Initialize once per module instance to prevent re-entrant initialization loops. ###
+                        #
                         self.interpreter._initialize_model_block(model_block, self._module_context)
+                        #
                         self._initialized = True
+
+                    #
                     module_context = self._module_context
 
                     #
@@ -968,7 +1087,6 @@ class LanguageModel_ForwardInterpreter:
 
                         #
                         if not isinstance(kwarg_value, np.ndarray):
-
                             #
                             kwarg_value = np.array(kwarg_value, dtype=np.float32)
 
@@ -987,13 +1105,11 @@ class LanguageModel_ForwardInterpreter:
                     ### Return the first output (assuming single output). ###
                     #
                     if result_dict:
-
                         #
                         return list(result_dict.values())[0]
 
                     #
                     else:
-
                         #
                         return None
 
@@ -1128,7 +1244,6 @@ class LanguageModel_ForwardInterpreter:
             ### Convert PyTorch tensors to numpy arrays. ###
             #
             if hasattr(param_value, "detach"):
-
                 #
                 return param_value.detach().cpu().numpy()
 
@@ -1239,7 +1354,6 @@ class LanguageModel_ForwardInterpreter:
 
                             #
                             if self.context.has_variable(layer_name):
-
                                 #
                                 layer_instances.append(self.context.get_variable(layer_name))
 
@@ -1254,14 +1368,17 @@ class LanguageModel_ForwardInterpreter:
                 # construct and return a ModuleWrapper so that self.<name> behaves like a ModuleList.
                 #
                 if name in self.model_block.block_layers:
-                    blk_layer = self.model_block.block_layers[name]
+                    #
+                    blk_layer: lc.Layer = self.model_block.block_layers[name]
+                    #
                     if 'BlockModuleList' in blk_layer.layer_type:
-                        # Return the container wrapper bound to the current context
+                        #
+                        ### Return the container wrapper bound to the current context ###
+                        #
                         return self.context.get_variable(name) if self.context.has_variable(name) else self.interpreter._create_layer_instance(blk_layer, self.context)
 
                 #
                 else:
-
                     #
                     raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
@@ -1273,7 +1390,8 @@ class LanguageModel_ForwardInterpreter:
                 return iter(self.model_block)
 
         #
-        # Define 'self' strictly in the local function scope to avoid looking upward
+        ### Define 'self' strictly in the local function scope to avoid looking upward ###
+        #
         local_context.set_variable_local("self", lc.VarType("ModelBlock"), SelfWrapper(block_function.model_block, local_context, self))
 
         #
@@ -1286,7 +1404,6 @@ class LanguageModel_ForwardInterpreter:
 
                 #
                 if arg_name in block_function.function_arguments:
-
                     #
                     arg_type, _ = block_function.function_arguments[arg_name]
                     #
@@ -1743,7 +1860,6 @@ class LanguageModel_ForwardInterpreter:
             ### Execute loop body. ###
             #
             for loop_instruction in instruction.flow_control_instructions:
-
                 #
                 self._execute_flow_control_instruction(loop_instruction, loop_context)
 
@@ -1843,7 +1959,6 @@ class LanguageModel_ForwardInterpreter:
                     ### Handle single output. ###
                     #
                     if len(instruction.output_variables) == 1:
-
                         #
                         context.set_variable(instruction.output_variables[0], result_type, result)
 
@@ -1865,7 +1980,6 @@ class LanguageModel_ForwardInterpreter:
 
                         #
                         else:
-
                             #
                             context.set_variable(instruction.output_variables[0], result_type, result)
 
@@ -2183,7 +2297,6 @@ class LanguageModel_ForwardInterpreter:
 
         #
         for return_var in instruction.return_variables:
-
             #
             return_values[return_var] = context.get_variable(return_var)
 
@@ -2217,7 +2330,6 @@ class LanguageModel_ForwardInterpreter:
             ### Execute if block. ###
             #
             for if_instruction in instruction.if_flow_control_instructions:
-
                 #
                 self._execute_flow_control_instruction(if_instruction, context)
 
@@ -2231,7 +2343,6 @@ class LanguageModel_ForwardInterpreter:
 
                 #
                 for else_instruction in instruction.else_flow_control_instructions:
-
                     #
                     self._execute_flow_control_instruction(else_instruction, context)
 
@@ -2888,50 +2999,90 @@ class LanguageModel_ForwardInterpreter:
             out_features = int(_layer_params.get("out_features", 1))
             use_bias = bool(_layer_params.get("bias", True))
 
-            # Retrieve weights saved during linking.
+            #
+            ### Retrieve weights saved during linking. ###
+            #
             weight = layer_weights.get("weight")  # Expected shape: (in_features, out_features)
             bias_weight = layer_weights.get("bias") if use_bias else None  # shape: (out_features,)
 
-            # Ensure arrays are numpy float32
+            #
+            ### Ensure arrays are numpy float32. ###
+            #
             if weight is None:
-                # Fallback: initialize a small random weight for robustness
+                #
+                ### Fallback: initialize a small random weight for robustness. ###
+                #
                 weight = (np.random.randn(in_features, out_features).astype(np.float32)) * 0.01
+            #
             else:
+                #
                 if hasattr(weight, "detach"):
+                    #
                     weight = weight.detach().cpu().numpy()
+                #
                 weight = weight.astype(np.float32)
 
+            #
             if use_bias:
+                #
                 if bias_weight is None:
+                    #
                     bias_weight = np.zeros((out_features,), dtype=np.float32)
+                #
                 else:
+                    #
                     if hasattr(bias_weight, "detach"):
+                        #
                         bias_weight = bias_weight.detach().cpu().numpy()
+                    #
                     bias_weight = bias_weight.astype(np.float32)
 
+            #
             x = input_tensor
-            # Move/reshape so that the last dim equals in_features
+            #
+            ### Move/reshape so that the last dim equals in_features. ###
+            #
             if x.shape[-1] != in_features:
-                # Try to handle the common (B, C, T, C_in) vs (B, C, T, W) ambiguity.
-                # If any other dimension equals in_features, move it to the last position temporarily.
+                #
+                ### Try to handle the common (B, C, T, C_in) vs (B, C, T, W) ambiguity. ###
+                ### If any other dimension equals in_features, move it to the last position temporarily. ###
+                #
                 axes = list(range(x.ndim))
+                #
                 try_move_axis = None
+                #
                 for ax in range(x.ndim):
+                    #
                     if x.shape[ax] == in_features and ax != x.ndim - 1:
+                        #
                         try_move_axis = ax
+                        #
                         break
+
+                #
                 if try_move_axis is not None:
+                    #
                     x = np.moveaxis(x, try_move_axis, -1)
+                #
                 else:
-                    # As a last resort, if last dim does not match, this is a true shape mismatch.
+                    #
+                    ### As a last resort, if last dim does not match, this is a true shape mismatch. ###
+                    #
                     raise ValueError(f"Linear layer expected last dim {in_features}, got {input_tensor.shape[-1]} in shape {input_tensor.shape}")
 
-            # Flatten to 2D, apply matmul, then reshape back
+            #
+            ### Flatten to 2D, apply matmul, then reshape back. ###
+            #
             leading_shape = x.shape[:-1]
+            #
             x2 = x.reshape(-1, in_features).astype(np.float32)
+            #
             y2 = x2 @ weight  # (N, out_features)
+            #
             if use_bias and bias_weight is not None:
+                #
                 y2 = y2 + bias_weight
+            #
             result = y2.reshape(*leading_shape, out_features)
 
         #
@@ -2966,77 +3117,127 @@ class LanguageModel_ForwardInterpreter:
             affine = bool(_layer_params.get("affine", True))
             track_running_stats = bool(_layer_params.get("track_running_stats", True))
 
-            # Weights
+            #
+            ### Weights. ###
+            #
             if affine:
+                #
                 weight = layer_weights.get("weight")
                 bias_weight = layer_weights.get("bias")
+                #
                 if weight is None:
+                    #
                     weight = np.ones((num_features,), dtype=np.float32)
+                #
                 else:
+                    #
                     if hasattr(weight, "detach"):
+                        #
                         weight = weight.detach().cpu().numpy()
+                    #
                     weight = weight.astype(np.float32)
+                #
                 if bias_weight is None:
+                    #
                     bias_weight = np.zeros((num_features,), dtype=np.float32)
+                #
                 else:
+                    #
                     if hasattr(bias_weight, "detach"):
+                        #
                         bias_weight = bias_weight.detach().cpu().numpy()
+                    #
                     bias_weight = bias_weight.astype(np.float32)
+            #
             else:
+                #
                 weight = np.ones((num_features,), dtype=np.float32)
                 bias_weight = np.zeros((num_features,), dtype=np.float32)
 
-            # Running stats
+            #
+            ### Running stats. ###
+            #
             if track_running_stats:
+                #
                 running_mean = layer_weights.get("running_mean")
                 running_var = layer_weights.get("running_var")
+
+                #
                 if running_mean is None:
+                    #
                     running_mean = np.zeros((num_features,), dtype=np.float32)
+                #
                 else:
+                    #
                     if hasattr(running_mean, "detach"):
+                        #
                         running_mean = running_mean.detach().cpu().numpy()
+                    #
                     running_mean = running_mean.astype(np.float32)
+                #
                 if running_var is None:
+                    #
                     running_var = np.ones((num_features,), dtype=np.float32)
+                #
                 else:
+                    #
                     if hasattr(running_var, "detach"):
+                        #
                         running_var = running_var.detach().cpu().numpy()
+                    #
                     running_var = running_var.astype(np.float32)
+            #
             else:
+                #
                 running_mean = np.zeros((num_features,), dtype=np.float32)
                 running_var = np.ones((num_features,), dtype=np.float32)
 
+            #
             x = input_tensor
-            # Expect NCHW; compute mean/var over N,H,W for each channel
+            #
+            ### Expect NCHW; compute mean/var over N,H,W for each channel. ###
+            #
             if x.ndim == 4:
+                #
                 mean = x.mean(axis=(0, 2, 3))
                 var = x.var(axis=(0, 2, 3))
+                #
                 mean_reshaped = mean.reshape(1, -1, 1, 1)
                 var_reshaped = var.reshape(1, -1, 1, 1)
                 gamma = weight.reshape(1, -1, 1, 1)
                 beta = bias_weight.reshape(1, -1, 1, 1)
+            #
             elif x.ndim == 3:
+                #
                 mean = x.mean(axis=(0, 2))
                 var = x.var(axis=(0, 2))
+                #
                 mean_reshaped = mean.reshape(1, -1, 1)
                 var_reshaped = var.reshape(1, -1, 1)
                 gamma = weight.reshape(1, -1, 1)
                 beta = bias_weight.reshape(1, -1, 1)
+            #
             elif x.ndim == 2:
+                #
                 mean = x.mean(axis=0)
                 var = x.var(axis=0)
+                #
                 mean_reshaped = mean.reshape(1, -1)
                 var_reshaped = var.reshape(1, -1)
                 gamma = weight.reshape(1, -1)
                 beta = bias_weight.reshape(1, -1)
+            #
             else:
+                #
                 mean = x.mean(axis=0)
                 var = x.var(axis=0)
+                #
                 mean_reshaped = mean
                 var_reshaped = var
                 gamma = weight
                 beta = bias_weight
 
+            #
             normalized = (x - mean_reshaped) / np.sqrt(var_reshaped + eps)
             result = normalized * gamma + beta
 
@@ -3094,20 +3295,25 @@ class LanguageModel_ForwardInterpreter:
 
             #
             elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+
                 #
                 spatial_size = input_tensor.shape[2]
                 #
                 ### Try to reshape to square ###
                 #
                 sqrt_spatial = int(np.sqrt(spatial_size))
+
                 #
                 if sqrt_spatial * sqrt_spatial == spatial_size:
+
                     #
                     input_height = input_width = sqrt_spatial
                     #
                     input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
                 #
                 else:
+
                     #
                     ### Find best rectangular factorization ###
                     #
@@ -3127,6 +3333,7 @@ class LanguageModel_ForwardInterpreter:
                         input_height, input_width = factors[-1]
                         #
                         input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
                     #
                     else:
                         #
@@ -3266,6 +3473,237 @@ class LanguageModel_ForwardInterpreter:
             ### Replace -inf values with 0 (in case of edge cases) ###
             #
             output_tensor[output_tensor == -np.inf] = 0.0
+
+            #
+            return output_tensor
+
+        #
+        elif layer_type == "AvgPool2d":
+
+            #
+            ### 2D Average Pooling layer ###
+            #
+            import numpy as np
+
+            #
+            ### Get parameters ###
+            #
+            kernel_size = _layer_params.get("kernel_size", 2)
+            stride = _layer_params.get("stride", kernel_size)  # Default stride equals kernel_size
+            padding = _layer_params.get("padding", 0)
+            ceil_mode = _layer_params.get("ceil_mode", False)
+            count_include_pad = _layer_params.get("count_include_pad", True)
+            divisor_override = _layer_params.get("divisor_override", None)
+
+            #
+            ### Ensure kernel_size is a tuple ###
+            #
+            if isinstance(kernel_size, int):
+                #
+                kernel_size = (kernel_size, kernel_size)
+
+            #
+            ### Ensure stride is a tuple ###
+            #
+            if isinstance(stride, int):
+                #
+                stride = (stride, stride)
+
+            #
+            ### Ensure padding is a tuple ###
+            #
+            if isinstance(padding, int):
+                #
+                padding = (padding, padding)
+
+            #
+            ### Input tensor shape: (batch, channels, height, width) ###
+            #
+            batch_size = input_tensor.shape[0]
+            channels = input_tensor.shape[1]
+
+            #
+            ### Handle different input shapes ###
+            #
+            if len(input_tensor.shape) == 4:  # (batch, channels, height, width)
+                #
+                input_height = input_tensor.shape[2]
+                input_width = input_tensor.shape[3]
+
+            #
+            elif len(input_tensor.shape) == 3:  # (batch, channels, spatial) - assume square
+                #
+                spatial_size = input_tensor.shape[2]
+
+                #
+                ### Try to reshape to square ###
+                #
+                sqrt_spatial = int(np.sqrt(spatial_size))
+
+                #
+                if sqrt_spatial * sqrt_spatial == spatial_size:
+                    #
+                    input_height = input_width = sqrt_spatial
+                    #
+                    input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+                #
+                else:
+                    #
+                    ### Find best rectangular factorization ###
+                    #
+                    factors = []
+                    #
+                    for i in range(1, int(np.sqrt(spatial_size)) + 1):
+                        #
+                        if spatial_size % i == 0:
+                            #
+                            factors.append((i, spatial_size // i))
+
+                    #
+                    if factors:
+                        #
+                        ### Use the most square-like factorization ###
+                        #
+                        input_height, input_width = factors[-1]
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+                    #
+                    else:
+                        #
+                        ### Fallback: treat as 1D ###
+                        #
+                        input_height = 1
+                        input_width = spatial_size
+                        #
+                        input_tensor = input_tensor.reshape(batch_size, channels, input_height, input_width)
+
+            #
+            else:
+                #
+                raise ValueError(f"AvgPool2d: Unsupported input tensor shape: {input_tensor.shape}")
+
+            #
+            ### Apply padding if specified ###
+            #
+            if padding[0] > 0 or padding[1] > 0:
+                #
+                padded_tensor = np.pad(
+                    input_tensor,
+                    ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
+                    mode='constant',
+                    constant_values=0.0  # Zero padding for average pooling
+                )
+
+                #
+                ### Build mask to count valid (non-padded) elements when count_include_pad is False. ###
+                #
+                mask = np.ones_like(input_tensor, dtype=np.float32)
+                #
+                padded_mask = np.pad(
+                    mask,
+                    ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
+                    mode='constant',
+                    constant_values=0.0
+                )
+
+            #
+            else:
+                #
+                padded_tensor = input_tensor
+                padded_mask = np.ones_like(input_tensor, dtype=np.float32)
+
+            #
+            ### Calculate output dimensions ###
+            #
+            padded_height = padded_tensor.shape[2]
+            padded_width = padded_tensor.shape[3]
+
+            #
+            if ceil_mode:
+                #
+                ### Use ceiling division ###
+                #
+                output_height = int(np.ceil((padded_height - kernel_size[0]) / stride[0] + 1))
+                output_width = int(np.ceil((padded_width - kernel_size[1]) / stride[1] + 1))
+            #
+            else:
+                #
+                ### Use floor division (default) ###
+                #
+                output_height = int((padded_height - kernel_size[0]) / stride[0] + 1)
+                output_width = int((padded_width - kernel_size[1]) / stride[1] + 1)
+
+            #
+            ### Ensure output dimensions are positive ###
+            #
+            output_height = max(1, output_height)
+            output_width = max(1, output_width)
+
+            #
+            ### Initialize output tensor ###
+            #
+            output_tensor = np.zeros((batch_size, channels, output_height, output_width), dtype=input_tensor.dtype)
+
+            #
+            ### Perform average pooling ###
+            #
+            for b in range(batch_size):
+                #
+                for c in range(channels):
+                    #
+                    for h_out in range(output_height):
+                        #
+                        for w_out in range(output_width):
+                            #
+                            ### Calculate input region for this output position ###
+                            #
+                            h_start = h_out * stride[0]
+                            w_start = w_out * stride[1]
+
+                            #
+                            h_end = min(h_start + kernel_size[0], padded_height)
+                            w_end = min(w_start + kernel_size[1], padded_width)
+
+                            #
+                            region = padded_tensor[b, c, h_start:h_end, w_start:w_end]
+
+                            #
+                            if region.size == 0:
+                                #
+                                output_tensor[b, c, h_out, w_out] = 0.0
+                                #
+                                continue
+
+                            #
+                            if count_include_pad:
+                                #
+                                if divisor_override is not None:
+                                    #
+                                    divisor = float(divisor_override)
+                                #
+                                else:
+                                    #
+                                    divisor = float(kernel_size[0] * kernel_size[1])
+                            #
+                            else:
+                                #
+                                ### Exclude padded elements from the count using the mask. ###
+                                #
+                                region_mask = padded_mask[b, c, h_start:h_end, w_start:w_end]
+                                valid_count = float(region_mask.sum())
+
+                                #
+                                if divisor_override is not None:
+                                    #
+                                    divisor = float(divisor_override)
+                                #
+                                else:
+                                    #
+                                    divisor = valid_count if valid_count > 0 else 1.0
+
+                            #
+                            output_tensor[b, c, h_out, w_out] = region.sum() / divisor
 
             #
             return output_tensor
@@ -3429,60 +3867,97 @@ class LanguageModel_ForwardInterpreter:
             #
             ### Layer Normalization (over last normalized_shape dims). ###
             #
-            # Parameters
+            ### Parameters. ###
+            #
             normalized_shape = _layer_params.get("normalized_shape")
             eps = float(_layer_params.get("eps", 1e-5))
             elementwise_affine = bool(_layer_params.get("elementwise_affine", True))
 
-            # If normalized_shape is a sequence, derive number of reduced axes; if int, it's count of last dims
+            #
+            ### If normalized_shape is a sequence, derive number of reduced axes; if int, it's count of last dims. ###
+            #
             if isinstance(normalized_shape, (list, tuple)):
+                #
                 num_dims = len(normalized_shape)
+            #
             else:
+                #
                 num_dims = 1
 
-            # Axes to reduce: the last num_dims axes
+            #
+            ### Axes to reduce: the last num_dims axes. ###
+            #
             axes = tuple(range(input_tensor.ndim - num_dims, input_tensor.ndim))
 
+            #
             mean = input_tensor.mean(axis=axes, keepdims=True)
             var = input_tensor.var(axis=axes, keepdims=True)
             normalized = (input_tensor - mean) / np.sqrt(var + eps)
 
+            #
             if elementwise_affine:
+
+                #
                 weight = layer_weights.get("weight")
                 bias_weight = layer_weights.get("bias")
 
+                #
                 if weight is not None:
+                    #
                     if hasattr(weight, "detach"):
+                        #
                         weight = weight.detach().cpu().numpy()
+                    #
                     weight = weight.astype(np.float32)
-                    # Reshape weight to broadcast over reduced axes
-                    # Expect weight shape == normalized_shape (flatten if single int)
+                    #
+                    ### Reshape weight to broadcast over reduced axes ###
+                    ### Expect weight shape == normalized_shape (flatten if single int) ###
+                    #
                     if not isinstance(normalized_shape, (list, tuple)):
+                        #
                         shape = [1] * input_tensor.ndim
                         shape[-1] = normalized.shape[-1]
                         weight = weight.reshape(shape)
+                    #
                     else:
+                        #
                         shape = [1] * input_tensor.ndim
+                        #
                         for i in range(1, num_dims + 1):
+                            #
                             shape[-i] = normalized.shape[-i]
+                        #
                         weight = weight.reshape(shape)
+                    #
                     normalized = normalized * weight
 
+                #
                 if bias_weight is not None:
+                    #
                     if hasattr(bias_weight, "detach"):
+                        #
                         bias_weight = bias_weight.detach().cpu().numpy()
+                    #
                     bias_weight = bias_weight.astype(np.float32)
+                    #
                     if not isinstance(normalized_shape, (list, tuple)):
+                        #
                         shape = [1] * input_tensor.ndim
                         shape[-1] = normalized.shape[-1]
                         bias_weight = bias_weight.reshape(shape)
+                    #
                     else:
+                        #
                         shape = [1] * input_tensor.ndim
+                        #
                         for i in range(1, num_dims + 1):
+                            #
                             shape[-i] = normalized.shape[-i]
+                        #
                         bias_weight = bias_weight.reshape(shape)
+                    #
                     normalized = normalized + bias_weight
-
+            #
             result = normalized.astype(np.float32)
 
         #
@@ -4526,13 +5001,21 @@ class LanguageModel_ForwardInterpreter:
             if len(args) >= 1:
                 #
                 val = get_arg(0)
-                # If numpy array or list-like, cast elementwise to float32
+                #
+                ### If numpy array or list-like, cast elementwise to float32. ###
+                #
                 if isinstance(val, np.ndarray):
+                    #
                     return val.astype(np.float32)
+                #
                 try:
+                    #
                     return float(val)
+                #
                 except Exception:
-                    # Fallback: try numpy array conversion
+                    #
+                    ### Fallback: try numpy array conversion. ###
+                    #
                     return np.array(val).astype(np.float32)
 
         #
