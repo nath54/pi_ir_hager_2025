@@ -17,8 +17,7 @@ import core.lib_impl.lib_layers as ll
 import core.lib_impl.lib_interpretor as li
 #
 import lib_extract_model_architecture as lema
-import lib_test_link_weights_to_architecture as ltlwta
-import lib_test_load_link_and_interprete as ltllai
+import lib_weights_link as ltlwta
 
 
 #
@@ -292,8 +291,6 @@ class Tester:
         #
         for _ in range(nb_exec_test):
 
-            #
-            ### TODO: reset internal state of (interpreter: li.LanguageModel_ForwardInterpreter) ###
             #
             interpreter.reset_state()
 

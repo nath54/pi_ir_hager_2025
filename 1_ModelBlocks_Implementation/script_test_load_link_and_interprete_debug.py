@@ -10,10 +10,11 @@ import torch
 from torch import nn
 #z
 from lib_extract_model_architecture import extract_from_file, get_pytorch_main_model
-from lib_test_link_weights_to_architecture import link_weights
+from lib_weights_link import link_weights
 import core.lib_impl.lib_classes as lc
 import core.lib_impl.lib_layers as ll
 import core.lib_impl.lib_interpretor as li
+import core.lib_impl.lib_interpretor_debug as lidbg
 
 
 #
@@ -60,9 +61,14 @@ if __name__ == "__main__":
     l1_model = link_weights(pt_model = pt_model, l_model = l1_model, all_layers_info=all_layers_info, crt_model_block_name = None)
 
     #
-    ### Create interpreter. ###
+    ### Create interpreter (debug). ###
     #
-    interpreter: li.LanguageModel_ForwardInterpreter = li.LanguageModel_ForwardInterpreter(l1_model)
+    interpreter: lidbg.LanguageModel_ForwardInterpreter_Debug = lidbg.LanguageModel_ForwardInterpreter_Debug(l1_model)
+
+    #
+    ### For script equivalence with non-debug version, run continuously by default. ###
+    ### Users can comment the next line to enter interactive stepping by default. ###
+    # interpreter.debugger_continue()
 
     #
     ### Validate model. ###
@@ -93,7 +99,7 @@ if __name__ == "__main__":
     batch_size: int = 3
     window_time: int = 128
     features_1: int = 16
-    features_2: int = 5  # ensure conv output width becomes 1 so Linear(in_features=1) is valid
+    features_2: int = 8
     input_tensor: NDArray[np.float32] = np.random.randn(batch_size, window_time, features_1, features_2).astype(np.float32)
     #
     inputs: dict[str, NDArray[np.float32]] = {"x": input_tensor}
@@ -111,4 +117,5 @@ if __name__ == "__main__":
         #
         print(f"\nFinal output shape: {outputs['output'].shape}")
         print(f"Output sample: {outputs['output'][0]}")
+
 

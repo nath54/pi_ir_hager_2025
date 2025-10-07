@@ -23,3 +23,5 @@ pyvenv.cfg
 *.onnx
 
 **/st_ai_*
+
+libopencm3
