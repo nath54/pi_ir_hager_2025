@@ -6,16 +6,15 @@ import torch
 import torch.nn as nn
 
 
-class SimpleConvModel(nn.Module):
-    """A simple convolutional model with conv layers, batch norm, and ReLU."""
+class Model(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+        self.layer: nn.AvgPool2d = nn.AvgPool2d(kernel_size=3)
 
     def forward(self, x):
 
-        x = self.conv1(x)
+        x = self.layer(x)
 
         return x
 
