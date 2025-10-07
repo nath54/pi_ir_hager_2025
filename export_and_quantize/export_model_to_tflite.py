@@ -4,17 +4,16 @@ import numpy as np
 import torch
 from torch import nn, Tensor
 import onnx
-from onnx2keras import onnx_to_keras
 import tensorflow as tf
+import tf2onnx
 
 
 def export_tflite_model(model: nn.Module, example_inputs: tuple) -> None:
-    """Export a PyTorch model to TFLite using ONNX → Keras → TFLite conversion."""
-
+    """Export a PyTorch model to TFLite using ONNX → TensorFlow → TFLite (modern path)."""
     model.eval()
     onnx_path = "model.onnx"
 
-    # Step 1: Export PyTorch → ONNX
+    # --- Step 1: PyTorch → ONNX ---
     torch.onnx.export(
         model,
         example_inputs,
@@ -26,41 +25,34 @@ def export_tflite_model(model: nn.Module, example_inputs: tuple) -> None:
         output_names=["output"],
         dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
     )
-    print(f"✅ Exported ONNX model to {onnx_path}")
+    print(f"✅ Exported ONNX model → {onnx_path}")
 
-    # Step 2: ONNX → Keras
-    onnx_model = onnx.load(onnx_path)
-    k_model = onnx_to_keras(onnx_model, ["input"], name_policy='short')
-    print("✅ Converted ONNX → Keras model")
+    # --- Step 2: ONNX → TensorFlow Graph ---
+    tf_model_path = "saved_model"
+    model_proto = onnx.load(onnx_path)
+    tf_rep, _ = tf2onnx.convert.from_onnx(model_proto, output_path=None)
+    tf.saved_model.save(tf_rep, tf_model_path)
+    print(f"✅ Converted to TensorFlow SavedModel → {tf_model_path}")
 
-    # Step 3: Save Keras model and convert to TFLite
-    keras_path = "keras_model"
-    os.makedirs(keras_path, exist_ok=True)
-    k_model.save(keras_path)
-    print(f"✅ Saved Keras model to {keras_path}")
-
-    converter = tf.lite.TFLiteConverter.from_saved_model(keras_path)
+    # --- Step 3: TensorFlow → TFLite ---
+    converter = tf.lite.TFLiteConverter.from_saved_model(tf_model_path)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]  # optional quantization
     tflite_model = converter.convert()
     with open("exported_model.tflite", "wb") as f:
         f.write(tflite_model)
-    print("✅ Exported TensorFlow Lite model: exported_model.tflite")
+    print("✅ Exported TensorFlow Lite model → exported_model.tflite")
 
 
 if __name__ == "__main__":
-    # --- Load model ---
     model: nn.Module = torch.load("quantized_model.pth", map_location="cpu")
     model.eval()
 
-    # --- Load example input data ---
     with open("model_to_export_example_data.pkl", "rb") as f:
         example_data = pickle.load(f)
 
     input_data1 = torch.tensor(example_data[0], dtype=torch.float32).unsqueeze(0)
-
-    # --- Run test inference ---
     with torch.no_grad():
         predictions = model(input_data1)
         print(f"✅ Inference OK — predictions shape: {predictions.shape}")
 
-    # --- Export ---
     export_tflite_model(model, (input_data1,))
