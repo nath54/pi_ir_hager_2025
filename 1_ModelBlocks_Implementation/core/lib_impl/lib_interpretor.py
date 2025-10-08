@@ -12,6 +12,7 @@ import copy
 ### Import all classes from lib_classes. ###
 #
 from . import lib_classes as lc
+from . import lib_track as lt
 
 
 #
@@ -4012,9 +4013,16 @@ class LanguageModel_ForwardInterpreter:
             return args_list[index] if index < len(args_list) else default
 
         #
+        ### Track function. ###
+        #
+        if function_name == "track":
+            #
+            lt.track( *list(args.values()) )
+
+        #
         ### Handle torch functions. ###
         #
-        if function_name == "torch.cat" or function_name == "cat":
+        elif function_name == "torch.cat" or function_name == "cat":
 
             #                    #
             ### Concatenate tensors. ###

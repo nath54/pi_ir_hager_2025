@@ -16,6 +16,8 @@ import core.lib_impl.lib_classes as lc
 import core.lib_impl.lib_layers as ll
 import core.lib_impl.lib_interpretor as li
 #
+from core.lib_impl.lib_track import reset_trace, log_distances, init_track, track
+#
 import lib_extract_model_architecture as lema
 import lib_weights_link as ltlwta
 
@@ -287,9 +289,18 @@ class Tester:
 
         #
         distances: list[float] = []
+        pto_norm: list[float] = []
+        #
+        cosine_similarities: list[float] = []
+
+        #
+        nb_exec_test = 20
 
         #
         for _ in range(nb_exec_test):
+
+            #
+            reset_trace(is_pytorch=True)
 
             #
             interpreter.reset_state()
@@ -313,9 +324,17 @@ class Tester:
                 ref_output: NDArray[np.float32] = ref_output_pt.to(dtype=torch.float32, device="cpu").numpy()
 
             #
+            reset_trace(is_pytorch=False)
+
+            #
             ### Get the output from the extracted model. ###
             #
             extr_outputs: dict[str, NDArray[np.float32]] = interpreter.forward(inputs=inputs_dict)
+
+            #
+            j: int = len(os.listdir("logs/"))
+            #
+            log_distances(output_file=f"logs/log_{j}_{pt_model.__class__.__name__}.txt")
 
             #
             extr_output: Optional[NDArray[np.float32]] = None
@@ -338,6 +357,10 @@ class Tester:
             extr_output = list(extr_outputs.values())[0]
 
             #
+            # print(f"Pytorch Output: {ref_output}")
+            # print(f"Interpretor Output: {extr_output}")
+
+            #
             if extr_output is None:
                 #
                 return (False, "Model output is None.", None)
@@ -356,24 +379,47 @@ class Tester:
 
             #
             dist: float = np.linalg.norm(ref_output - extr_output)
-
+            #
+            ref_norm: float = np.linalg.norm(ref_output)
+            extr_norm: float = np.linalg.norm(extr_output)
+            #
+            dot_prod = np.dot(
+                np.ndarray.flatten(extr_output),
+                np.ndarray.flatten(ref_output).T
+            )
+            #
+            cos_sim: float = 0.0
+            #
+            if abs(ref_norm * extr_norm) > 1e-6:
+                #
+                cos_sim: float = dot_prod / (ref_norm * extr_norm)
             #
             distances.append( dist )
+            #
+            pto_norm.append( ref_norm )
+            #
+            cosine_similarities.append( cos_sim )
 
         #
         mean_dist: float = sum(distances) / float(nb_exec_test)
+        mean_pto_norm: float = sum(pto_norm) / float(nb_exec_test)
+        #
+        relative_error: float = mean_dist / mean_pto_norm
 
         #
-        treshold: float = 1e0
+        avg_cosine_sims: float = sum(cosine_similarities) / float(nb_exec_test)
 
         #
-        if mean_dist > treshold:
+        treshold: float = 1e-1
+
+        #
+        if relative_error > treshold:
 
             #
-            return (False, f"Model output is too far from reference : {mean_dist} > {treshold}  ({nb_exec_test} x avg) !", tuple(extr_output.shape))
+            return (False, f"Model output is too far from reference | abs dist = {mean_dist} > {treshold} | rel dist = {relative_error} | cos sim = {avg_cosine_sims} ({nb_exec_test} x avg) !", tuple(extr_output.shape))
 
         #
-        return (True, f"Distance between reference and inference output is {mean_dist} ({nb_exec_test} x avg).", tuple(extr_output.shape))
+        return (True, f"Distance between reference and inference output is : abs dist = {mean_dist} | rel dist = {relative_error} | cos sim = {avg_cosine_sims} ({nb_exec_test} x avg).", tuple(extr_output.shape))
 
 
     #
