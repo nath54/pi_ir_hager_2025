@@ -2895,88 +2895,87 @@ class LanguageModel_ForwardInterpreter:
             #
             ### Convolutional layer. ###
             #
+            #
             ### Get parameters. ###
             #
-            in_channels = _layer_params.get("in_channels", 1)
             out_channels = _layer_params.get("out_channels", 1)
             kernel_size = _layer_params.get("kernel_size", 3)
             stride = _layer_params.get("stride", 1)
             padding = _layer_params.get("padding", 0)
-            dilation = _layer_params.get("dilation", 1)
-            groups = _layer_params.get("groups", 1)
-            bias = _layer_params.get("bias", True)
 
             #
-            ### Get weights. ###
+            ### Get weights (PyTorch shape: [out_channels, in_channels, kH, kW]). ###
             #
             weight = layer_weights.get("weight")
-            bias_weight = layer_weights.get("bias") if bias else None
+            bias = layer_weights.get("bias") # Shape: [out_channels]
 
             #
-            ### Apply convolution. ###
+            ### Ensure kernel, stride, and padding are tuples. ###
             #
-            ### Simplified implementation that produces correct output shape ###
-            #
-            ### Calculate output dimensions ###
-            #
-            input_shape = input_tensor.shape
+            if isinstance(kernel_size, int): kernel_size = (kernel_size, kernel_size)
+            if isinstance(stride, int): stride = (stride, stride)
+            if isinstance(padding, int): padding = (padding, padding)
 
             #
-            ### Handle kernel_size as tuple or int ###
+            ### Input tensor shape: (N, C_in, H_in, W_in). ###
             #
-            if isinstance(kernel_size, (tuple, list)):
-                #
-                kernel_h, kernel_w = kernel_size
-            #
-            else:
-                #
-                kernel_h = kernel_w = kernel_size
+            N, C_in, H_in, W_in = input_tensor.shape
+            kH, kW = kernel_size
+            sH, sW = stride
+            pH, pW = padding
 
             #
-            ### Handle stride as tuple or int ###
+            ### Calculate output dimensions. ###
             #
-            if isinstance(stride, (tuple, list)):
-                #
-                stride_h, stride_w = stride
-            #
-            else:
-                #
-                stride_h = stride_w = stride
+            H_out = (H_in + 2 * pH - kH) // sH + 1
+            W_out = (W_in + 2 * pW - kW) // sW + 1
 
             #
-            ### Handle padding as tuple or int ###
+            ### Apply padding to the input tensor. ###
             #
-            if isinstance(padding, (tuple, list)):
-                #
-                pad_h, pad_w = padding
-            #
-            else:
-                #
-                pad_h = pad_w = padding
+            padded_input = np.pad(
+                input_tensor,
+                ((0, 0), (0, 0), (pH, pH), (pW, pW)),
+                mode='constant'
+            )
 
             #
-            ### Calculate output dimensions using convolution formula ###
-            ### output_size = (input_size + 2*padding - kernel_size) / stride + 1 ###
+            ### Initialize the output tensor. ###
             #
-            if len(input_shape) >= 4:  # (batch, channels, height, width)
-
-                #
-                output_h = (input_shape[2] + 2*pad_h - kernel_h) // stride_h + 1
-                output_w = (input_shape[3] + 2*pad_w - kernel_w) // stride_w + 1
-
-                #
-                ### Create output tensor with correct shape ###
-                #
-                output_shape = (input_shape[0], out_channels, output_h, output_w)
-                #
-                result = np.random.randn(*output_shape).astype(np.float32) * 0.1
+            output_tensor = np.zeros((N, out_channels, H_out, W_out), dtype=np.float32)
 
             #
-            else:
-                #
-                ### Fallback for other shapes ###
-                #
-                result = input_tensor * 0.5
+            ### Perform the convolution operation. ###
+            #
+            for n in range(N):  # For each image in the batch
+                for c_out in range(out_channels):  # For each output channel (filter)
+                    for h in range(H_out):  # Slide vertically
+                        for w in range(W_out):  # Slide horizontally
+                            #
+                            ### Define the sliding window boundaries. ###
+                            #
+                            h_start, w_start = h * sH, w * sW
+                            h_end, w_end = h_start + kH, w_start + kW
+
+                            #
+                            ### Extract the receptive field (window). ###
+                            #
+                            window = padded_input[n, :, h_start:h_end, w_start:w_end]
+
+                            #
+                            ### Perform element-wise multiplication and sum. ###
+                            #
+                            conv_sum = np.sum(window * weight[c_out, :, :, :])
+
+                            #
+                            ### Add bias if it exists. ###
+                            #
+                            if bias is not None:
+                                conv_sum += bias[c_out]
+
+                            output_tensor[n, c_out, h, w] = conv_sum
+
+            result = output_tensor
 
         #
         elif layer_type == "Softmax":
