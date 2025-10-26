@@ -36,7 +36,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, c0: int, k0: int, p0: int) -> None:
+    def __init__(self, c0: int = 8, k0: int = 3, p0: int = 2) -> None:
 
         #
         super().__init__()  # type: ignore

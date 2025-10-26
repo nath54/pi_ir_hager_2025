@@ -37,7 +37,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, num_channels: int, kernel_size: int, num_layers: int) -> None:
+    def __init__(self, num_channels: int = 8, kernel_size: int = 3, num_layers: int = 3) -> None:
 
         #
         super().__init__()  # type: ignore

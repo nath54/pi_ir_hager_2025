@@ -37,7 +37,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, c0: int, k_h: int, k_w: int, p: int) -> None:
+    def __init__(self, c0: int = 8, k_h: int = 3, k_w: int = 3, p: int = 2) -> None:
 
         #
         super().__init__()  # type: ignore
@@ -65,17 +65,17 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.unsqueeze(1)
-        X = self.conv2d(X)
-        X = self.relu(X)
-        X = self.maxpool(X)
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = x.unsqueeze(1)
+        x = self.conv2d(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x
