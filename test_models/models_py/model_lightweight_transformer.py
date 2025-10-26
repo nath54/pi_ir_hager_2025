@@ -39,7 +39,7 @@ class Model(nn.Module):
     def __init__(self, d_model: int, num_heads: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.proj: nn.Linear = nn.Linear(in_features=10, out_features=d_model)
@@ -62,23 +62,23 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = self.proj(X)
+        x = self.proj(x)
         #
-        X_residual = X
-        X, _ = self.attention(X, X, X)
-        X = self.norm1(X + X_residual)
+        x_residual = x
+        x, _ = self.attention(x, x, x)
+        x = self.norm1(x + x_residual)
         #
-        X_residual = X
-        X = self.ffn(X)
-        X = self.norm2(X + X_residual)
+        x_residual = x
+        x = self.ffn(x)
+        x = self.norm2(x + x_residual)
         #
-        X = X.mean(dim=1)
-        X = self.lin(X)
+        x = x.mean(dim=1)
+        x = self.lin(x)
 
         #
-        return X
+        return x

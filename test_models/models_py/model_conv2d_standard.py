@@ -40,7 +40,7 @@ class Model(nn.Module):
     def __init__(self, c0: int, k_h: int, k_w: int, p: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.conv2d: nn.Conv2d = nn.Conv2d(in_channels=1, out_channels=c0, kernel_size=(k_h, k_w))

@@ -41,7 +41,7 @@ class Model(nn.Module):
     def __init__(self, k_h: int, k_w: int, c0: int, p: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.depthwise: nn.Conv2d = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(k_h, k_w), groups=1)
@@ -68,18 +68,18 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.unsqueeze(1)
-        X = self.depthwise(X)
-        X = self.pointwise(X)
-        X = self.relu(X)
-        X = self.maxpool(X)
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = x.unsqueeze(1)
+        x = self.depthwise(x)
+        x = self.pointwise(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x

@@ -41,7 +41,7 @@ class Model(nn.Module):
     def __init__(self, d_k: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.d_k: int = d_k
@@ -60,23 +60,23 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        Q = self.query(X)
-        K = self.key(X)
-        V = self.value(X)
+        Q = self.query(x)
+        K = self.key(x)
+        V = self.value(x)
         #
         scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
         #
         attn_weights = self.softmax(scores)
         #
-        X = torch.matmul(attn_weights, V)
+        x = torch.matmul(attn_weights, V)
         #
-        X = X.mean(dim=1)
-        X = self.lin(X)
+        x = x.mean(dim=1)
+        x = self.lin(x)
 
         #
-        return X
+        return x

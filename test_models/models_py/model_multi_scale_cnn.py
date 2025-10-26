@@ -40,7 +40,7 @@ class Model(nn.Module):
     def __init__(self, c0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.conv1: nn.Conv2d = nn.Conv2d(in_channels=1, out_channels=c0, kernel_size=3)
@@ -61,27 +61,27 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.unsqueeze(1)
+        x = x.unsqueeze(1)
         #
-        X1 = self.relu(self.conv1(X))
-        X1 = self.global_pool(X1)
-        X1 = self.flatten(X1)
+        x1 = self.relu(self.conv1(x))
+        x1 = self.global_pool(x1)
+        x1 = self.flatten(x1)
         #
-        X2 = self.relu(self.conv2(X))
-        X2 = self.global_pool(X2)
-        X2 = self.flatten(X2)
+        x2 = self.relu(self.conv2(x))
+        x2 = self.global_pool(x2)
+        x2 = self.flatten(x2)
         #
-        X3 = self.relu(self.conv3(X))
-        X3 = self.global_pool(X3)
-        X3 = self.flatten(X3)
+        x3 = self.relu(self.conv3(x))
+        x3 = self.global_pool(x3)
+        x3 = self.flatten(x3)
         #
-        X = torch.cat([X1, X2, X3], dim=1)
-        X = self.lin(X)
+        x = torch.cat([x1, x2, x3], dim=1)
+        x = self.lin(x)
 
         #
-        return X
+        return x

@@ -41,7 +41,7 @@ class Model(nn.Module):
     def __init__(self, h_i: list[int]) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.N: int = len(h_i)
@@ -71,24 +71,24 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = self.lin1(X)
-        X = self.relu(X)
-        X = self.flatten(X)
-        X = self.lin2(X)
-        X = self.relu(X)
+        x = self.lin1(x)
+        x = self.relu(x)
+        x = self.flatten(x)
+        x = self.lin2(x)
+        x = self.relu(x)
         #
         for i in range(1, self.N):
             #
-            X = self.lins[i](X)
-            X = self.relu(X)
+            x = self.lins[i](x)
+            x = self.relu(x)
         #
-        X = self.lin_N(X)
+        x = self.lin_N(x)
 
         #
-        return X
+        return x
 

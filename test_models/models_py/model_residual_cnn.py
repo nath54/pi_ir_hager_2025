@@ -41,7 +41,7 @@ class Model(nn.Module):
     def __init__(self, c0: int, k_h: int, k_w: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         padding_h: int = k_h // 2
@@ -66,25 +66,25 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.unsqueeze(1)
+        x = x.unsqueeze(1)
         #
-        X_residual = self.conv_skip(X)
+        x_residual = self.conv_skip(x)
         #
-        X = self.conv1(X)
-        X = self.relu(X)
-        X = self.conv2(X)
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
         #
-        X = X + X_residual
-        X = self.relu(X)
+        x = x + x_residual
+        x = self.relu(x)
         #
-        X = self.global_pool(X)
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = self.global_pool(x)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x

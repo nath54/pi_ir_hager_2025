@@ -33,7 +33,7 @@ class Model(nn.Module):
     def __init__(self) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.flatten: nn.Flatten = nn.Flatten()
@@ -44,13 +44,13 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x

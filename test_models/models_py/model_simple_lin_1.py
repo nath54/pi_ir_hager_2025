@@ -35,7 +35,7 @@ class Model(nn.Module):
     def __init__(self, h0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.lin1: nn.Linear = nn.Linear(in_features=10, out_features=h0)
@@ -50,16 +50,16 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = self.lin1(X)
-        X = self.relu(X)
-        X = self.flatten(X)
-        X = self.lin2(X)
+        x = self.lin1(x)
+        x = self.relu(x)
+        x = self.flatten(x)
+        x = self.lin2(x)
 
         #
-        return X
+        return x
 

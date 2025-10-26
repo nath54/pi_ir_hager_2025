@@ -41,7 +41,7 @@ class Model(nn.Module):
     def __init__(self, h0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.lin1: nn.Linear = nn.Linear(in_features=40, out_features=h0)
@@ -54,23 +54,23 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X_mean = X.mean(dim=1)
+        x_mean = x.mean(dim=1)
         #
-        X_std = X.std(dim=1)
+        x_std = x.std(dim=1)
         #
-        X_max = X.max(dim=1)[0]
+        x_max = x.max(dim=1)[0]
         #
-        X_min = X.min(dim=1)[0]
+        x_min = x.min(dim=1)[0]
         #
-        X = torch.cat([X_mean, X_std, X_max, X_min], dim=1)
-        X = self.lin1(X)
-        X = self.relu(X)
-        X = self.lin2(X)
+        x = torch.cat([x_mean, x_std, x_max, x_min], dim=1)
+        x = self.lin1(x)
+        x = self.relu(x)
+        x = self.lin2(x)
 
         #
-        return X
+        return x

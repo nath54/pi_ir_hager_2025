@@ -42,7 +42,7 @@ class Model(nn.Module):
     def __init__(self, c0: int, k_h: int, k_w: int, reduction_ratio: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.conv2d: nn.Conv2d = nn.Conv2d(in_channels=1, out_channels=c0, kernel_size=(k_h, k_w))
@@ -69,29 +69,29 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.unsqueeze(1)
-        X = self.conv2d(X)
-        X = self.relu(X)
+        x = x.unsqueeze(1)
+        x = self.conv2d(x)
+        x = self.relu(x)
         #
-        X_residual = X
+        x_residual = x
         #
-        X_se = self.global_pool(X)
-        X_se = X_se.squeeze(-1).squeeze(-1)
-        X_se = self.fc1(X_se)
-        X_se = self.relu(X_se)
-        X_se = self.fc2(X_se)
-        X_se = self.sigmoid(X_se)
-        X_se = X_se.unsqueeze(-1).unsqueeze(-1)
+        x_se = self.global_pool(x)
+        x_se = x_se.squeeze(-1).squeeze(-1)
+        x_se = self.fc1(x_se)
+        x_se = self.relu(x_se)
+        x_se = self.fc2(x_se)
+        x_se = self.sigmoid(x_se)
+        x_se = x_se.unsqueeze(-1).unsqueeze(-1)
         #
-        X = X_residual * X_se
+        x = x_residual * x_se
         #
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x

@@ -40,7 +40,7 @@ class Model(nn.Module):
     def __init__(self, num_channels: int, kernel_size: int, num_layers: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.num_layers: int = num_layers
@@ -77,22 +77,22 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)
         #
         for i in range(self.num_layers):
             #
-            X = self.tcn_layers[i](X)
-            X = X[:, :, :30]
-            X = self.relu(X)
+            x = self.tcn_layers[i](x)
+            x = x[:, :, :30]
+            x = self.relu(x)
         #
-        X = self.global_pool(X)
-        X = X.squeeze(-1)
-        X = self.lin(X)
+        x = self.global_pool(x)
+        x = x.squeeze(-1)
+        x = self.lin(x)
 
         #
-        return X
+        return x

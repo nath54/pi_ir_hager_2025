@@ -39,7 +39,7 @@ class Model(nn.Module):
     def __init__(self, c0: int, k0: int, p0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.conv1d: nn.Conv1d = nn.Conv1d(in_channels=10, out_channels=c0, kernel_size=k0)
@@ -60,17 +60,17 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X = X.permute(0, 2, 1)
-        X = self.conv1d(X)
-        X = self.relu(X)
-        X = self.maxpool(X)
-        X = self.flatten(X)
-        X = self.lin(X)
+        x = x.permute(0, 2, 1)
+        x = self.conv1d(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.flatten(x)
+        x = self.lin(x)
 
         #
-        return X
+        return x

@@ -38,7 +38,7 @@ class Model(nn.Module):
     def __init__(self, h0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.time_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
@@ -55,22 +55,22 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X_time = X.permute(0, 2, 1)
-        X_time = self.time_pool(X_time)
-        X_time = X_time.squeeze(-1)
+        x_time = x.permute(0, 2, 1)
+        x_time = self.time_pool(x_time)
+        x_time = x_time.squeeze(-1)
         #
-        X_feature = self.feature_pool(X)
-        X_feature = X_feature.squeeze(-1)
+        x_feature = self.feature_pool(x)
+        x_feature = x_feature.squeeze(-1)
         #
-        X = torch.cat([X_time, X_feature], dim=1)
-        X = self.lin1(X)
-        X = self.relu(X)
-        X = self.lin2(X)
+        x = torch.cat([x_time, x_feature], dim=1)
+        x = self.lin1(x)
+        x = self.relu(x)
+        x = self.lin2(x)
 
         #
-        return X
+        return x

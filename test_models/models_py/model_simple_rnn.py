@@ -34,7 +34,7 @@ class Model(nn.Module):
     def __init__(self, h0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.rnn: nn.RNN = nn.RNN(input_size=10, hidden_size=h0, batch_first=True)
@@ -45,14 +45,14 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X, _ = self.rnn(X)
-        X = X[:, -1, :]
-        X = self.lin(X)
+        x, _ = self.rnn(x)
+        x = x[:, -1, :]
+        x = self.lin(x)
 
         #
-        return X
+        return x

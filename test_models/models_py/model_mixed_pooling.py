@@ -38,7 +38,7 @@ class Model(nn.Module):
     def __init__(self, h0: int) -> None:
 
         #
-        super().__init__()
+        super().__init__()  # type: ignore
 
         #
         self.global_avg_pool: nn.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d(1)
@@ -55,23 +55,23 @@ class Model(nn.Module):
     #
     ### Forward Method. ###
     #
-    def forward(self, X: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
 
         #
         ### Forward pass. ###
         #
-        X_perm = X.permute(0, 2, 1)
+        x_perm = x.permute(0, 2, 1)
         #
-        X_avg = self.global_avg_pool(X_perm)
-        X_avg = X_avg.squeeze(-1)
+        x_avg = self.global_avg_pool(x_perm)
+        x_avg = x_avg.squeeze(-1)
         #
-        X_max = self.global_max_pool(X_perm)
-        X_max = X_max.squeeze(-1)
+        x_max = self.global_max_pool(x_perm)
+        x_max = x_max.squeeze(-1)
         #
-        X = torch.cat([X_avg, X_max], dim=1)
-        X = self.lin1(X)
-        X = self.relu(X)
-        X = self.lin2(X)
+        x = torch.cat([x_avg, x_max], dim=1)
+        x = self.lin1(x)
+        x = self.relu(x)
+        x = self.lin2(x)
 
         #
-        return X
+        return x
