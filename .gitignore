@@ -22,6 +22,7 @@ pyvenv.cfg
 **/minimal_build
 
 *.onnx
+*.data
 
 **/st_ai_*
 

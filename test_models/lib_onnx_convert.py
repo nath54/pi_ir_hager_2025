@@ -1,14 +1,11 @@
 #
 ### Import Modules. ###
 #
-import numpy as np
-from numpy.typing import NDArray
+from typing import Any
 #
 import torch
 from torch import nn
 from torch import Tensor
-#
-import onnxruntime as ort
 #
 import onnx
 #
@@ -25,12 +22,12 @@ class ONNX_Converter:
         self.verbose: bool = verbose
 
     #
-    def log(self, *args) -> None:
+    def log(self, *args: Any) -> None:
 
         #
         if self.verbose:
             #
-            self.log(*args)
+            print(*args)
 
     #
     def convert_to_onnx(self, pt_model: nn.Module, input_shape: tuple[int, ...], onnx_filepath: str) -> bool:
@@ -51,7 +48,7 @@ class ONNX_Converter:
                 #
                 ### Generate random input matrix. ###
                 #
-                input_tensor: Tensor = torch.random(input_shape)
+                input_tensor: Tensor = torch.randn(input_shape)
 
                 #
                 ### Use torch.jit.script instead of trace to handle the explicit slicing better. ###
@@ -62,7 +59,7 @@ class ONNX_Converter:
                 #
                 ### More permissive tracing. ###
                 #
-                traced_model = torch.jit.trace(
+                traced_model = torch.jit.trace(  # type: ignore
                     pt_model,
                     input_tensor,
                     strict=False,  # Allow some flexibility
@@ -75,7 +72,7 @@ class ONNX_Converter:
                 #
                 ### Freeze the traced model. ###
                 #
-                traced_model = torch.jit.freeze(traced_model)
+                traced_model = torch.jit.freeze(traced_model)  # type: ignore
                 #
                 self.log("✓ Model frozen")
 
@@ -84,9 +81,9 @@ class ONNX_Converter:
             #
             self.log("\nExporting to ONNX...")
             #
-            torch.onnx.export(
+            torch.onnx.export(  # type: ignore
                 traced_model,
-                input_tensor,
+                input_tensor,  # type: ignore
                 onnx_filepath,
                 export_params=True,
                 opset_version=13,
@@ -107,8 +104,8 @@ class ONNX_Converter:
             #
             self.log("\nVerifying ONNX model...")
             #
-            onnx_model = onnx.load("exported_model_ir9_no_if.onnx")
-            onnx.checker.check_model(onnx_model)
+            onnx_model = onnx.load("exported_model_ir9_no_if.onnx")  # type: ignore
+            onnx.checker.check_model(onnx_model)  # type: ignore
             self.log("✓ ONNX model is valid")
 
             #
@@ -124,7 +121,7 @@ class ONNX_Converter:
             #
             self.log(f"❌ Export failed: {e}")
             #
-            traceback.self.log_exc()
+            traceback.self.log_exc()  # type: ignore
             #
             return False
 
