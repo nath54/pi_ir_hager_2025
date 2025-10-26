@@ -13,32 +13,39 @@ from model_to_export_custom_layer_norm import Model
 
 #
 def export_executorch_model(model: nn.Module, example_inputs: tuple) -> None:
-
-    # --- Standard ExecuTorch Export ---
+    """
+    Export model to ONNX using TorchScript tracing.
+    This avoids issues with aten.as_strided operations.
+    """
     try:
-
-        # traced_script_module = torch.jit.trace(model, example_inputs)
-
-        # onnx_program = torch.onnx.export(model, example_inputs, dynamo=True)
-
-        # Use opset_version=17 to target an older, more compatible version.
-        # opset 17 corresponds to IR version 9, which the checker supports.
-        onnx_program = torch.onnx.export(
-            model,
+        # Use torch.jit.trace for more stable ONNX export
+        model.eval()
+        
+        with torch.no_grad():
+            traced_model = torch.jit.trace(model, example_inputs)
+        
+        # Export using TorchScript approach (no dynamo)
+        torch.onnx.export(
+            traced_model,
             example_inputs,
-            dynamo=True,
-            opset_version=17, # Specify a lower opset version
-            do_constant_folding=True
+            "exported_model_ir9.onnx",
+            export_params=True,
+            opset_version=17,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
+            }
         )
-
-        onnx_program.optimize()
-
-        onnx_program.save("exported_model_ir9.onnx")
-
+        
+        print("✅ Model exported successfully to exported_model_ir9.onnx")
 
     except Exception as e:
         print(f"Export failed: {e}")
-        # Consider logging details or using specific exception handling
+        import traceback
+        traceback.print_exc()
 
 
 #
@@ -70,7 +77,8 @@ if __name__ == "__main__":
     model.eval()
 
     #
-    predictions: Tensor = model( input_data1 )
+    with torch.no_grad():
+        predictions: Tensor = model( input_data1 )
 
     #
     print( f"\npredictions : {predictions}\n" )
