@@ -29,7 +29,7 @@ from lib_onnx_convert import ONNX_Converter
 def measure_onnx_ram(onnx_path: str, input_shape: tuple[int, ...]) -> dict[str, float]:
     """
     Measure ONNX model memory usage.
-    Returns dict with model_size_mb, estimated_activation_mb, total_mb
+    Returns dict with model_size_kb, estimated_activation_kb, total_kb
     """
 
     #
@@ -94,9 +94,9 @@ def measure_onnx_ram(onnx_path: str, input_shape: tuple[int, ...]) -> dict[str, 
 
     #
     return {
-        'model_size_mb': model_size / (1024**2),
-        'activation_size_mb': activation_size / (1024**2),
-        'total_mb': (model_size + activation_size) / (1024**2)
+        'model_size_kb': model_size / 1024,
+        'activation_size_kb': activation_size / 1024,
+        'total_kb': (model_size + activation_size) / 1024
     }
 
 
@@ -124,7 +124,7 @@ def measure_ram_with_process_monitoring(
     #
     ### Baseline memory. ###
     #
-    baseline_mem: float = process.memory_info().rss / (1024**2)
+    baseline_mem: float = process.memory_info().rss / 1024
 
     #
     ### Deep copy model to examine it memory cost. ###
@@ -134,7 +134,7 @@ def measure_ram_with_process_monitoring(
     #
     ### Load model into memory (already loaded, but measure). ###
     #
-    model_loaded_mem = process.memory_info().rss / (1024**2)
+    model_loaded_mem = process.memory_info().rss / 1024
     #
     model_overhead = model_loaded_mem - baseline_mem
 
@@ -148,7 +148,7 @@ def measure_ram_with_process_monitoring(
     #
     gc.collect()
     #
-    mem_before = process.memory_info().rss / (1024**2)
+    mem_before = process.memory_info().rss / 1024
 
     #
     if is_onnx and onnx_session is not None:
@@ -167,7 +167,7 @@ def measure_ram_with_process_monitoring(
             _ = model(input_tensor)
 
     #
-    mem_after = process.memory_info().rss / (1024**2)
+    mem_after = process.memory_info().rss / 1024
     activation_mem = mem_after - mem_before
 
     #
@@ -177,11 +177,11 @@ def measure_ram_with_process_monitoring(
 
     #
     return {
-        'baseline_mb': baseline_mem,
-        'model_overhead_mb': model_overhead,
-        'activation_mb': activation_mem,
-        'peak_mb': mem_after,
-        'inference_increase_mb': activation_mem
+        'baseline_kb': baseline_mem,
+        'model_overhead_kb': model_overhead,
+        'activation_kb': activation_mem,
+        'peak_kb': mem_after,
+        'inference_increase_kb': activation_mem
     }
 
 
@@ -384,13 +384,13 @@ class Model_Processing_and_Tester:
 
         #
         return {
-            'model_params_mb': model_params_size / (1024**2),
-            'model_buffers_mb': model_buffers_size / (1024**2),
-            'model_total_mb': model_total_size / (1024**2),
-            'input_mb': input_size / (1024**2),
-            'activations_mb': activation_size / (1024**2),
-            'inference_total_mb': (model_total_size + input_size + activation_size) / (1024**2),
-            'process_delta_mb': process_delta / (1024**2),  # For validation
+            'model_params_kb': model_params_size / 1024,
+            'model_buffers_kb': model_buffers_size / 1024,
+            'model_total_kb': model_total_size / 1024,
+            'input_kb': input_size / 1024,
+            'activations_kb': activation_size / 1024,
+            'inference_total_kb': (model_total_size + input_size + activation_size) / 1024,
+            'process_delta_kb': process_delta / 1024,  # For validation
         }
 
     #
@@ -499,13 +499,31 @@ class Model_Processing_and_Tester:
 
         #
         return {
-            'model_file_mb': model_file_size / (1024**2),
-            'input_mb': input_size / (1024**2),
-            'output_mb': output_size / (1024**2),
-            'activations_mb': activation_size / (1024**2),
-            'inference_total_mb': (model_file_size + input_size + output_size + activation_size) / (1024**2),
-            'process_delta_mb': process_delta / (1024**2),  # For validation
+            'model_file_kb': model_file_size / 1024,
+            'input_kb': input_size / 1024,
+            'output_kb': output_size / 1024,
+            'activations_kb': activation_size / 1024,
+            'inference_total_kb': (model_file_size + input_size + output_size + activation_size) / 1024,
+            'process_delta_kb': process_delta / 1024,  # For validation
         }
+
+    #
+    def convert_to_onnx(
+        self,
+        model_name: str,
+        pt_model: nn.Module,
+        onnx_filepath: str
+    ) -> None:
+
+        #
+        self.onnx_converter.convert_to_onnx(
+            pt_model=pt_model,
+            input_shape=self.input_shape,
+            onnx_filepath=onnx_filepath
+        )
+
+        #
+        self.model_onnx_filepath[model_name] = onnx_filepath
 
 
     #
@@ -514,7 +532,6 @@ class Model_Processing_and_Tester:
         model_name: str,
         pt_model: nn.Module,
     ) -> None:
-
         #
         onnx_model_path: str = self.model_onnx_filepath[model_name]
 
@@ -522,7 +539,7 @@ class Model_Processing_and_Tester:
         self.log(f"\n🔍 Loading ONNX model from {onnx_model_path}...")
 
         #
-        ort_session = ort.InferenceSession(onnx_model_path)
+        ort_session: ort.InferenceSession = ort.InferenceSession(onnx_model_path)
 
         #
         ### Store time measurements for each run. ###
@@ -546,17 +563,28 @@ class Model_Processing_and_Tester:
         mean_distances: list[float] = []
 
         #
+        print("Compiling pytorch model for faster inference and most accurate measurements")
+        #
+        pt_model_compiled = torch.compile(pt_model)  # type: ignore
+
+        #
+        ### Waking up the pytorch compiled model. ###
+        #
+        input_tensor: Tensor = torch.randn(self.input_shape)
+        pytorch_output = pt_model_compiled(input_tensor)
+
+        #
         i: int
         #
-        for i in range(self.nb_inference_test):
+        for i in range(self.nb_inference_test+1):
 
             #
-            self.log(f"\n--- Inference run {i+1}/{self.nb_inference_test} ---")
+            self.log(f"\n--- Inference run {i}/{self.nb_inference_test} ---")
 
             #
             ### Prepare input. ###
             #
-            input_tensor: Tensor = torch.randn(self.input_shape)
+            input_tensor = torch.randn(self.input_shape)
             #
             input_numpy: NDArray[np.float32] = input_tensor.cpu().numpy().astype(np.float32)  # type: ignore
 
@@ -571,9 +599,9 @@ class Model_Processing_and_Tester:
             #
             pt_time_start: float = time.perf_counter()
             #
-            with torch.no_grad():
+            with torch.inference_mode():
                 #
-                pytorch_output = pt_model(input_tensor)
+                pytorch_output = pt_model_compiled(input_tensor)
             #
             pt_time_end: float = time.perf_counter()
             #
@@ -628,14 +656,14 @@ class Model_Processing_and_Tester:
 
             #
             self.log(f"  PT time: {pt_times[-1]:.3f}ms | ONNX time: {onnx_times[-1]:.3f}ms")
-            self.log(f"  PT RAM: {pt_ram['inference_total_mb']:.2f}MB | ONNX RAM: {onnx_ram['inference_total_mb']:.2f}MB")
+            self.log(f"  PT RAM: {pt_ram['inference_total_kb']:.2f}KB | ONNX RAM: {onnx_ram['inference_total_kb']:.2f}KB")
             self.log(f"  Max diff: {max_diff:.6e} | Mean diff: {mean_diff:.6e}")
 
         #
         ### Store results. ###
         #
-        self.model_pt_inference_times[model_name] = pt_times
-        self.model_onnx_inference_times[model_name] = onnx_times
+        self.model_pt_inference_times[model_name] = pt_times[1:]
+        self.model_onnx_inference_times[model_name] = onnx_times[1:]
 
         #
         ### Average RAM measurements across runs. ###
@@ -656,13 +684,17 @@ class Model_Processing_and_Tester:
         self.model_mean_distances[model_name] = mean_distances
 
         #
+        self.model_nb_parameters[model_name] = sum(p.numel() for p in pt_model.parameters())
+
+        #
         ### Log summary. ###
         #
         self.log(f"\n📊 Summary for {model_name}:")
-        self.log(f"  PT inference: {np.mean(pt_times):.3f}ms ± {np.std(pt_times):.3f}ms")
-        self.log(f"  ONNX inference: {np.mean(onnx_times):.3f}ms ± {np.std(onnx_times):.3f}ms")
-        self.log(f"  PT total RAM: {self.model_pt_ram_breakdown[model_name]['inference_total_mb']:.2f}MB")
-        self.log(f"  ONNX total RAM: {self.model_onnx_ram_breakdown[model_name]['inference_total_mb']:.2f}MB")
+        self.log(f"  PT Num Params: {self.model_nb_parameters[model_name]} parameters.")
+        self.log(f"  PT inference: {np.mean(pt_times[1:]):.3f}ms ± {np.std(pt_times[1:]):.3f}ms")
+        self.log(f"  ONNX inference: {np.mean(onnx_times[1:]):.3f}ms ± {np.std(onnx_times[1:]):.3f}ms")
+        self.log(f"  PT total RAM: {self.model_pt_ram_breakdown[model_name]['inference_total_kb']:.2f}KB")
+        self.log(f"  ONNX total RAM: {self.model_onnx_ram_breakdown[model_name]['inference_total_kb']:.2f}KB")
 
 
     #
@@ -672,11 +704,10 @@ class Model_Processing_and_Tester:
         data: dict[str, dict[str, Any] | list[Any]] = {
             "model_nb_parameters": self.model_nb_parameters,
             "model_onnx_filepath": self.model_onnx_filepath,
-            "model_onnx_file_size": self.model_onnx_file_size,
-            "model_pt_inference_times": self.model_pt_inference_times,
-            "model_onnx_inference_times": self.model_onnx_inference_times,
-            "model_pt_ram_breakdown": self.model_pt_ram_breakdown,
-            "model_onnx_ram_breakdown": self.model_onnx_ram_breakdown,
+            "model_pt_inference_times_ms": self.model_pt_inference_times,
+            "model_onnx_inference_times_ms": self.model_onnx_inference_times,
+            "model_pt_ram_breakdown_kb": self.model_pt_ram_breakdown,
+            "model_onnx_ram_breakdown_kb": self.model_onnx_ram_breakdown,
             "model_distances": self.model_distances,
             "model_max_distances": self.model_max_distances,
             "model_mean_distances": self.model_mean_distances,

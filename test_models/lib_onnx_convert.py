@@ -86,7 +86,7 @@ class ONNX_Converter:
                 input_tensor,  # type: ignore
                 onnx_filepath,
                 export_params=True,
-                opset_version=13,
+                # opset_version=19,
                 do_constant_folding=True,
                 input_names=['input'],
                 output_names=['output'],
@@ -104,7 +104,7 @@ class ONNX_Converter:
             #
             self.log("\nVerifying ONNX model...")
             #
-            onnx_model = onnx.load("exported_model_ir9_no_if.onnx")  # type: ignore
+            onnx_model = onnx.load(onnx_filepath)  # type: ignore
             onnx.checker.check_model(onnx_model)  # type: ignore
             self.log("✓ ONNX model is valid")
 
@@ -121,7 +121,7 @@ class ONNX_Converter:
             #
             self.log(f"❌ Export failed: {e}")
             #
-            traceback.self.log_exc()  # type: ignore
+            traceback.print_exception(e)  # type: ignore
             #
             return False
 

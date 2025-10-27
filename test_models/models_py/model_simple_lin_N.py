@@ -26,6 +26,7 @@ Architecture:
 #
 ### Import Modules. ###
 #
+import torch
 from torch import nn
 from torch import Tensor
 
@@ -38,7 +39,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h_i: list[int] = [16, 32, 16]) -> None:
+    def __init__(self, h_i: list[int] = [16, 32, 64, 128, 64, 32, 16]) -> None:
 
         #
         super().__init__()  # type: ignore
@@ -62,7 +63,7 @@ class Model(nn.Module):
             #
             nn.Linear(in_features=h_i[i-1], out_features=h_i[i])
             #
-            for i in range(1, self.N)
+            for i in range(2, self.N)
         ])
         #
         self.lin_N: nn.Linear = nn.Linear(in_features=h_i[self.N-1], out_features=1)
@@ -82,9 +83,9 @@ class Model(nn.Module):
         x = self.lin2(x)
         x = self.relu(x)
         #
-        for i in range(1, self.N):
+        for lin in self.lins:
             #
-            x = self.lins[i](x)
+            x = lin(x)
             x = self.relu(x)
         #
         x = self.lin_N(x)
@@ -92,3 +93,15 @@ class Model(nn.Module):
         #
         return x
 
+
+#
+if __name__ == "__main__":
+
+    #
+    m = Model()
+
+    #
+    ri: Tensor = torch.randn((1,30,10))
+
+    #
+    print(m(ri))
