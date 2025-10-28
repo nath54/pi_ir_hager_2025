@@ -31,13 +31,19 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h0: int = 8) -> None:
+    def __init__(self, h0: int = 8, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
 
         #
-        self.bilstm: nn.LSTM = nn.LSTM(input_size=10, hidden_size=h0, batch_first=True, bidirectional=True)
+        self.bilstm: nn.LSTM = nn.LSTM(
+            input_size=10,
+            hidden_size=h0,
+            num_layers=depth,
+            batch_first=True,
+            bidirectional=True
+        )
         #
         self.lin: nn.Linear = nn.Linear(in_features=2 * h0, out_features=1)
 

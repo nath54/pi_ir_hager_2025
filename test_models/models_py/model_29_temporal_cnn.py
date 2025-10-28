@@ -8,6 +8,7 @@ Models parameters:
     - num_channels: Number of channels in each layer
     - kernel_size: Kernel size for convolutions
     - num_layers: Number of TCN layers
+    - depth_multiplier: Multiplier for increasing depth (additional layers per base layer)
 
 Data variables:
     - B: Batch size
@@ -37,7 +38,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, num_channels: int = 8, kernel_size: int = 3, num_layers: int = 3) -> None:
+    def __init__(self, num_channels: int = 8, kernel_size: int = 3, num_layers: int = 3, depth_multiplier: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
@@ -45,27 +46,37 @@ class Model(nn.Module):
         #
         self.num_layers: int = num_layers
         #
+        self.depth_multiplier: int = depth_multiplier
+        #
         self.tcn_layers: nn.ModuleList = nn.ModuleList()
         #
         in_channels: int = 10
         #
+        layer_idx: int = 0
+        #
         for i in range(num_layers):
             #
-            dilation: int = 2 ** i
-            #
-            padding: int = (kernel_size - 1) * dilation
-            #
-            self.tcn_layers.append(
-                nn.Conv1d(
-                    in_channels=in_channels,
-                    out_channels=num_channels,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    padding=padding
+            for j in range(depth_multiplier):
+                #
+                dilation: int = 2 ** i
+                #
+                padding: int = (kernel_size - 1) * dilation
+                #
+                self.tcn_layers.append(
+                    nn.Conv1d(
+                        in_channels=in_channels,
+                        out_channels=num_channels,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        padding=padding
+                    )
                 )
-            )
-            #
-            in_channels = num_channels
+                #
+                in_channels = num_channels
+                #
+                layer_idx += 1
+        #
+        self.total_layers: int = num_layers * depth_multiplier
         #
         self.relu: nn.ReLU = nn.ReLU()
         #
@@ -84,7 +95,7 @@ class Model(nn.Module):
         #
         x = x.permute(0, 2, 1)
         #
-        for i in range(self.num_layers):
+        for i in range(self.total_layers):
             #
             x = self.tcn_layers[i](x)
             x = x[:, :, :30]

@@ -1,11 +1,12 @@
 """
-Model Name: Mixed Pooling (Avg + Max)
+Model Name: Mixed Pooling (Avg + Max) with Depth Scaling
 
 Model Input: (B, 30, 10)  # Batch, dim feature 1, dim feature 2
 Model Output: (B, 1)  # Batch, Prediction Value
 
 Models parameters:
     - h0: Hidden dimension
+    - depth: Number of hidden layers
 
 Data variables:
     - B: Batch size
@@ -16,6 +17,7 @@ Architecture:
     - Concatenate -> (B, 20)
     - Linear (B, 20) -> (B, h0)
     - ReLU (B, h0) -> (B, h0)
+    - [Optional: Additional hidden layers based on depth]
     - Linear (B, h0) -> (B, 1)
 """
 
@@ -35,7 +37,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h0: int = 16) -> None:
+    def __init__(self, h0: int = 16, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
@@ -49,7 +51,17 @@ class Model(nn.Module):
         #
         self.relu: nn.ReLU = nn.ReLU()
         #
+        self.hidden_layers: nn.ModuleList = nn.ModuleList()
+        #
+        # Add additional hidden layers based on depth parameter
+        for i in range(depth - 1):
+            self.hidden_layers.append(nn.Linear(in_features=h0, out_features=h0))
+            self.hidden_layers.append(nn.ReLU())
+        #
         self.lin2: nn.Linear = nn.Linear(in_features=h0, out_features=1)
+        #
+        self.depth: int = depth
+        self.h0: int = h0
 
 
     #
@@ -71,6 +83,11 @@ class Model(nn.Module):
         x = torch.cat([x_avg, x_max], dim=1)
         x = self.lin1(x)
         x = self.relu(x)
+        #
+        # Apply additional hidden layers if depth > 1
+        for layer in self.hidden_layers:
+            x = layer(x)
+        #
         x = self.lin2(x)
 
         #

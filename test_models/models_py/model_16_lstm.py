@@ -1,19 +1,20 @@
 """
-Model Name: Bidirectional GRU
+Model Name: LSTM (Long Short-Term Memory)
 
 Model Input: (B, 30, 10)  # Batch, dim feature 1, dim feature 2
 Model Output: (B, 1)  # Batch, Prediction Value
 
 Models parameters:
     - h0: Hidden size
+    - depth: Number of LSTM layers
 
 Data variables:
     - B: Batch size
 
 Architecture:
-    - BiGRU (B, 30, 10) -> (B, 30, 2*h0)
-    - Take last timestep (B, 30, 2*h0) -> (B, 2*h0)
-    - Linear (B, 2*h0) -> (B, 1)
+    - LSTM (B, 30, 10) -> (B, 30, h0)
+    - Take last timestep (B, 30, h0) -> (B, h0)
+    - Linear (B, h0) -> (B, 1)
 """
 
 #
@@ -31,15 +32,15 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h0: int = 8) -> None:
+    def __init__(self, h0: int = 16, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
 
         #
-        self.bigru: nn.GRU = nn.GRU(input_size=10, hidden_size=h0, batch_first=True, bidirectional=True)
+        self.lstm: nn.LSTM = nn.LSTM(input_size=10, hidden_size=h0, num_layers=depth, batch_first=True)
         #
-        self.lin: nn.Linear = nn.Linear(in_features=2 * h0, out_features=1)
+        self.lin: nn.Linear = nn.Linear(in_features=h0, out_features=1)
 
 
     #
@@ -50,7 +51,7 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x, _ = self.bigru(x)
+        x, _ = self.lstm(x)
         x = x[:, -1, :]
         x = self.lin(x)
 

@@ -1,5 +1,5 @@
 """
-Model Name: GRU (Gated Recurrent Unit)
+Model Name: Bidirectional GRU
 
 Model Input: (B, 30, 10)  # Batch, dim feature 1, dim feature 2
 Model Output: (B, 1)  # Batch, Prediction Value
@@ -11,9 +11,9 @@ Data variables:
     - B: Batch size
 
 Architecture:
-    - GRU (B, 30, 10) -> (B, 30, h0)
-    - Take last timestep (B, 30, h0) -> (B, h0)
-    - Linear (B, h0) -> (B, 1)
+    - BiGRU (B, 30, 10) -> (B, 30, 2*h0)
+    - Take last timestep (B, 30, 2*h0) -> (B, 2*h0)
+    - Linear (B, 2*h0) -> (B, 1)
 """
 
 #
@@ -31,15 +31,21 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h0: int = 16) -> None:
+    def __init__(self, h0: int = 8, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
 
         #
-        self.gru: nn.GRU = nn.GRU(input_size=10, hidden_size=h0, batch_first=True)
+        self.bigru: nn.GRU = nn.GRU(
+            input_size=10,
+            hidden_size=h0,
+            num_layers=depth,
+            batch_first=True,
+            bidirectional=True
+        )
         #
-        self.lin: nn.Linear = nn.Linear(in_features=h0, out_features=1)
+        self.lin: nn.Linear = nn.Linear(in_features=2 * h0, out_features=1)
 
 
     #
@@ -50,7 +56,7 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x, _ = self.gru(x)
+        x, _ = self.bigru(x)
         x = x[:, -1, :]
         x = self.lin(x)
 

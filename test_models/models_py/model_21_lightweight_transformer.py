@@ -238,6 +238,7 @@ class TransformerBlock(nn.Module):
     """
 
     def __init__(self, d_model: int, num_heads: int, ffn_hidden: int = 4) -> None:
+
         #
         super().__init__()  # type: ignore
 
@@ -254,6 +255,7 @@ class TransformerBlock(nn.Module):
         self.norm2: LayerNorm = LayerNorm(d_model)
 
     def forward(self, x: Tensor) -> Tensor:
+
         #
         ### Self-attention with residual connection. ###
         #

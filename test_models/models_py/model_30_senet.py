@@ -9,6 +9,7 @@ Models parameters:
     - k_h: Kernel height
     - k_w: Kernel width
     - reduction_ratio: Reduction ratio for SE block
+    - depth: Number of SE blocks stacked
 
 Data variables:
     - B: Batch size
@@ -17,6 +18,7 @@ Architecture:
     - Reshape (B, 30, 10) -> (B, 1, 30, 10)
     - Conv2d (B, 1, 30, 10) -> (B, c0, 30-k_h+1, 10-k_w+1)
     - ReLU (B, c0, 30-k_h+1, 10-k_w+1) -> (B, c0, 30-k_h+1, 10-k_w+1)
+    - [SE Block] x depth times
     - Squeeze: GlobalAvgPool2d -> (B, c0, 1, 1)
     - Excitation: Linear -> ReLU -> Linear -> Sigmoid -> (B, c0, 1, 1)
     - Scale: Multiply with original features
@@ -32,6 +34,52 @@ from torch import Tensor
 
 
 #
+### Squeeze-Excitation Block Class. ###
+#
+class SEBlock(nn.Module):
+    #
+    ### Init Method. ###
+    #
+    def __init__(self, channels: int, reduction_ratio: int) -> None:
+        super().__init__()
+        self.channels: int = channels
+        self.reduction_ratio: int = reduction_ratio
+
+        self.global_pool: nn.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d(1)
+        self.fc1: nn.Linear = nn.Linear(
+            in_features=channels,
+            out_features=max(1, channels // reduction_ratio)
+        )
+        self.relu: nn.ReLU = nn.ReLU()
+        self.fc2: nn.Linear = nn.Linear(
+            in_features=max(1, channels // reduction_ratio),
+            out_features=channels
+        )
+        self.sigmoid: nn.Sigmoid = nn.Sigmoid()
+
+    #
+    ### Forward Method. ###
+    #
+    def forward(self, x: Tensor) -> Tensor:
+        #
+        ### Apply squeeze and excitation. ###
+        #
+        x_residual: Tensor = x
+
+        x_se: Tensor = self.global_pool(x)
+        x_se = x_se.squeeze(-1).squeeze(-1)
+        x_se = self.fc1(x_se)
+        x_se = self.relu(x_se)
+        x_se = self.fc2(x_se)
+        x_se = self.sigmoid(x_se)
+        x_se = x_se.unsqueeze(-1).unsqueeze(-1)
+
+        x = x_residual * x_se
+
+        return x
+
+
+#
 ### Model Class. ###
 #
 class Model(nn.Module):
@@ -39,7 +87,7 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, c0: int = 8, k_h: int = 3, k_w: int = 3, reduction_ratio: int = 4) -> None:
+    def __init__(self, c0: int = 8, k_h: int = 3, k_w: int = 3, reduction_ratio: int = 4, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
@@ -49,13 +97,10 @@ class Model(nn.Module):
         #
         self.relu: nn.ReLU = nn.ReLU()
         #
-        self.global_pool: nn.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d(1)
-        #
-        self.fc1: nn.Linear = nn.Linear(in_features=c0, out_features=c0 // reduction_ratio)
-        #
-        self.fc2: nn.Linear = nn.Linear(in_features=c0 // reduction_ratio, out_features=c0)
-        #
-        self.sigmoid: nn.Sigmoid = nn.Sigmoid()
+        self.se_blocks: nn.ModuleList = nn.ModuleList([
+            SEBlock(channels=c0, reduction_ratio=reduction_ratio)
+            for _ in range(depth)
+        ])
         #
         self.flatten: nn.Flatten = nn.Flatten()
         #
@@ -78,17 +123,9 @@ class Model(nn.Module):
         x = self.conv2d(x)
         x = self.relu(x)
         #
-        x_residual = x
-        #
-        x_se = self.global_pool(x)
-        x_se = x_se.squeeze(-1).squeeze(-1)
-        x_se = self.fc1(x_se)
-        x_se = self.relu(x_se)
-        x_se = self.fc2(x_se)
-        x_se = self.sigmoid(x_se)
-        x_se = x_se.unsqueeze(-1).unsqueeze(-1)
-        #
-        x = x_residual * x_se
+        # Apply SE blocks sequentially
+        for se_block in self.se_blocks:
+            x = se_block(x)
         #
         x = self.flatten(x)
         x = self.lin(x)

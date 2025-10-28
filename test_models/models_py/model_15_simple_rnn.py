@@ -1,19 +1,19 @@
 """
-Model Name: MLP Flatten-First
+Model Name: Deep RNN
 
 Model Input: (B, 30, 10)  # Batch, dim feature 1, dim feature 2
 Model Output: (B, 1)  # Batch, Prediction Value
 
 Models parameters:
-    - h0: First hidden dimension
+    - h0: Hidden size
+    - depth: Number of RNN layers
 
 Data variables:
     - B: Batch size
 
 Architecture:
-    - Flatten (B, 30, 10) -> (B, 300)
-    - Linear (B, 300) -> (B, h0)
-    - ReLU (B, h0) -> (B, h0)
+    - RNN (B, 30, 10) -> (B, 30, h0) with depth layers
+    - Take last timestep (B, 30, h0) -> (B, h0)
     - Linear (B, h0) -> (B, 1)
 """
 
@@ -32,19 +32,15 @@ class Model(nn.Module):
     #
     ### Init Method. ###
     #
-    def __init__(self, h0: int = 32) -> None:
+    def __init__(self, h0: int = 16, depth: int = 1) -> None:
 
         #
         super().__init__()  # type: ignore
 
         #
-        self.flatten: nn.Flatten = nn.Flatten()
+        self.rnn: nn.RNN = nn.RNN(input_size=10, hidden_size=h0, num_layers=depth, batch_first=True)
         #
-        self.lin1: nn.Linear = nn.Linear(in_features=300, out_features=h0)
-        #
-        self.relu: nn.ReLU = nn.ReLU()
-        #
-        self.lin2: nn.Linear = nn.Linear(in_features=h0, out_features=1)
+        self.lin: nn.Linear = nn.Linear(in_features=h0, out_features=1)
 
 
     #
@@ -55,10 +51,9 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x = self.flatten(x)
-        x = self.lin1(x)
-        x = self.relu(x)
-        x = self.lin2(x)
+        x, _ = self.rnn(x)
+        x = x[:, -1, :]
+        x = self.lin(x)
 
         #
         return x
