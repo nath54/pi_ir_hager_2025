@@ -82,7 +82,8 @@ class Model(nn.Module):
             conv_layer: nn.Conv2d = nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
-                kernel_size=(k_h, k_w)
+                kernel_size=(k_h, k_w),
+                padding="same"
             )
             #
             relu_layer: nn.ReLU = nn.ReLU()
@@ -99,9 +100,11 @@ class Model(nn.Module):
             #
             in_channels = out_channels
             #
-            H = (H - k_h + 1) // p
+            H = H // p
+            W = W // p
             #
-            W = (W - k_w + 1) // p
+            # H = (H - k_h + 1) // p
+            # W = (W - k_w + 1) // p
 
         #
         self.flatten: nn.Flatten = nn.Flatten()

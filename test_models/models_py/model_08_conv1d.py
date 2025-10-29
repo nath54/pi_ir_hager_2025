@@ -98,14 +98,15 @@ class Model(nn.Module):
             #
             ### Add Conv1d + ReLU + MaxPool1d block. ###
             #
-            layers.append(nn.Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=k))
+            layers.append(nn.Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=k, padding="same"))
             layers.append(nn.ReLU())
             layers.append(nn.MaxPool1d(kernel_size=p))
 
             #
             ### Update dimensions for next layer. ###
             #
-            L = (L - k + 1) // p
+            # L = (L - k + 1) // p
+            L = L // p
             in_channels = out_channels
 
             #

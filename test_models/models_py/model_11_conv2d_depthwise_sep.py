@@ -77,13 +77,15 @@ class Model(nn.Module):
                 out_channels=in_channels,
                 kernel_size=(k_h, k_w),
                 groups=in_channels,
-                padding=0
+                # padding=0,
+                padding="same",
             )
             #
             pointwise: nn.Conv2d = nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
-                kernel_size=1
+                kernel_size=1,
+                padding="same",
             )
             #
             relu: nn.ReLU = nn.ReLU()
@@ -104,9 +106,11 @@ class Model(nn.Module):
             #
             in_channels = out_channels
             #
-            current_h = (current_h - k_h + 1) // p
+            current_h = current_h // p
+            current_w = current_w // p
             #
-            current_w = (current_w - k_w + 1) // p
+            # current_h = (current_h - k_h + 1) // p
+            # current_w = (current_w - k_w + 1) // p
 
         #
         self.flatten: nn.Flatten = nn.Flatten()
@@ -128,6 +132,7 @@ class Model(nn.Module):
 
         #
         for block in self.blocks:
+            #
             x = block(x)
 
         #

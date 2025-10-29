@@ -229,6 +229,11 @@ class Model_Processing_and_Tester:
         self.model_onnx_file_size: dict[str, float] = {}
 
         #
+        ### Model family for each model name. ###
+        #
+        self.models_families: dict[str, int] = {}
+
+        #
         ### Pytorch measured peak RAM usage for each run for each model. ###
         #
         self.model_pt_ram_breakdown: dict[str, dict[str, float]] = {}
@@ -702,6 +707,7 @@ class Model_Processing_and_Tester:
 
         #
         data: dict[str, dict[str, Any] | list[Any]] = {
+            "model_families": self.models_families,
             "model_nb_parameters": self.model_nb_parameters,
             "model_onnx_filepath": self.model_onnx_filepath,
             "model_pt_inference_times_ms": self.model_pt_inference_times,

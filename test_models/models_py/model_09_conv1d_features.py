@@ -73,7 +73,8 @@ class Model(nn.Module):
                 nn.Conv1d(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    kernel_size=k0
+                    kernel_size=k0,
+                    padding="same"
                 )
             )
             #
@@ -89,8 +90,10 @@ class Model(nn.Module):
         ### Determine final feature length and channel size after convolutions. ###
         #
         feat_len: int = 10
-        for _ in range(depth):
-            feat_len = feat_len - k0 + 1
+        #
+        # for _ in range(depth):
+        #     #
+        #     feat_len = feat_len - k0 + 1
         #
         final_channels: int = in_channels  # This is c0 * (2 ** (depth - 1))
 
