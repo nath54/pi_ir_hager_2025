@@ -3,6 +3,8 @@
 #
 from typing import Any
 #
+import traceback
+#
 import torch
 from torch import Tensor
 from torch import nn
@@ -10,6 +12,8 @@ from torch import nn
 from lib_import_pt_models import import_module_from_filepath
 #
 from lib_test import Model_Processing_and_Tester
+#
+from lib_count_layers import count_low_level_matrix_operations_attached_to_low_level_layers_types
 
 
 #
@@ -384,13 +388,19 @@ class DataModelsClass:
 class MainTestAndMeasures:
 
     #
-    def __init__(self) -> None:
+    def __init__(self, force: bool = False, logs_filepath: str = "saved_models_measures.json") -> None:
 
         #
         self.data_models: DataModelsClass = DataModelsClass()
 
         #
         self.mpt: Model_Processing_and_Tester = Model_Processing_and_Tester()
+
+        #
+        self.force: bool = force
+
+        #
+        self.logs_filepath: str = logs_filepath
 
 
     #
@@ -400,10 +410,25 @@ class MainTestAndMeasures:
         model_name: str = self.data_models.models_to_test[model_idx].model_name
 
         #
+        self.mpt.model_hyper_params[model_name] = self.data_models.models_to_test[model_idx].model_kwargs
+
+        #
+        self.mpt.models_families_script[model_name] = self.data_models.models_to_test[model_idx].pytorch_file_path
+
+        #
+        if not self.force and model_name in self.mpt.models_families_script:
+            #
+            return
+
+
+        #
         print(f"\n\n==== Processing model `{model_name}` with parameters: {self.data_models.models_to_test[model_idx].model_kwargs} ====\n\n")
 
         #
         pt_model: nn.Module = self.data_models.load_model(model_idx=model_idx)
+
+        #
+        self.mpt.model_layer_counts[model_name] = count_low_level_matrix_operations_attached_to_low_level_layers_types(model=pt_model)
 
         #
         ### Test model inference before converting into ONNX. ###
@@ -414,9 +439,12 @@ class MainTestAndMeasures:
             #
             _ = pt_model(input_tensor)
         #
-        except:
+        except Exception as e:
             #
             print(f"Error with model : `{model_name}`")
+            #
+            print(e)
+            print( traceback.extract_stack() )
             #
             return
 
@@ -441,6 +469,9 @@ class MainTestAndMeasures:
     def main(self) -> None:
 
         #
+        self.mpt.load_logs(filepath=self.logs_filepath)
+
+        #
         for model_idx in range(len(self.data_models.models_to_test)):
 
             #
@@ -456,7 +487,7 @@ class MainTestAndMeasures:
             #     pass
 
         #
-        self.mpt.save_logs()
+        self.mpt.save_logs(filepath=self.logs_filepath)
 
 
 #
