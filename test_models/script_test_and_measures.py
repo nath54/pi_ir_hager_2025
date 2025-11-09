@@ -4,6 +4,7 @@
 from typing import Any
 #
 import traceback
+import argparse
 #
 import torch
 from torch import Tensor
@@ -388,7 +389,7 @@ class DataModelsClass:
 class MainTestAndMeasures:
 
     #
-    def __init__(self, force: bool = False, logs_filepath: str = "saved_models_measures.json") -> None:
+    def __init__(self, force: bool = False, logs_filepath: str = "saved_models_measures.json", skip_measures: bool = False) -> None:
 
         #
         self.data_models: DataModelsClass = DataModelsClass()
@@ -401,6 +402,9 @@ class MainTestAndMeasures:
 
         #
         self.logs_filepath: str = logs_filepath
+
+        #
+        self.skip_measures: bool = skip_measures
 
 
     #
@@ -416,10 +420,9 @@ class MainTestAndMeasures:
         self.mpt.models_families_script[model_name] = self.data_models.models_to_test[model_idx].pytorch_file_path
 
         #
-        if not self.force and model_name in self.mpt.models_families_script:
+        if not self.skip_measures and not self.force and model_name in self.mpt.models_families_script:
             #
             return
-
 
         #
         print(f"\n\n==== Processing model `{model_name}` with parameters: {self.data_models.models_to_test[model_idx].model_kwargs} ====\n\n")
@@ -428,7 +431,10 @@ class MainTestAndMeasures:
         pt_model: nn.Module = self.data_models.load_model(model_idx=model_idx)
 
         #
-        self.mpt.model_layer_counts[model_name] = count_low_level_matrix_operations_attached_to_low_level_layers_types(model=pt_model)
+        if not self.skip_measures:
+
+            #
+            self.mpt.model_layer_counts[model_name] = count_low_level_matrix_operations_attached_to_low_level_layers_types(model=pt_model)
 
         #
         ### Test model inference before converting into ONNX. ###
@@ -456,10 +462,13 @@ class MainTestAndMeasures:
         )
 
         #
-        self.mpt.measure_model(
-            model_name=model_name,
-            pt_model=pt_model
-        )
+        if not self.skip_measures:
+
+            #
+            self.mpt.measure_model(
+                model_name=model_name,
+                pt_model=pt_model
+            )
 
         #
         self.mpt.models_families[model_name] = self.data_models.models_to_test[model_idx].model_family
@@ -487,14 +496,30 @@ class MainTestAndMeasures:
             #     pass
 
         #
-        self.mpt.save_logs(filepath=self.logs_filepath)
+        if not self.skip_measures:
+            #
+            self.mpt.save_logs(filepath=self.logs_filepath)
 
 
 #
 if __name__ == "__main__":
 
     #
-    main: MainTestAndMeasures = MainTestAndMeasures()
+    ### Initialize parser ###
+    #
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    #
+    ### backbone model arguments ###
+    #
+    parser.add_argument('--skip_measures', action="store_true", default=False)
+    #
+    args: argparse.Namespace = parser.parse_args()
+
+    #
+    skip_measures: bool = args.skip_measures
+
+    #
+    main: MainTestAndMeasures = MainTestAndMeasures(skip_measures=skip_measures)
 
     #
     main.main()
