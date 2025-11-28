@@ -5,18 +5,29 @@ set -euo pipefail
 # Usage: 
 #   ./build.sh         - builds with main.c (full version with semihosting)
 #   ./build.sh minimal - builds with main_minimal_test.c (LED-only version)
+#   ./build.sh debug   - builds with main.c (full version with semihosting, debug flags)
+#   ./build.sh minimal debug - builds with main_minimal_test.c (LED-only, debug flags)
 
-if [ "${1:-}" = "minimal" ]; then
-    echo "Building MINIMAL version (main_minimal_test.c - LED-only, no semihosting)"
-    MAIN_SRC=main_minimal_test.c
-else
-    echo "Building NORMAL version (main.c - with semihosting debug)"
-    MAIN_SRC=main.c
-fi
+# Default to main.c
+MAIN_SRC="main.c"
+MAKE_FLAGS=""
+BUILD_TYPE="RELEASE (Fast, No Semihosting)"
+
+# Parse arguments
+for arg in "$@"
+do
+    if [ "$arg" == "debug" ]; then
+        MAKE_FLAGS="DEBUG=1"
+        BUILD_TYPE="DEBUG (Semihosting Enabled)"
+    fi
+done
+
+echo "Building $BUILD_TYPE"
+echo "Source: $MAIN_SRC"
 
 # Clean and build
 make clean
-make all MAIN_SRC="$MAIN_SRC"
+make MAIN_SRC=$MAIN_SRC $MAKE_FLAGS
 
 echo ""
 echo "======================================"

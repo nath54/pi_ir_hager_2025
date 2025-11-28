@@ -125,7 +125,7 @@ static void systick_setup(uint32_t ahb_hz) {
 }
 
 static void error_blink(uint32_t ms, const char* error_msg) {
-	debug_printf("ERROR: %s\\n", error_msg);
+	debug_printf("ERROR: %s\n", error_msg);
 	for (;;) {
 		gpio_set(LED3_PORT, LED3_PIN);
 		delay_ms(ms);
@@ -141,6 +141,10 @@ int main(void) {
 	// STEP 1: Disable MPU (for compatibility)
 	mpu_config();
 	
+	#ifdef DEBUG_SEMIHOSTING
+	initialise_monitor_handles();
+	#endif
+	
 	// NOTE: Cache enable is SKIPPED - it causes crashes with libopencm3
 	
 	// STEP 2: Configure system clock (HSE)
@@ -151,84 +155,57 @@ int main(void) {
 	systick_setup(8000000);  // 8MHz HSE clock
 
 	// ========================
-	// SYSTEM STATUS REPORT
-	// ========================
-	debug_printf("\\n\\n");
-	debug_printf("====================================================\\n");
-	debug_printf("  STM32H723ZG AI Inference - OPTIMIZED VERSION      \\n");
-	debug_printf("====================================================\\n");
-	debug_printf("MPU:              Disabled (for compatibility)\\n");
-	debug_printf("I-Cache:          DISABLED (libopencm3 compat)\\n");
-	debug_printf("D-Cache:          DISABLED (libopencm3 compat)\\n");
-	debug_printf("System Clock:     8 MHz (HSE direct)\\n");
-	debug_printf("Activations:      32-byte aligned\\n");
-	debug_printf("====================================================\\n\\n");
-
-	// ========================
 	// AI NETWORK INITIALIZATION
 	// ========================
-	debug_printf("Initializing AI Network...\\n");
-	debug_printf("  Model: %s\\n", AI_NETWORK_MODEL_NAME);
-	debug_printf("  Input:  %d elements (float[%dx%d])\\n", 
+	debug_printf("Initializing AI Network...\n");
+	debug_printf("  Model: %s\n", AI_NETWORK_MODEL_NAME);
+	debug_printf("  Input:  %d elements (float[%dx%d])\n", 
 	             AI_NETWORK_IN_1_SIZE, 
 	             AI_NETWORK_IN_1_HEIGHT, 
 	             AI_NETWORK_IN_1_CHANNEL);
-	debug_printf("  Output: %d elements\\n", AI_NETWORK_OUT_1_SIZE);
-	debug_printf("  Activations: %d bytes (32-byte aligned)\\n", 
+	debug_printf("  Output: %d elements\n", AI_NETWORK_OUT_1_SIZE);
+	debug_printf("  Activations: %d bytes (32-byte aligned)\n", 
 	             AI_NETWORK_DATA_ACTIVATION_1_SIZE);
-	debug_printf("  Activations address: %p (%s)\\n", 
+	debug_printf("  Activations address: %p (%s)\n", 
 	             (void*)activations,
 	             ((uintptr_t)activations % 32) == 0 ? "ALIGNED" : "NOT ALIGNED!");
 	
 	ai_handle activations_table[] = { activations };
 	ai_handle weights_table[] = { ai_network_data_weights_get() };
 
-	debug_printf("\\nCalling ai_network_create_and_init()...\\n");
+	debug_printf("\nCalling ai_network_create_and_init()...\n");
 	ai_error err = ai_network_create_and_init(&network, activations_table, weights_table);
 	
 	if (err.type != AI_ERROR_NONE) {
-		debug_printf("\\n*** NETWORK INITIALIZATION FAILED ***\\n");
-		debug_printf("Error type: %d\\n", err.type);
-		debug_printf("Error code: %d\\n", err.code);
+		debug_printf("\n*** NETWORK INITIALIZATION FAILED ***\n");
+		debug_printf("Error type: %d\n", err.type);
+		debug_printf("Error code: %d\n", err.code);
 		error_blink(100, "AI network initialization failed");
 	}
 	
-	debug_printf("Network initialized successfully!\\n");
-	debug_printf("Network handle: %p\\n\\n", (void*)network);
+	debug_printf("Network initialized successfully!\n");
+	debug_printf("Network handle: %p\n\n", (void*)network);
 
 	// ========================
 	// MAIN INFERENCE LOOP
 	// ========================
-	uint8_t counter = 0;
-	debug_printf("====================================================\\n");
-	debug_printf("Starting inference loop (3 iterations)...\\n");
-	debug_printf("====================================================\\n\\n");
-	
+
+	int counter = 0;
+
 	for (;;) {
-		debug_printf("--- Iteration %d (t=%lu ms) ---\\n", counter, system_millis);
+		debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
 		
 		// Clear all LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
 		gpio_clear(LED2_PORT, LED2_PIN);
 		gpio_clear(LED3_PORT, LED3_PIN);
 
-		// Red LED ON: computation starting
-		gpio_set(LED3_PORT, LED3_PIN);
+		// Orange LED ON: input preparation
+		gpio_set(LED2_PORT, LED2_PIN);
 
-		// Generate input data
-		if (counter == 0) {
-			// First iteration: use zeros for reproducibility
-			for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-				input_data[i] = 0.0f;
-			}
-			debug_printf("Input: all zeros (test pattern)\\n");
-		} else {
-			// Subsequent iterations: pseudo-random data
-			for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-				input_data[i] = (ai_float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f;
-			}
-			debug_printf("Input: pseudo-random (first 5: %.2f %.2f %.2f %.2f %.2f)\\n",
-			            (double)input_data[0], (double)input_data[1], (double)input_data[2], (double)input_data[3], (double)input_data[4]);
+		// Generate  pseudo-random data
+		for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
+			input_data[i] = (ai_float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f;
 		}
 
 		// Prepare input buffer
@@ -256,18 +233,27 @@ int main(void) {
 		};
 
 		// Run inference
-		debug_printf("Running inference...");
+		debug_printf("Running inference...\n");
+
+		// Clear all LEDs
+		gpio_clear(LED1_PORT, LED1_PIN);
+		gpio_clear(LED2_PORT, LED2_PIN);
+		gpio_clear(LED3_PORT, LED3_PIN);
+
+		// Red LED ON: inference
+		gpio_set(LED3_PORT, LED3_PIN);
+
 		uint32_t start_time = system_millis;
 		ai_i32 batch = ai_network_run(network, ai_input, ai_output);
 		uint32_t end_time = system_millis;
 		uint32_t inference_time = end_time - start_time;
 		
 		if (batch != 1) {
-			debug_printf(" FAILED!\\n");
-			debug_printf("  Expected batch=1, got %ld\\n", (long)batch);
+			debug_printf(" FAILED!\n");
+			debug_printf("  Expected batch=1, got %ld\n", (long)batch);
 			
 			ai_error err = ai_network_get_error(network);
-			debug_printf("  Error type: %d, code: %d\\n", err.type, err.code);
+			debug_printf("  Error type: %d, code: %d\n", err.type, err.code);
 			
 			// Blink red LED rapidly to indicate error
 			for (int i = 0; i < 6; i++) {
@@ -275,39 +261,51 @@ int main(void) {
 				delay_ms(50);
 			}
 		} else {
-			debug_printf(" SUCCESS! (%lu ms)\\n", inference_time);
+			debug_printf(" SUCCESS! (%lu ms)\n", inference_time);
 			
 			// Get output value
 			ai_float result = output_data[0];
-			debug_printf("  Output: %.4f\\n", (double)result);
+			debug_printf("  Output: %.4f\n", (double)result);
 			
 			// Calculate throughput
 			if (inference_time > 0) {
 				uint32_t inferences_per_sec = 1000 / inference_time;
-				debug_printf("  Performance: %lu inferences/sec\\n", inferences_per_sec);
+				debug_printf("  Performance: %lu inferences/sec\n", inferences_per_sec);
 			}
 			
-			// Green LED ON: success!
+			// Clear all LEDs
+			gpio_clear(LED1_PORT, LED1_PIN);
+			gpio_clear(LED2_PORT, LED2_PIN);
 			gpio_clear(LED3_PORT, LED3_PIN);
+
+			// Green LED ON: success!
 			gpio_set(LED1_PORT, LED1_PIN);
+
 		}
 
-		debug_printf("\\n");
-		delay_ms(1000);
+		debug_printf("\n");
+		// Wait 200ms
+		delay_ms(200);
 
 		counter++;
-		
-		// Stop after 3 successful iterations
-		if (counter >= 3) {
-			debug_printf("====================================================\\n");
-			debug_printf("✓ All 3 test iterations completed successfully!\\n");
-			debug_printf("====================================================\\n");
-			debug_printf("\\nEntering success mode - green LED blinking slowly\\n");
-			
-			for (;;) {
-				gpio_toggle(LED1_PORT, LED1_PIN);
-				delay_ms(500);
-			}
+		if(system_millis > 10000 || counter > 10000) {
+			// Reset system_millis and counter to avoid overflow
+			system_millis = 0;
+			counter = 0;
+			// Reset waiting time with all the leds on
+			gpio_set(LED1_PORT, LED1_PIN);
+			gpio_set(LED2_PORT, LED2_PIN);
+			gpio_set(LED3_PORT, LED3_PIN);
+			// Wait 2000ms
+			delay_ms(2000);
 		}
+
+		// Clear all LEDs
+		gpio_clear(LED1_PORT, LED1_PIN);
+		gpio_clear(LED2_PORT, LED2_PIN);
+		gpio_clear(LED3_PORT, LED3_PIN);
+
+		// Wait 200ms
+		delay_ms(400);
 	}
 }

@@ -16,17 +16,27 @@ CFLAGS = -Os -g -Wall -Wextra -std=c11 \
 	-I$(LIBOPENCM3_DIR)/include -IInc -DSTM32H7
 
 
-# Arch/ABI flags must be present at link time too to match libopencm3 build
+# Arch/ABI flags must be present at link time too to match libopencm3
 LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-Wl,--gc-sections -nostartfiles \
 	-L$(LIBOPENCM3_DIR)/lib -lopencm3_stm32h7 \
 	-LLib -l:NetworkRuntime1020_CM7_GCC.a \
-	-Tstm32h723xg.ld \
-	--specs=rdimon.specs \
-	-Wl,--start-group -lc -lgcc -lrdimon -Wl,--end-group
+	-Tstm32h723xg.ld
+
+# Debug / Semihosting configuration
+# Usage: make DEBUG=1
+ifdef DEBUG
+    CFLAGS += -DDEBUG_SEMIHOSTING -g
+    # Use rdimon.specs for semihosting
+    LDFLAGS += --specs=rdimon.specs -Wl,--start-group -lc -lgcc -lrdimon -Wl,--end-group
+else
+    # Default: Release mode (no semihosting, smaller binary)
+    # Use nosys.specs for bare metal without semihosting
+    LDFLAGS += --specs=nosys.specs -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+endif
 
 # Source files - main.c gets replaced by MAIN_SRC
-SRCS = $(MAIN_SRC) network.c network_data.c network_data_params.c debug_log.c
+SRCS = $(MAIN_SRC) network.c network_data.c network_data_params.c
 OBJS = $(addprefix $(BUILD_DIR)/, $(notdir $(SRCS:.c=.o)))
 
 .PHONY: all clean flash bin hex
