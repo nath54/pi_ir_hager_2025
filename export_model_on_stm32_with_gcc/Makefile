@@ -2,6 +2,11 @@ PROJECT = blink
 BUILD_DIR = build
 LIBOPENCM3_DIR = libopencm3
 
+# Allow selection of main source file
+# Usage: make MAIN_SRC=main_minimal_test.c
+# Default: main.c
+MAIN_SRC ?= main.c
+
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
 
@@ -20,8 +25,9 @@ LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	--specs=rdimon.specs \
 	-Wl,--start-group -lc -lgcc -lrdimon -Wl,--end-group
 
-SRCS = main.c network.c network_data.c network_data_params.c debug_log.c
-OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
+# Source files - main.c gets replaced by MAIN_SRC
+SRCS = $(MAIN_SRC) network.c network_data.c network_data_params.c debug_log.c
+OBJS = $(addprefix $(BUILD_DIR)/, $(notdir $(SRCS:.c=.o)))
 
 .PHONY: all clean flash bin hex
 
@@ -30,7 +36,9 @@ all: $(BUILD_DIR)/$(PROJECT).elf $(BUILD_DIR)/$(PROJECT).bin $(BUILD_DIR)/$(PROJ
 $(BUILD_DIR):
 	mkdir -p $@
 
+# Build rule for all .c files (including main.c and main_minimal_test.c)
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@echo "Compiling $<..."
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/$(PROJECT).elf: $(OBJS)

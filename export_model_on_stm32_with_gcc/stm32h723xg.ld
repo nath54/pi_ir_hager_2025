@@ -3,6 +3,7 @@
  * Adjust sizes if your exact device differs.
  */
 
+_stack_size = 0x4000;  /* 16KB stack */
 MEMORY
 {
 	rom (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K
