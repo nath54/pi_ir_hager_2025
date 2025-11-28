@@ -26,4 +26,4 @@ pyvenv.cfg
 
 **/st_ai_*
 
-libopencm3
+stm32_example_export_opensource/libopencm3

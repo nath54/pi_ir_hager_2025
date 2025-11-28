@@ -10,6 +10,8 @@ import torch
 from torch import Tensor
 from torch import nn
 #
+from thop import profile  # type: ignore
+#
 from lib_import_pt_models import import_module_from_filepath
 #
 from lib_test import Model_Processing_and_Tester
@@ -431,15 +433,19 @@ class MainTestAndMeasures:
         pt_model: nn.Module = self.data_models.load_model(model_idx=model_idx)
 
         #
+        input_tensor: Tensor = torch.randn(self.mpt.input_shape)
+
+        #
         if not self.skip_measures:
 
             #
             self.mpt.model_layer_counts[model_name] = count_low_level_matrix_operations_attached_to_low_level_layers_types(model=pt_model)
 
+            #
+            self.mpt.model_mac_score[model_name] = profile(pt_model, inputs=(input_tensor, ), verbose=False)[0]
+
         #
         ### Test model inference before converting into ONNX. ###
-        #
-        input_tensor: Tensor = torch.randn(self.mpt.input_shape)
         #
         try:
             #

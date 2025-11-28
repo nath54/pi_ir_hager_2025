@@ -230,6 +230,11 @@ class Model_Processing_and_Tester:
         self.model_layer_counts: dict[str, dict[str, tuple[int, int]]] = {}
 
         #
+        ### MAC score. ###
+        #
+        self.model_mac_score: dict[str, int] = {}
+
+        #
         ### Onnx file path for each processed model. ###
         #
         self.model_onnx_filepath: dict[str, str] = {}
@@ -751,6 +756,7 @@ class Model_Processing_and_Tester:
             self.model_max_distances = data["model_max_distances"]
             self.model_mean_distances = data["model_mean_distances"]
             self.model_layer_counts = data["model_layer_counts"]
+            self.model_mac_score = data["model_mac_score"]
 
         #
         except Exception as e:
@@ -775,6 +781,7 @@ class Model_Processing_and_Tester:
             self.model_max_distances.clear()
             self.model_mean_distances.clear()
             self.model_layer_counts.clear()
+            self.model_mac_score.clear()
 
 
     #
@@ -797,7 +804,8 @@ class Model_Processing_and_Tester:
             "model_distances": self.model_distances,
             "model_max_distances": self.model_max_distances,
             "model_mean_distances": self.model_mean_distances,
-            "model_layer_counts": self.model_layer_counts
+            "model_layer_counts": self.model_layer_counts,
+            "model_mac_score": self.model_mac_score,
         }
 
         #
@@ -834,7 +842,7 @@ class Model_Processing_and_Tester:
         csv_table: dict[str, dict[int, str]] = {}
 
         #
-        cols_base: list[str] = ["model_name", "model_script", "nb_params", "onnx_inference_time", "onnx_flash_size", "onnx_ram"]
+        cols_base: list[str] = ["model_name", "model_script", "nb_params", "onnx_inference_time", "onnx_flash_size", "onnx_ram", "model_mac_score"]
         cols_layers: list[str] = []
         cols_params: list[str] = []
 
@@ -902,6 +910,15 @@ class Model_Processing_and_Tester:
                 csv_table["onnx_ram"] = {}
             #
             csv_table["onnx_ram"][idx_model] = str(self.model_onnx_ram_breakdown[model_name]["inference_total_kb"])
+
+            #
+            ### "model_mac_score" Attribute
+            #
+            if "model_mac_score" not in csv_table:
+                #
+                csv_table["model_mac_score"] = {}
+            #
+            csv_table["model_mac_score"][idx_model] = str(self.model_mac_score[model_name])
 
             #
             ### Layers Counts. ###
