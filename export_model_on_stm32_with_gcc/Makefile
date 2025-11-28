@@ -8,7 +8,7 @@ OBJCOPY = arm-none-eabi-objcopy
 CFLAGS = -Os -g -Wall -Wextra -std=c11 \
 	-mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-ffunction-sections -fdata-sections \
-	-I$(LIBOPENCM3_DIR)/include -DSTM32H7
+	-I$(LIBOPENCM3_DIR)/include -IInc -DSTM32H7
 
 
 # Arch/ABI flags must be present at link time too to match libopencm3 build
@@ -18,7 +18,7 @@ LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-T/home/nathan/stm32/stm32h723xg.ld \
 	-Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
-SRCS = main.c
+SRCS = main.c network.c network_data.c network_data_params.c
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 .PHONY: all clean flash bin hex
