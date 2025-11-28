@@ -3,8 +3,8 @@ set -euo pipefail
 
 cd /home/nathan/stm32
 
-BIN="/home/nathan/stm32/build/blink.bin"
-ELF="/home/nathan/stm32/build/blink.elf"
+BIN="build/blink.bin"
+ELF="build/blink.elf"
 if [[ ! -f "$BIN" || ! -f "$ELF" ]]; then
 	echo "Build outputs not found: $BIN or $ELF"
 	echo "Run ./build.sh first."

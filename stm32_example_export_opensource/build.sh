@@ -4,6 +4,6 @@ set -euo pipefail
 cd /home/nathan/stm32
 make clean && make all
 
-echo "Build complete: /home/nathan/stm32/build/blink.elf"
+echo "Build complete: build/blink.elf"
 
 

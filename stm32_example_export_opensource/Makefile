@@ -1,6 +1,6 @@
 PROJECT = blink
 BUILD_DIR = build
-LIBOPENCM3_DIR = /home/nathan/stm32/libopencm3
+LIBOPENCM3_DIR = libopencm3
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
@@ -15,7 +15,7 @@ CFLAGS = -Os -g -Wall -Wextra -std=c11 \
 LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-Wl,--gc-sections -nostartfiles \
 	-L$(LIBOPENCM3_DIR)/lib -lopencm3_stm32h7 \
-	-T/home/nathan/stm32/stm32h723xg.ld \
+	-Tstm32h723xg.ld \
 	-Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
 SRCS = blink.c

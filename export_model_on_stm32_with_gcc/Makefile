@@ -1,6 +1,6 @@
 PROJECT = blink
 BUILD_DIR = build
-LIBOPENCM3_DIR = /home/nathan/stm32/libopencm3
+LIBOPENCM3_DIR = libopencm3
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
@@ -16,10 +16,11 @@ LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-Wl,--gc-sections -nostartfiles \
 	-L$(LIBOPENCM3_DIR)/lib -lopencm3_stm32h7 \
 	-LLib -l:NetworkRuntime1020_CM7_GCC.a \
-	-T/home/nathan/stm32/stm32h723xg.ld \
-	-Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+	-Tstm32h723xg.ld \
+	--specs=rdimon.specs \
+	-Wl,--start-group -lc -lgcc -lrdimon -Wl,--end-group
 
-SRCS = main.c network.c network_data.c network_data_params.c
+SRCS = main.c network.c network_data.c network_data_params.c debug_log.c
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 .PHONY: all clean flash bin hex

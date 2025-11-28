@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start OpenOCD, reset and run the target, then exit (assumes already flashed).
-# Adjust interface/target cfgs if needed.
+# Start OpenOCD with semihosting enabled
+# This will show debug printf output in the terminal
+# Press Ctrl+C to stop
 
 openocd \
 	-f interface/stlink.cfg \
 	-f target/stm32h7x.cfg \
-	-c "init; reset run; exit"
+	-c "init" \
+	-c "arm semihosting enable" \
+	-c "reset run"
 
 

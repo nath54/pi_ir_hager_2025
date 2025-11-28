@@ -4,9 +4,11 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/systick.h>
+#include <stdio.h>
 
 #include "network.h"
 #include "network_data.h"
+#include "debug_log.h"
 
 // NOTE: Many Nucleo-144 boards map LD1/LD2/LD3 to PB0, PB7, PB14 respectively.
 // If your board uses a different mapping, update the port/pin defines below.
@@ -68,31 +70,47 @@ static void systick_setup(uint32_t ahb_hz) {
 	systick_counter_enable();
 }
 
+static void error_blink(uint32_t ms, const char* error_msg) {
+	debug_printf("ERROR: %s\n", error_msg);
+	for (;;) {
+		gpio_set(LED3_PORT, LED3_PIN);
+		delay_ms(ms);
+		gpio_clear(LED3_PORT, LED3_PIN);
+		delay_ms(ms);
+	}
+}
+
 int main(void) {
 
 	clock_setup();
 	gpio_setup();
 	systick_setup(0);
 
+	debug_printf("\n\n=== STM32 AI Network Debug Log ===\n");
+	debug_printf("System initialized\n");
+
 	// Initialize the neural network using the helper function
 	// Prepare activation and weight arrays
+	debug_printf("Preparing network buffers...\n");
 	ai_handle activations_table[] = { activations };
 	ai_handle weights_table[] = { ai_network_data_weights_get() };
 
 	// Create and initialize the network in one call
+	debug_printf("Creating and initializing AI network...\n");
 	ai_error err = ai_network_create_and_init(&network, activations_table, weights_table);
 	if (err.type != AI_ERROR_NONE) {
 		// Error: blink red LED to indicate initialization failure
-		for (;;) {
-			gpio_toggle(LED3_PORT, LED3_PIN);
-			delay_ms(200);
-		}
+		debug_printf("Network init failed! Error type: %d, code: %d\n", err.type, err.code);
+		error_blink(100, "AI network initialization failed");
 	}
+	debug_printf("Network initialized successfully!\n");
 
 	uint8_t counter = 0;
 
+	debug_printf("Entering main loop...\n");
     //
 	for (;;) {
+		debug_printf("\n--- Iteration %d (time=%lu ms) ---\n", counter, system_millis);
 		
         // FIRST STEP: CLEAR ALL LEDS
 		gpio_clear(LED1_PORT, LED1_PIN);
@@ -101,8 +119,10 @@ int main(void) {
 
         // ON ALLUME LA LED ROUGE POUR DIRE QU'ON COMMENCE LE CALCUL
         gpio_set(LED3_PORT, LED3_PIN);
+        debug_printf("Red LED ON - starting computation\n");
 
         // Generate a pseudo-random input vector (30x10 = 300 int8 values)
+        debug_printf("Generating input data...\n");
         for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
             // Simple PRNG using system time and counter
             input_data[i] = (ai_i8)((system_millis * 13 + counter * 7 + i * 3) % 256 - 128);
@@ -133,10 +153,13 @@ int main(void) {
         };
 
         // Run the neural network inference
+        debug_printf("Running inference...\n");
         ai_i32 batch = ai_network_run(network, ai_input, ai_output);
+        debug_printf("Inference complete. Batch result: %ld\n", (long)batch);
         
         if (batch != 1) {
             // Inference failed - blink red LED twice rapidly
+            debug_printf("WARNING: Inference failed!\n");
             for (int i = 0; i < 4; i++) {
                 gpio_toggle(LED3_PORT, LED3_PIN);
                 delay_ms(50);
@@ -144,16 +167,18 @@ int main(void) {
         }
 
         // Get the output value (available in output_data[0])
-        // ai_i8 result = output_data[0];
-        // TODO: Use result for GPIO output or other purposes in the future
+        ai_i8 result = output_data[0];
+        debug_printf("Output value: %d\n", result);
 
         // ON ALLUME LA LED VERTE POUR DIRE QU'ON A FINI LE CALCUL
         gpio_clear(LED3_PORT, LED3_PIN);
         gpio_set(LED1_PORT, LED1_PIN);
+        debug_printf("Green LED ON - computation finished\n");
 
         // ON ATTENDS UN PEU POUR OBSERVER LA FIN DU CALCUL
 		delay_ms(100);
 
+        counter++;
         //
 		// counter = (uint8_t)((counter + 1) & 0x07);
 	}
