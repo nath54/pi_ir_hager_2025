@@ -15,6 +15,7 @@ CFLAGS = -Os -g -Wall -Wextra -std=c11 \
 LDFLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
 	-Wl,--gc-sections -nostartfiles \
 	-L$(LIBOPENCM3_DIR)/lib -lopencm3_stm32h7 \
+	-LLib -l:NetworkRuntime1020_CM7_GCC.a \
 	-T/home/nathan/stm32/stm32h723xg.ld \
 	-Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 

@@ -74,37 +74,18 @@ int main(void) {
 	gpio_setup();
 	systick_setup(0);
 
-	// Initialize the neural network model
-	ai_network_params params = {
-		.params = AI_HANDLE_NULL,
-		.activations = AI_HANDLE_NULL
-	};
+	// Initialize the neural network using the helper function
+	// Prepare activation and weight arrays
+	ai_handle activations_table[] = { activations };
+	ai_handle weights_table[] = { ai_network_data_weights_get() };
 
-	// Get the default params (includes weights)
-	if (!ai_network_data_params_get(&params)) {
-		// Error: blink red LED rapidly
-		for (;;) {
-			gpio_toggle(LED3_PORT, LED3_PIN);
-			delay_ms(100);
-		}
-	}
-
-	// Create the network
-	ai_error err = ai_network_create(&network, AI_NETWORK_DATA_CONFIG);
+	// Create and initialize the network in one call
+	ai_error err = ai_network_create_and_init(&network, activations_table, weights_table);
 	if (err.type != AI_ERROR_NONE) {
-		// Error: blink red LED
+		// Error: blink red LED to indicate initialization failure
 		for (;;) {
 			gpio_toggle(LED3_PORT, LED3_PIN);
 			delay_ms(200);
-		}
-	}
-
-	// Initialize the network with activations buffer
-	if (!ai_network_init(network, &params)) {
-		// Error: blink red LED slowly
-		for (;;) {
-			gpio_toggle(LED3_PORT, LED3_PIN);
-			delay_ms(500);
 		}
 	}
 
