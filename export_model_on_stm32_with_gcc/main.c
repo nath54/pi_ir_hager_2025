@@ -36,9 +36,22 @@ static ai_handle network = AI_HANDLE_NULL;
 __attribute__((aligned(32)))
 static ai_u8 activations[AI_NETWORK_DATA_ACTIVATION_1_SIZE];
 
-// FIX: Network expects FLOAT input/output, not int8
-static ai_float input_data[AI_NETWORK_IN_1_SIZE];
-static ai_float output_data[AI_NETWORK_OUT_1_SIZE];
+// Define model types based on quantization
+#ifdef QUANTIZED_INT8
+    typedef ai_i8 model_input_type;
+    typedef ai_i8 model_output_type;
+    #define MODEL_FMT_SPEC "%d"
+    #define MODEL_INPUT_GEN(i) (ai_i8)((i) % 255 - 128)
+#else
+    typedef ai_float model_input_type;
+    typedef ai_float model_output_type;
+    #define MODEL_FMT_SPEC "%f"
+    #define MODEL_INPUT_GEN(i) (ai_float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f
+#endif
+
+// Buffers
+static model_input_type input_data[AI_NETWORK_IN_1_SIZE];
+static model_output_type output_data[AI_NETWORK_OUT_1_SIZE];
 
 void sys_tick_handler(void) {
 	system_millis++;
@@ -138,6 +151,14 @@ int main(void) {
 
 	// ... (Initialization sequence remains same) ...
 	
+	// STEP 0: Enable FPU (Cortex-M7)
+	// CPACR is located at address 0xE000ED88
+	// Bits 20-23 control access to CP10 and CP11
+	// 0b1111 << 20 = 0xF00000
+	SCB_CPACR |= (0xF << 20);
+	__asm__ volatile ("dsb");
+	__asm__ volatile ("isb");
+
 	// STEP 1: Disable MPU (for compatibility)
 	mpu_config();
 	
@@ -171,7 +192,19 @@ int main(void) {
 	             ((uintptr_t)activations % 32) == 0 ? "ALIGNED" : "NOT ALIGNED!");
 	
 	ai_handle activations_table[] = { activations };
-	ai_handle weights_table[] = { ai_network_data_weights_get() };
+	
+	// FIX: Handle weights table wrapper
+	ai_handle w_handle = ai_network_data_weights_get();
+	ai_handle weights_ptr = w_handle;
+	ai_handle* w_table = (ai_handle*)w_handle;
+
+	// Check for magic marker (0xA1FACADE) which indicates a table wrapper
+	if ((uint32_t)w_table[0] == 0xA1FACADE) {
+		debug_printf("DEBUG: Found magic marker in weights table, using index 1\n");
+		weights_ptr = w_table[1];
+	}
+
+	ai_handle weights_table[] = { weights_ptr };
 
 	debug_printf("\nCalling ai_network_create_and_init()...\n");
 	ai_error err = ai_network_create_and_init(&network, activations_table, weights_table);
@@ -185,6 +218,15 @@ int main(void) {
 	
 	debug_printf("Network initialized successfully!\n");
 	debug_printf("Network handle: %p\n\n", (void*)network);
+
+	// DEBUG: Check weights (using the corrected pointer)
+	float* w_f = (float*)weights_ptr;
+	debug_printf("DEBUG: First 5 weights at %p:\n", w_f);
+	for(int i=0; i<5; i++) {
+		uint32_t val = ((uint32_t*)w_f)[i];
+		debug_printf("  [%d] 0x%08lX = %f\n", i, val, w_f[i]);
+	}
+
 
 	// ========================
 	// MAIN INFERENCE LOOP
@@ -203,9 +245,9 @@ int main(void) {
 		// Orange LED ON: input preparation
 		gpio_set(LED2_PORT, LED2_PIN);
 
-		// Generate  pseudo-random data
+		// Fill input buffer with dummy data
 		for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-			input_data[i] = (ai_float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f;
+			input_data[i] = MODEL_INPUT_GEN(i);
 		}
 
 		// Prepare input buffer
@@ -234,6 +276,18 @@ int main(void) {
 
 		// Run inference
 		debug_printf("Running inference...\n");
+		
+		// DEBUG: Check input
+		debug_printf("DEBUG: First 5 inputs:\n");
+		for(int i=0; i<5; i++) {
+			uint32_t val = ((uint32_t*)input_data)[i];
+            #ifdef QUANTIZED_INT8
+			    debug_printf("  [%d] 0x%08lX = %d\n", i, val, input_data[i]);
+            #else
+			    debug_printf("  [%d] 0x%08lX = %f\n", i, val, (double)input_data[i]);
+            #endif
+		}
+
 
 		// Clear all LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
@@ -264,13 +318,18 @@ int main(void) {
 			debug_printf(" SUCCESS! (%lu ms)\n", inference_time);
 			
 			// Get output value
-			ai_float result = output_data[0];
-			debug_printf("  Output: %.4f\n", (double)result);
-			
-			// Calculate throughput
-			if (inference_time > 0) {
-				uint32_t inferences_per_sec = 1000 / inference_time;
-				debug_printf("  Performance: %lu inferences/sec\n", inferences_per_sec);
+			if (batch > 0) {
+            #ifdef QUANTIZED_INT8
+			    model_output_type result = output_data[0];
+			    debug_printf("  Output: %d\n", result);
+            #else
+			    ai_float result = output_data[0];
+			    debug_printf("  Output: %.4f\n", (double)result);
+            #endif
+			debug_printf("  Performance: %lu inferences/sec\n", 1000 / (end_time - start_time));
+			error_blink(2, "Inference success"); // 2 blinks for success
+		} else {
+				debug_printf("  Performance: %lu inferences/sec\n", inference_time > 0 ? 1000 / inference_time : 0);
 			}
 			
 			// Clear all LEDs

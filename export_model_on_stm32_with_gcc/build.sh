@@ -17,8 +17,12 @@ BUILD_TYPE="RELEASE (Fast, No Semihosting)"
 for arg in "$@"
 do
     if [ "$arg" == "debug" ]; then
-        MAKE_FLAGS="DEBUG=1"
+        MAKE_FLAGS="$MAKE_FLAGS DEBUG=1"
         BUILD_TYPE="DEBUG (Semihosting Enabled)"
+    fi
+    if [ "$arg" == "int" ]; then
+        MAKE_FLAGS="$MAKE_FLAGS INT_QUANTIZATION=1"
+        BUILD_TYPE="$BUILD_TYPE (INT8 Quantized)"
     fi
 done
 

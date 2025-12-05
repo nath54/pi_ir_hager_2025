@@ -33,6 +33,14 @@ else
     # Default: Release mode (no semihosting, smaller binary)
     # Use nosys.specs for bare metal without semihosting
     LDFLAGS += --specs=nosys.specs -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+    # Use nosys.specs for bare metal without semihosting
+    LDFLAGS += --specs=nosys.specs -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+endif
+
+# Quantization configuration
+# Usage: make INT_QUANTIZATION=1
+ifdef INT_QUANTIZATION
+    CFLAGS += -DQUANTIZED_INT8
 endif
 
 # Source files - main.c gets replaced by MAIN_SRC
