@@ -33,8 +33,7 @@ else
     # Default: Release mode (no semihosting, smaller binary)
     # Use nosys.specs for bare metal without semihosting
     LDFLAGS += --specs=nosys.specs -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
-    # Use nosys.specs for bare metal without semihosting
-    LDFLAGS += --specs=nosys.specs -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+
 endif
 
 # Quantization configuration

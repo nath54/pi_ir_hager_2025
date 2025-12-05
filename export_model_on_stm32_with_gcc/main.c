@@ -138,6 +138,7 @@ static void systick_setup(uint32_t ahb_hz) {
 }
 
 static void error_blink(uint32_t ms, const char* error_msg) {
+	(void)error_msg; // Silence unused parameter warning
 	debug_printf("ERROR: %s\n", error_msg);
 	for (;;) {
 		gpio_set(LED3_PORT, LED3_PIN);
@@ -224,6 +225,7 @@ int main(void) {
 	debug_printf("DEBUG: First 5 weights at %p:\n", w_f);
 	for(int i=0; i<5; i++) {
 		uint32_t val = ((uint32_t*)w_f)[i];
+        (void)val; // Silence unused warning if debug_printf is no-op
 		debug_printf("  [%d] 0x%08lX = %f\n", i, val, w_f[i]);
 	}
 
@@ -281,6 +283,7 @@ int main(void) {
 		debug_printf("DEBUG: First 5 inputs:\n");
 		for(int i=0; i<5; i++) {
 			uint32_t val = ((uint32_t*)input_data)[i];
+            (void)val; // Silence unused warning if debug_printf is no-op
             #ifdef QUANTIZED_INT8
 			    debug_printf("  [%d] 0x%08lX = %d\n", i, val, input_data[i]);
             #else
@@ -301,12 +304,14 @@ int main(void) {
 		ai_i32 batch = ai_network_run(network, ai_input, ai_output);
 		uint32_t end_time = system_millis;
 		uint32_t inference_time = end_time - start_time;
+        (void)inference_time; // Silence unused warning
 		
 		if (batch != 1) {
 			debug_printf(" FAILED!\n");
 			debug_printf("  Expected batch=1, got %ld\n", (long)batch);
 			
 			ai_error err = ai_network_get_error(network);
+            (void)err; // Silence unused warning
 			debug_printf("  Error type: %d, code: %d\n", err.type, err.code);
 			
 			// Blink red LED rapidly to indicate error
@@ -324,10 +329,19 @@ int main(void) {
 			    debug_printf("  Output: %d\n", result);
             #else
 			    ai_float result = output_data[0];
+                (void)result; // Silence unused warning
 			    debug_printf("  Output: %.4f\n", (double)result);
             #endif
 			debug_printf("  Performance: %lu inferences/sec\n", 1000 / (end_time - start_time));
-			error_blink(2, "Inference success"); // 2 blinks for success
+			debug_printf("  Performance: %lu inferences/sec\n", 1000 / (end_time - start_time));
+			
+			// Blink green LED 2 times for success
+			for(int i=0; i<2; i++) {
+				gpio_set(LED1_PORT, LED1_PIN);
+				delay_ms(50);
+				gpio_clear(LED1_PORT, LED1_PIN);
+				delay_ms(50);
+			}
 		} else {
 				debug_printf("  Performance: %lu inferences/sec\n", inference_time > 0 ? 1000 / inference_time : 0);
 			}
