@@ -63,31 +63,9 @@ def clean_root_files():
 def create_dummy_network_data_params():
     """Create a dummy network_data_params.c file if it's missing."""
     print("Creating dummy network_data_params.c...")
-    content = """
-/**
-  * @file    network_data_params.c
-  * @brief   Dummy file created by manage_models.py to satisfy Makefile compilation.
-  *          The actual model likely doesn't use this file or encodes params differently.
-  */
-#include "network_data_params.h"
-// No content needed for some models
-"""
-    # Look for header to see if we need to mock anything else?
-    # Usually if the file is missing, the symbols are likely in network_data.c or unused.
-    # However, 'network_data_params.h' might not exist either if params.c is missing.
-    # Let's check headers.
-
-    # If network_data_params.h doesn't exist, we might need to create a dummy header too?
-    # But usually headers are copied. Let's write the dummy file.
-
-    # UPDATE: We should check if network_data_params.h exists. If not, the include might fail.
-    # But let's assume if the model doesn't have the .c file, it might not have the .h file either.
-    # If so, we shouldn't include it.
-    # But the Makefile expects the .c file to be compiled.
-
+    # This dummy file is enough to satisfy the linker if the model doesn't use params
     with open("network_data_params.c", "w") as f:
         f.write("/** Dummy network_data_params.c */\n")
-        # Empty file is valid C object
 
 def load_model(model_name):
     """Load a specific model by copying files to root."""
@@ -132,20 +110,25 @@ def is_int8_model(model_name):
     lower_name = model_name.lower()
     return "int8" in lower_name or "quant" in lower_name
 
-def build_model():
+def build_model(fast_mode=False):
     """Build the currently loaded model."""
     model_name = get_current_model()
     if not model_name:
         print("Error: No model loaded. Please load a model first.")
         return
 
-    print(f"Building model: {model_name}")
+    print(f"Building model: {model_name} (Fast Mode: {fast_mode})")
 
     # Clean build
-    subprocess.run(["make", "clean"], check=True)
+    subprocess.run(["make", "clean"], check=False)
 
     # Build command
     cmd = ["make"]
+
+    if fast_mode:
+        print("Fast Mode enabled: Adding FAST_MODE=1")
+        cmd.append("FAST_MODE=1")
+
     if is_int8_model(model_name):
         print("Detected INT8 model. Enabling INT_QUANTIZATION flag.")
         cmd.append("INT_QUANTIZATION=1")
@@ -182,17 +165,13 @@ def flash_model():
     except Exception as e:
         print(f"An error occurred during flashing: {e}")
 
-def get_basename(path):
-    return os.path.basename(path) # Helper for the above string formatting if needed, but os.path is imported
-
-
-def debug_model():
+def debug_model(fast_mode=False):
     """Build, Flash and Debug (not fully automated, just runs build/flash for now)."""
     # This matches user request "build and flash and run in debug mode"
     # Usually this implies running openocd or st-util, but standard practice via script
     # might just be flashing.
     # We will implement Build + Flash.
-    build_model()
+    build_model(fast_mode=fast_mode)
     flash_model()
     print("For debug output, please connect via UART or use: screen /dev/ttyACM0 115200")
 
@@ -207,9 +186,10 @@ def main():
         print("2. Build Current Model")
         print("3. Flash Current Model")
         print("4. Build, Flash & Run (Debug)")
-        print("5. Quit")
+        print("5. Build, Flash & Run (FAST MODE - No Sleeps)")
+        print("6. Quit")
 
-        choice = input("Enter choice (1-5): ").strip()
+        choice = input("Enter choice (1-6): ").strip()
 
         if choice == '1':
             print("\nAvailable Models:")
@@ -232,9 +212,12 @@ def main():
             flash_model()
 
         elif choice == '4':
-            debug_model()
+            debug_model(fast_mode=False)
 
         elif choice == '5':
+            debug_model(fast_mode=True)
+
+        elif choice == '6':
             print("Exiting.")
             break
         else:

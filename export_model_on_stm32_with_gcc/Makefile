@@ -38,8 +38,14 @@ endif
 
 # Quantization configuration
 # Usage: make INT_QUANTIZATION=1
-ifdef INT_QUANTIZATION
+ifneq ($(INT_QUANTIZATION),)
     CFLAGS += -DQUANTIZED_INT8
+endif
+
+# Fast Mode configuration (No Sleep)
+# Usage: make FAST_MODE=1
+ifneq ($(FAST_MODE),)
+    CFLAGS += -DNO_SLEEP
 endif
 
 # Source files - main.c gets replaced by MAIN_SRC

@@ -128,7 +128,7 @@ static void debug_printf(const char *format, ...) {
         usart_send_blocking(USART3, buffer[i]);
         // Add CR before LF for terminal compatibility if needed
         if (buffer[i] == '\n') {
-             // usart_send_blocking(USART3, '\r'); 
+             // usart_send_blocking(USART3, '\r');
              // Intentionally commented out, usually terminals handle LF locally
         }
     }
@@ -157,6 +157,39 @@ static void error_handler(const char* error_msg, stai_return_code err_code) {
 }
 
 // ==============================================================================
+// SIGNAL OUTPUT SETUP (GPIO PORT E)
+// PINS: PE2-PE9 (Data D0-D7), PE10 (Valid Strobe)
+// ==============================================================================
+static void gpio_signal_setup(void) {
+    rcc_periph_clock_enable(RCC_GPIOE);
+    // PE2-PE10 as Output Push-Pull
+    gpio_mode_setup(GPIOE, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                    GPIO2 | GPIO3 | GPIO4 | GPIO5 |
+                    GPIO6 | GPIO7 | GPIO8 | GPIO9 | GPIO10);
+    // Initial state Low
+    gpio_clear(GPIOE, GPIO2 | GPIO3 | GPIO4 | GPIO5 |
+                      GPIO6 | GPIO7 | GPIO8 | GPIO9 | GPIO10);
+}
+
+static void emit_signal(uint8_t value) {
+    // 1. Set Data Pins (PE2-PE9)
+    // Clear first to be safe (masked)
+    uint16_t mask = (0xFF << 2); // 0x03FC
+    gpio_clear(GPIOE, mask);
+
+    // Set bits based on value shifted by 2 (PE2 is LSB)
+    uint16_t set_bits = ((uint16_t)value) << 2;
+    gpio_set(GPIOE, set_bits & mask);
+
+    // 2. Pulse Valid Strobe (PE10)
+    gpio_set(GPIOE, GPIO10);
+    // Short delay for signal integrity (~1us is enough usually, but we do more for visibility if needed)
+    // For fast signaling, just a few cycles.
+    for(volatile int i=0; i<100; i++) __asm__("nop");
+    gpio_clear(GPIOE, GPIO10);
+}
+
+// ==============================================================================
 // MAIN
 // ==============================================================================
 
@@ -169,20 +202,21 @@ int main(void) {
 
 	// STEP 1: Disable MPU
 	mpu_config();
-	
+
 	// STEP 2: Configure system clock (HSI Default)
 	system_clock_config();
-	
+
 	// STEP 3: Initialize peripherals
 	gpio_setup();
     usart_setup();
-	systick_setup(64000000);  // 64MHz 
+    gpio_signal_setup(); // SIGNAL OUTPUT INIT
+	systick_setup(64000000);  // 64MHz
 
     // Hello message
     debug_printf("\n\n");
     debug_printf("========================================\n");
-    debug_printf("STM32 AI Inference v3.0\n");
-    debug_printf("System Clock: ~64 MHz (HSI)\n");
+    debug_printf("STM32 AI Inference v3.0 + SIGNAL OUTPUT\n");
+    debug_printf("Signal: PE2-PE9 (Data), PE10 (Strobe)\n");
     debug_printf("UART: Enabled (115200 8N1)\n");
     debug_printf("========================================\n");
 
@@ -191,16 +225,16 @@ int main(void) {
 	// ========================
 	debug_printf("Initializing ST.AI Network...\n");
 
-    // Initialize Runtime 
+    // Initialize Runtime
     stai_return_code err = stai_runtime_init();
     if (err != STAI_SUCCESS) error_handler("Runtime Init Failed", err);
 
 	debug_printf("  Model: %s\n", STAI_NETWORK_MODEL_NAME);
-    
+
     // Initialize Network Context
     err = stai_network_init(network);
     if (err != STAI_SUCCESS) error_handler("Network Init Failed", err);
-    
+
     // Set Activations
     const stai_ptr activations_ptrs[] = { (stai_ptr)activations };
     err = stai_network_set_activations(network, activations_ptrs, 1);
@@ -233,7 +267,7 @@ int main(void) {
 
 	for (;;) {
 		// debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
-		
+
 		// Reset LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
 		gpio_clear(LED2_PORT, LED2_PIN);
@@ -249,7 +283,7 @@ int main(void) {
 
 		// Run inference
 		// debug_printf("Running inference...\n");
-		
+
 		// DEBUG: Check input (print first element only to avoid spam)
 		// debug_printf("  Input[0] = %f\n", (double)input_data[0]);
 
@@ -258,29 +292,40 @@ int main(void) {
 		gpio_set(LED3_PORT, LED3_PIN);
 
 		uint32_t start_time = system_millis;
-        
+
         // V3 API Run
 		err = stai_network_run(network, STAI_MODE_SYNC);
-        
+
 		uint32_t end_time = system_millis;
 		uint32_t inference_time = end_time - start_time;
-		
+
 		if (err != STAI_SUCCESS) {
 			debug_printf("FAILED! (Code: 0x%X)\n", err);
-			
+
 			// Blink red LED rapidly
 			for (int i = 0; i < 6; i++) {
 				gpio_toggle(LED3_PORT, LED3_PIN);
 				delay_ms(50);
 			}
 		} else {
+            uint8_t out_byte = 0;
+
+            #ifdef QUANTIZED_INT8
+                out_byte = (uint8_t)output_data[0];
+            #else
+                out_byte = (uint8_t)(output_data[0] * 100); // Scale float
+            #endif
+
+            // EMIT SIGNAL
+            emit_signal(out_byte);
+
 			// Compact output
             #ifdef QUANTIZED_INT8
-                debug_printf("INF: OK (%lu ms) | Out: %.4f | Mode: INT8\n", inference_time, (double)output_data[0]);
+                debug_printf("INF: OK (%lu ms) | Out: %d (0x%02X) | Mode: INT8\n", inference_time, (int8_t)output_data[0], out_byte);
             #else
-			    debug_printf("INF: OK (%lu ms) | Out: %.4f | Mode: FP32\n", inference_time, (double)output_data[0]);
+			    debug_printf("INF: OK (%lu ms) | Out: %.4f (0x%02X) | Mode: FP32\n", inference_time, (double)output_data[0], out_byte);
             #endif
-			
+
 			// Blink green LED for success
             gpio_clear(LED3_PORT, LED3_PIN);
 			for(int i=0; i<2; i++) {
@@ -292,7 +337,10 @@ int main(void) {
             gpio_set(LED1_PORT, LED1_PIN); // Keep green on
 		}
 
+
+		#ifndef NO_SLEEP
 		delay_ms(200);
+		#endif
 
 		counter++;
 		// Reset logic
@@ -303,13 +351,17 @@ int main(void) {
 			gpio_set(LED1_PORT, LED1_PIN);
 			gpio_set(LED2_PORT, LED2_PIN);
 			gpio_set(LED3_PORT, LED3_PIN);
+			#ifndef NO_SLEEP
 			delay_ms(2000);
+			#endif
 		}
 
 		gpio_clear(LED1_PORT, LED1_PIN);
 		gpio_clear(LED2_PORT, LED2_PIN);
 		gpio_clear(LED3_PORT, LED3_PIN);
 
+		#ifndef NO_SLEEP
 		delay_ms(400);
+		#endif
 	}
 }
