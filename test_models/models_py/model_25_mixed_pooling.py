@@ -43,9 +43,9 @@ class Model(nn.Module):
         super().__init__()  # type: ignore
 
         #
-        self.global_avg_pool: nn.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d(1)
+        # self.global_avg_pool: nn.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d(1)
         #
-        self.global_max_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
+        # self.global_max_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
         #
         self.lin1: nn.Linear = nn.Linear(in_features=20, out_features=h0)
         #
@@ -72,13 +72,15 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x_perm = x.permute(0, 2, 1)
+        # x_perm = x.permute(0, 2, 1)
         #
-        x_avg = self.global_avg_pool(x_perm)
-        x_avg = x_avg.squeeze(-1)
+        # x_avg = self.global_avg_pool(x_perm)
+        # x_avg = x_avg.squeeze(-1)
+        x_avg = x.mean(dim=1)
         #
-        x_max = self.global_max_pool(x_perm)
-        x_max = x_max.squeeze(-1)
+        # x_max = self.global_max_pool(x_perm)
+        # x_max = x_max.squeeze(-1)
+        x_max = x.max(dim=1).values
         #
         x = torch.cat([x_avg, x_max], dim=1)
         x = self.lin1(x)

@@ -536,17 +536,20 @@ class Model_Processing_and_Tester:
         model_name: str,
         pt_model: nn.Module,
         onnx_filepath: str
-    ) -> None:
+    ) -> bool:
 
         #
-        self.onnx_converter.convert_to_onnx(
+        success = self.onnx_converter.convert_to_onnx(
             pt_model=pt_model,
             input_shape=self.input_shape,
             onnx_filepath=onnx_filepath
         )
 
         #
-        self.model_onnx_filepath[model_name] = onnx_filepath
+        if success:
+             self.model_onnx_filepath[model_name] = onnx_filepath
+
+        return success
 
 
     #
@@ -987,7 +990,10 @@ class Model_Processing_and_Tester:
         for i, col_name in enumerate(csv_col_names):
 
             #
-            cols_size[col_name] = max([len(col_name)] + [len(v) for v in csv_table[col_name].values()]) + 1
+            if col_name in csv_table:
+                cols_size[col_name] = max([len(col_name)] + [len(v) for v in csv_table[col_name].values()]) + 1
+            else:
+                cols_size[col_name] = len(col_name) + 1
 
             #
             if i > 0:
@@ -1006,7 +1012,7 @@ class Model_Processing_and_Tester:
         for idx_model in range(nb_models):
 
             #
-            if idx_model not in csv_table["model_script"]:
+            if "model_script" not in csv_table or idx_model not in csv_table["model_script"]:
                 #
                 continue
 
@@ -1047,7 +1053,7 @@ class Model_Processing_and_Tester:
                     #
                     csv_text += csv_sep
                 #
-                if idx_model in csv_table[col_name]:
+                if col_name in csv_table and idx_model in csv_table[col_name]:
                     #
                     v: str = csv_table[col_name][idx_model]
                     #

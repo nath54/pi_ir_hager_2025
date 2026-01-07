@@ -419,12 +419,12 @@ class MainTestAndMeasures:
         self.mpt.model_hyper_params[model_name] = self.data_models.models_to_test[model_idx].model_kwargs
 
         #
-        self.mpt.models_families_script[model_name] = self.data_models.models_to_test[model_idx].pytorch_file_path
-
-        #
         if not self.skip_measures and not self.force and model_name in self.mpt.models_families_script:
             #
             return
+
+        #
+        self.mpt.models_families_script[model_name] = self.data_models.models_to_test[model_idx].pytorch_file_path
 
         #
         print(f"\n\n==== Processing model `{model_name}` with parameters: {self.data_models.models_to_test[model_idx].model_kwargs} ====\n\n")
@@ -461,11 +461,16 @@ class MainTestAndMeasures:
             return
 
         #
-        self.mpt.convert_to_onnx(
+        #
+        success = self.mpt.convert_to_onnx(
             model_name=model_name,
             pt_model=pt_model,
             onnx_filepath=f"models_onnx/{model_name}.onnx"
         )
+
+        if not success:
+            print(f"Skipping measurement for `{model_name}` due to export failure.")
+            return
 
         #
         if not self.skip_measures:
@@ -489,8 +494,13 @@ class MainTestAndMeasures:
         #
         for model_idx in range(len(self.data_models.models_to_test)):
 
-            #
-            self.test_one_model(model_idx=model_idx)
+            try:
+                #
+                self.test_one_model(model_idx=model_idx)
+            
+            except Exception as e:
+                print(f"FAILED: {e}")
+                # traceback.print_exc()
 
             # #
             # try:

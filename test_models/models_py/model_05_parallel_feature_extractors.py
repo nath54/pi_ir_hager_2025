@@ -43,9 +43,9 @@ class Model(nn.Module):
         super().__init__()  # type: ignore
 
         #
-        self.time_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
+        # self.time_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
         #
-        self.feature_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
+        # self.feature_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
         #
         self.lin1: nn.Linear = nn.Linear(in_features=40, out_features=h0)
         #
@@ -68,12 +68,16 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x_time = x.permute(0, 2, 1)
-        x_time = self.time_pool(x_time)
-        x_time = x_time.squeeze(-1)
+        # x_time = x.permute(0, 2, 1)
+        # x_time = self.time_pool(x_time)
+        # x_time = x_time.squeeze(-1)
+        x_time = x.max(dim=1).values
         #
-        x_feature = self.feature_pool(x)
-        x_feature = x_feature.squeeze(-1)
+        # x_feature = self.feature_pool(x)
+        # x_feature = x_feature.squeeze(-1)
+        x_feature = x.max(dim=2).values
+        #
+        x = torch.cat([x_time, x_feature], dim=1)
         #
         x = torch.cat([x_time, x_feature], dim=1)
         x = self.lin1(x)

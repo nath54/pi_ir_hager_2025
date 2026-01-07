@@ -40,7 +40,7 @@ class Model(nn.Module):
         super().__init__()  # type: ignore
 
         #
-        self.global_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
+        # self.global_pool: nn.AdaptiveMaxPool1d = nn.AdaptiveMaxPool1d(1)
         #
         self.lin1: nn.Linear = nn.Linear(in_features=10, out_features=h0)
         #
@@ -76,9 +76,10 @@ class Model(nn.Module):
         #
         ### Forward pass. ###
         #
-        x = x.permute(0, 2, 1)
-        x = self.global_pool(x)
-        x = x.squeeze(-1)
+        # x = x.permute(0, 2, 1)
+        # x = self.global_pool(x)
+        # x = x.squeeze(-1)
+        x = x.max(dim=1).values
         x = self.lin1(x)
         x = self.relu(x)
         x = self.hidden_layers(x)

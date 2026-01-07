@@ -51,50 +51,24 @@ class ONNX_Converter:
                 input_tensor: Tensor = torch.randn(input_shape)
 
                 #
-                ### Use torch.jit.script instead of trace to handle the explicit slicing better. ###
-                ### But first, we need to trace with specific settings. ###
+                ### Export directly (torch.onnx.export will handle tracing internally). ###
                 #
-                self.log("\nTracing model...")
-
+                self.log("\nExporting to ONNX...")
                 #
-                ### More permissive tracing. ###
-                #
-                traced_model = torch.jit.trace(  # type: ignore
+                torch.onnx.export(  # type: ignore
                     pt_model,
-                    input_tensor,
-                    strict=False,  # Allow some flexibility
-                    check_trace=False  # Skip trace checking for now
+                    input_tensor,  # type: ignore
+                    onnx_filepath,
+                    export_params=True,
+                    opset_version=15,
+                    do_constant_folding=True,
+                    input_names=['input'],
+                    output_names=['output'],
+                    training=torch.onnx.TrainingMode.EVAL,
+                    dynamic_axes=None,
+                    verbose=False,
+                    operator_export_type=torch.onnx.OperatorExportTypes.ONNX
                 )
-
-                #
-                self.log("✓ Model traced successfully")
-
-                #
-                ### Freeze the traced model. ###
-                #
-                traced_model = torch.jit.freeze(traced_model)  # type: ignore
-                #
-                self.log("✓ Model frozen")
-
-            #
-            ### Export with more conservative settings for STM32. ###
-            #
-            self.log("\nExporting to ONNX...")
-            #
-            torch.onnx.export(  # type: ignore
-                traced_model,
-                input_tensor,  # type: ignore
-                onnx_filepath,
-                export_params=True,
-                # opset_version=19,
-                do_constant_folding=True,
-                input_names=['input'],
-                output_names=['output'],
-                training=torch.onnx.TrainingMode.EVAL,
-                dynamic_axes=None,
-                verbose=False,
-                operator_export_type=torch.onnx.OperatorExportTypes.ONNX
-            )
 
             #
             self.log(f"✅ Model exported successfully to {onnx_filepath}")
@@ -106,7 +80,13 @@ class ONNX_Converter:
             #
             onnx_model = onnx.load(onnx_filepath)  # type: ignore
             onnx.checker.check_model(onnx_model)  # type: ignore
-            self.log("✓ ONNX model is valid")
+            #
+            ### Force the model to be self-contained (no external data). ###
+            ### This overwrites the file with a version that includes all weights. ###
+            #
+            onnx.save(onnx_model, onnx_filepath)
+            #
+            self.log("✓ ONNX model is valid and self-contained")
 
             #
             ### log model info. ###
