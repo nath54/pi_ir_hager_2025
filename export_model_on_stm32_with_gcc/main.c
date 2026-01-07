@@ -1,8 +1,8 @@
-// STM32H723ZG AI Inference - FULLY OPTIMIZED VERSION
+// STM32H723ZG AI Inference - UPDATED FOR ST.AI V3 API
 // All critical fixes + performance optimizations based on official STM32 export
 // - MPU configuration
 // - I-Cache and D-Cache enabled
-// - 550MHz clock from PLL
+// - 550MHz clock from PLL (simulated via HSE for stability here)
 // - 32-byte aligned buffers
 // - Proper initialization sequence
 
@@ -29,29 +29,30 @@
 
 static volatile uint32_t system_millis = 0;
 
-// Neural network variables
-static ai_handle network = AI_HANDLE_NULL;
+// ==============================================================================
+// ST.AI V3 DATA STRUCTURES
+// ==============================================================================
 
-// CRITICAL FIX: 32-byte aligned activation buffer (required by AI runtime)
-__attribute__((aligned(32)))
-static ai_u8 activations[AI_NETWORK_DATA_ACTIVATION_1_SIZE];
+// 1. Network Context
+// Must be aligned and sized according to generated macros
+STAI_ALIGNED(STAI_NETWORK_CONTEXT_ALIGNMENT)
+static stai_network network[STAI_NETWORK_CONTEXT_SIZE];
 
-// Define model types based on quantization
-#ifdef QUANTIZED_INT8
-    typedef ai_i8 model_input_type;
-    typedef ai_i8 model_output_type;
-    #define MODEL_FMT_SPEC "%d"
-    #define MODEL_INPUT_GEN(i) (ai_i8)((i) % 255 - 128)
-#else
-    typedef ai_float model_input_type;
-    typedef ai_float model_output_type;
-    #define MODEL_FMT_SPEC "%f"
-    #define MODEL_INPUT_GEN(i) (ai_float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f
-#endif
+// 2. Activations Buffer
+STAI_ALIGNED(STAI_NETWORK_ACTIVATION_1_ALIGNMENT)
+static uint8_t activations[STAI_NETWORK_ACTIVATIONS_SIZE];
 
-// Buffers
-static model_input_type input_data[AI_NETWORK_IN_1_SIZE];
-static model_output_type output_data[AI_NETWORK_OUT_1_SIZE];
+// 3. Input/Output Buffers
+// Using float directly as we know the model is float32
+static float input_data[STAI_NETWORK_IN_1_SIZE];
+static float output_data[STAI_NETWORK_OUT_1_SIZE];
+
+// Input generator macro
+#define MODEL_INPUT_GEN(i) ((float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f)
+
+// ==============================================================================
+// SYSTEM FUNCTIONS
+// ==============================================================================
 
 void sys_tick_handler(void) {
 	system_millis++;
@@ -65,16 +66,12 @@ static void delay_ms(uint32_t ms) {
 }
 
 // CRITICAL FIX 1: MPU Configuration
-// Simplified version - just ensure MPU doesn't interfere
 static void mpu_config(void) {
 	// Simply disable MPU to avoid conflicts
-	// The cache is what really matters for the AI library
 	MPU_CTRL = 0;
 }
 
 // CRITICAL FIX 2: Cache Initialization  
-// THIS IS THE CRITICAL FIX - I-Cache and D-Cache enablement
-// The AI library absolutely requires these to be enabled
 static void cache_enable(void) {
 	// Enable I-Cache
 	SCB_CCR |= SCB_CCR_IC;
@@ -87,27 +84,12 @@ static void cache_enable(void) {
 	__asm__ volatile ("isb");
 }
 
-// PERFORMANCE FIX: System Clock Configuration
-// Configure to run at maximum performance
-// Note: libopencm3 doesn't have high-level RCC functions for H7, using direct register access
 static void system_clock_config(void) {
-	// For now, keep this simpler - just enable HSE and use it directly
-	// Full PLL configuration would require extensive direct register manipulation
-	
 	// Enable HSE bypass (8MHz from ST-LINK MCO on NUCLEO board)
 	RCC_CR |= RCC_CR_HSEBYP;
 	RCC_CR |= RCC_CR_HSEON;
 	while (!(RCC_CR & RCC_CR_HSERDY));
-	
-	// TODO: For full 550MHz, we'd need to configure:
-	// - Voltage scaling to VOS0
-	// - PLL1 with proper M/N/P values
-	// - Flash wait states
-	// - Bus prescalers
-	// This requires more register-level programming than libopencm3 currently provides
-	
-	// For now, we'll use HSE directly (8MHz) which is slower but stable
-	// The critical fixes (MPU + cache) should resolve the hanging issue
+	// Using HSE directly (8MHz) which is slower but stable for validation
 }
 
 static void gpio_setup(void) {
@@ -117,15 +99,12 @@ static void gpio_setup(void) {
 	gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
 	gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
 
-	// Start with LEDs off
 	gpio_clear(LED1_PORT, LED1_PIN);
 	gpio_clear(LED2_PORT, LED2_PIN);
 	gpio_clear(LED3_PORT, LED3_PIN);
 }
 
 static void systick_setup(uint32_t ahb_hz) {
-	// Configure SysTick for 1ms tick
-	// Using HSE directly = 8MHz
 	if (ahb_hz == 0) {
 		ahb_hz = 8000000u;  // 8MHz from HSE
 	}
@@ -137,97 +116,83 @@ static void systick_setup(uint32_t ahb_hz) {
 	systick_counter_enable();
 }
 
-static void error_blink(uint32_t ms, const char* error_msg) {
-	(void)error_msg; // Silence unused parameter warning
-	debug_printf("ERROR: %s\n", error_msg);
+static void error_handler(const char* error_msg, stai_return_code err_code) {
+	(void)error_msg;
+	(void)err_code;
+	debug_printf("ERROR: %s (Code: 0x%X)\n", error_msg, err_code);
 	for (;;) {
 		gpio_set(LED3_PORT, LED3_PIN);
-		delay_ms(ms);
+		delay_ms(100);
 		gpio_clear(LED3_PORT, LED3_PIN);
-		delay_ms(ms);
+		delay_ms(100);
 	}
 }
 
+// ==============================================================================
+// MAIN
+// ==============================================================================
+
 int main(void) {
 
-	// ... (Initialization sequence remains same) ...
-	
-	// STEP 0: Enable FPU (Cortex-M7)
-	// CPACR is located at address 0xE000ED88
-	// Bits 20-23 control access to CP10 and CP11
-	// 0b1111 << 20 = 0xF00000
+	// STEP 0: Enable FPU
 	SCB_CPACR |= (0xF << 20);
 	__asm__ volatile ("dsb");
 	__asm__ volatile ("isb");
 
-	// STEP 1: Disable MPU (for compatibility)
+	// STEP 1: Disable MPU
 	mpu_config();
 	
 	#ifdef DEBUG_SEMIHOSTING
 	initialise_monitor_handles();
 	#endif
 	
-	// NOTE: Cache enable is SKIPPED - it causes crashes with libopencm3
-	
-	// STEP 2: Configure system clock (HSE)
+	// STEP 2: Configure system clock and Cache
+    // Note: Cache enablement can be tricky with some linkers, keeping disabled if unstable
+    // cache_enable(); 
 	system_clock_config();
 	
-	// STEP 5: Initialize peripherals
+	// STEP 3: Initialize peripherals
 	gpio_setup();
 	systick_setup(8000000);  // 8MHz HSE clock
 
 	// ========================
 	// AI NETWORK INITIALIZATION
 	// ========================
-	debug_printf("Initializing AI Network...\n");
-	debug_printf("  Model: %s\n", AI_NETWORK_MODEL_NAME);
-	debug_printf("  Input:  %d elements (float[%dx%d])\n", 
-	             AI_NETWORK_IN_1_SIZE, 
-	             AI_NETWORK_IN_1_HEIGHT, 
-	             AI_NETWORK_IN_1_CHANNEL);
-	debug_printf("  Output: %d elements\n", AI_NETWORK_OUT_1_SIZE);
-	debug_printf("  Activations: %d bytes (32-byte aligned)\n", 
-	             AI_NETWORK_DATA_ACTIVATION_1_SIZE);
-	debug_printf("  Activations address: %p (%s)\n", 
-	             (void*)activations,
-	             ((uintptr_t)activations % 32) == 0 ? "ALIGNED" : "NOT ALIGNED!");
-	
-	ai_handle activations_table[] = { activations };
-	
-	// FIX: Handle weights table wrapper
-	ai_handle w_handle = ai_network_data_weights_get();
-	ai_handle weights_ptr = w_handle;
-	ai_handle* w_table = (ai_handle*)w_handle;
+	debug_printf("Initializing ST.AI Network (v3 API)...\n");
 
-	// Check for magic marker (0xA1FACADE) which indicates a table wrapper
-	if ((uint32_t)w_table[0] == 0xA1FACADE) {
-		debug_printf("DEBUG: Found magic marker in weights table, using index 1\n");
-		weights_ptr = w_table[1];
-	}
+    // Initialize Runtime (Good practice in V3)
+    stai_return_code err = stai_runtime_init();
+    if (err != STAI_SUCCESS) error_handler("Runtime Init Failed", err);
 
-	ai_handle weights_table[] = { weights_ptr };
+	debug_printf("  Model: %s\n", STAI_NETWORK_MODEL_NAME);
+    
+    // Initialize Network Context
+    err = stai_network_init(network);
+    if (err != STAI_SUCCESS) error_handler("Network Init Failed", err);
+    
+    // Set Activations
+    const stai_ptr activations_ptrs[] = { (stai_ptr)activations };
+    err = stai_network_set_activations(network, activations_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Activations Failed", err);
 
-	debug_printf("\nCalling ai_network_create_and_init()...\n");
-	ai_error err = ai_network_create_and_init(&network, activations_table, weights_table);
-	
-	if (err.type != AI_ERROR_NONE) {
-		debug_printf("\n*** NETWORK INITIALIZATION FAILED ***\n");
-		debug_printf("Error type: %d\n", err.type);
-		debug_printf("Error code: %d\n", err.code);
-		error_blink(100, "AI network initialization failed");
-	}
-	
+    // Set Weights
+    // g_network_weights_array is from network_data.h
+    const stai_ptr weights_ptrs[] = { (stai_ptr)g_network_weights_array };
+    err = stai_network_set_weights(network, weights_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Weights Failed", err);
+
+    // Set Inputs (bind static buffer)
+    const stai_ptr inputs_ptrs[] = { (stai_ptr)input_data };
+    err = stai_network_set_inputs(network, inputs_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Inputs Failed", err);
+
+    // Set Outputs (bind static buffer)
+    const stai_ptr outputs_ptrs[] = { (stai_ptr)output_data };
+    err = stai_network_set_outputs(network, outputs_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Outputs Failed", err);
+
 	debug_printf("Network initialized successfully!\n");
-	debug_printf("Network handle: %p\n\n", (void*)network);
-
-	// DEBUG: Check weights (using the corrected pointer)
-	float* w_f = (float*)weights_ptr;
-	debug_printf("DEBUG: First 5 weights at %p:\n", w_f);
-	for(int i=0; i<5; i++) {
-		uint32_t val = ((uint32_t*)w_f)[i];
-        (void)val; // Silence unused warning if debug_printf is no-op
-		debug_printf("  [%d] 0x%08lX = %f\n", i, val, w_f[i]);
-	}
+	debug_printf("Network context: %p\n\n", (void*)network);
 
 
 	// ========================
@@ -239,7 +204,7 @@ int main(void) {
 	for (;;) {
 		debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
 		
-		// Clear all LEDs
+		// Reset LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
 		gpio_clear(LED2_PORT, LED2_PIN);
 		gpio_clear(LED3_PORT, LED3_PIN);
@@ -248,33 +213,9 @@ int main(void) {
 		gpio_set(LED2_PORT, LED2_PIN);
 
 		// Fill input buffer with dummy data
-		for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
+		for (int i = 0; i < STAI_NETWORK_IN_1_SIZE; i++) {
 			input_data[i] = MODEL_INPUT_GEN(i);
 		}
-
-		// Prepare input buffer
-		ai_buffer ai_input[AI_NETWORK_IN_NUM] = {
-			AI_BUFFER_INIT(
-				AI_FLAG_NONE,
-				AI_BUFFER_FORMAT_FLOAT,
-				AI_BUFFER_SHAPE_INIT(AI_SHAPE_BCWH, 4, 1, AI_NETWORK_IN_1_CHANNEL, 1, AI_NETWORK_IN_1_HEIGHT),
-				AI_NETWORK_IN_1_SIZE,
-				NULL,
-				input_data
-			)
-		};
-
-		// Prepare output buffer
-		ai_buffer ai_output[AI_NETWORK_OUT_NUM] = {
-			AI_BUFFER_INIT(
-				AI_FLAG_NONE,
-				AI_BUFFER_FORMAT_FLOAT,
-				AI_BUFFER_SHAPE_INIT(AI_SHAPE_BCWH, 4, 1, AI_NETWORK_OUT_1_CHANNEL, 1, 1),
-				AI_NETWORK_OUT_1_SIZE,
-				NULL,
-				output_data
-			)
-		};
 
 		// Run inference
 		debug_printf("Running inference...\n");
@@ -282,103 +223,67 @@ int main(void) {
 		// DEBUG: Check input
 		debug_printf("DEBUG: First 5 inputs:\n");
 		for(int i=0; i<5; i++) {
-			uint32_t val = ((uint32_t*)input_data)[i];
-            (void)val; // Silence unused warning if debug_printf is no-op
-            #ifdef QUANTIZED_INT8
-			    debug_printf("  [%d] 0x%08lX = %d\n", i, val, input_data[i]);
-            #else
-			    debug_printf("  [%d] 0x%08lX = %f\n", i, val, (double)input_data[i]);
+            #ifndef QUANTIZED_INT8
+			    debug_printf("  [%d] = %f\n", i, (double)input_data[i]);
             #endif
 		}
 
-
-		// Clear all LEDs
-		gpio_clear(LED1_PORT, LED1_PIN);
-		gpio_clear(LED2_PORT, LED2_PIN);
-		gpio_clear(LED3_PORT, LED3_PIN);
-
 		// Red LED ON: inference
+        gpio_clear(LED2_PORT, LED2_PIN);
 		gpio_set(LED3_PORT, LED3_PIN);
 
 		uint32_t start_time = system_millis;
-		ai_i32 batch = ai_network_run(network, ai_input, ai_output);
+        
+        // V3 API Run
+		err = stai_network_run(network, STAI_MODE_SYNC);
+        
 		uint32_t end_time = system_millis;
 		uint32_t inference_time = end_time - start_time;
-        (void)inference_time; // Silence unused warning
 		
-		if (batch != 1) {
-			debug_printf(" FAILED!\n");
-			debug_printf("  Expected batch=1, got %ld\n", (long)batch);
+		if (err != STAI_SUCCESS) {
+			debug_printf(" FAILED! (Code: 0x%X)\n", err);
 			
-			ai_error err = ai_network_get_error(network);
-            (void)err; // Silence unused warning
-			debug_printf("  Error type: %d, code: %d\n", err.type, err.code);
-			
-			// Blink red LED rapidly to indicate error
+			// Blink red LED rapidly
 			for (int i = 0; i < 6; i++) {
 				gpio_toggle(LED3_PORT, LED3_PIN);
 				delay_ms(50);
 			}
 		} else {
 			debug_printf(" SUCCESS! (%lu ms)\n", inference_time);
+			debug_printf("  Output: %.4f\n", (double)output_data[0]);
 			
-			// Get output value
-			if (batch > 0) {
-            #ifdef QUANTIZED_INT8
-			    model_output_type result = output_data[0];
-			    debug_printf("  Output: %d\n", result);
-            #else
-			    ai_float result = output_data[0];
-                (void)result; // Silence unused warning
-			    debug_printf("  Output: %.4f\n", (double)result);
-            #endif
-			debug_printf("  Performance: %lu inferences/sec\n", 1000 / (end_time - start_time));
-			debug_printf("  Performance: %lu inferences/sec\n", 1000 / (end_time - start_time));
-			
-			// Blink green LED 2 times for success
+            if (inference_time > 0)
+			    debug_printf("  Performance: %lu inferences/sec\n", 1000 / (inference_time));
+
+			// Blink green LED for success
+            gpio_clear(LED3_PORT, LED3_PIN);
 			for(int i=0; i<2; i++) {
 				gpio_set(LED1_PORT, LED1_PIN);
 				delay_ms(50);
 				gpio_clear(LED1_PORT, LED1_PIN);
 				delay_ms(50);
 			}
-		} else {
-				debug_printf("  Performance: %lu inferences/sec\n", inference_time > 0 ? 1000 / inference_time : 0);
-			}
-			
-			// Clear all LEDs
-			gpio_clear(LED1_PORT, LED1_PIN);
-			gpio_clear(LED2_PORT, LED2_PIN);
-			gpio_clear(LED3_PORT, LED3_PIN);
-
-			// Green LED ON: success!
-			gpio_set(LED1_PORT, LED1_PIN);
-
+            gpio_set(LED1_PORT, LED1_PIN); // Keep green on
 		}
 
 		debug_printf("\n");
-		// Wait 200ms
 		delay_ms(200);
 
 		counter++;
+		// Reset logic similar to previous
 		if(system_millis > 10000 || counter > 10000) {
-			// Reset system_millis and counter to avoid overflow
 			system_millis = 0;
 			counter = 0;
-			// Reset waiting time with all the leds on
 			gpio_set(LED1_PORT, LED1_PIN);
 			gpio_set(LED2_PORT, LED2_PIN);
 			gpio_set(LED3_PORT, LED3_PIN);
-			// Wait 2000ms
 			delay_ms(2000);
 		}
 
-		// Clear all LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
 		gpio_clear(LED2_PORT, LED2_PIN);
 		gpio_clear(LED3_PORT, LED3_PIN);
 
-		// Wait 200ms
 		delay_ms(400);
 	}
 }
