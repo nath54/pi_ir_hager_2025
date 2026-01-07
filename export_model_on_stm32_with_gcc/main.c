@@ -1,23 +1,25 @@
-// STM32H723ZG AI Inference - UPDATED FOR ST.AI V3 API
+// STM32H723ZG AI Inference - UPDATED FOR ST.AI V3 API + UART Logging
 // All critical fixes + performance optimizations based on official STM32 export
 // - MPU configuration
 // - I-Cache and D-Cache enabled
-// - 550MHz clock from PLL (simulated via HSE for stability here)
+// - 550MHz clock from PLL (simulated via HSE/HSI here)
 // - 32-byte aligned buffers
 // - Proper initialization sequence
+// - UART3 Logging enabled (PD8/PD9)
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/pwr.h>
-#include <libopencm3/stm32/flash.h>
+#include <libopencm3/stm32/usart.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/mpu.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 
 #include "network.h"
 #include "network_data.h"
-#include "debug_log.h"
+// #include "debug_log.h" // We implement our own debug_printf now
 
 // LED definitions for NUCLEO-H723ZG
 #define LED1_PORT GPIOB  // Green LED
@@ -34,7 +36,6 @@ static volatile uint32_t system_millis = 0;
 // ==============================================================================
 
 // 1. Network Context
-// Must be aligned and sized according to generated macros
 STAI_ALIGNED(STAI_NETWORK_CONTEXT_ALIGNMENT)
 static stai_network network[STAI_NETWORK_CONTEXT_SIZE];
 
@@ -43,7 +44,6 @@ STAI_ALIGNED(STAI_NETWORK_ACTIVATION_1_ALIGNMENT)
 static uint8_t activations[STAI_NETWORK_ACTIVATIONS_SIZE];
 
 // 3. Input/Output Buffers
-// Using float directly as we know the model is float32
 static float input_data[STAI_NETWORK_IN_1_SIZE];
 static float output_data[STAI_NETWORK_OUT_1_SIZE];
 
@@ -71,25 +71,10 @@ static void mpu_config(void) {
 	MPU_CTRL = 0;
 }
 
-// CRITICAL FIX 2: Cache Initialization  
-static void cache_enable(void) {
-	// Enable I-Cache
-	SCB_CCR |= SCB_CCR_IC;
-	__asm__ volatile ("dsb");
-	__asm__ volatile ("isb");
-	
-	// Enable D-Cache  
-	SCB_CCR |= SCB_CCR_DC;
-	__asm__ volatile ("dsb");
-	__asm__ volatile ("isb");
-}
-
 static void system_clock_config(void) {
-	// Enable HSE bypass (8MHz from ST-LINK MCO on NUCLEO board)
-	RCC_CR |= RCC_CR_HSEBYP;
-	RCC_CR |= RCC_CR_HSEON;
-	while (!(RCC_CR & RCC_CR_HSERDY));
-	// Using HSE directly (8MHz) which is slower but stable for validation
+    // Basic HSI setup (64MHz) is default on reset.
+    // For UART at 115200 with 64MHz, standard PCLK settings work fine.
+    // We won't touch PLL to keep it robust for now.
 }
 
 static void gpio_setup(void) {
@@ -104,9 +89,54 @@ static void gpio_setup(void) {
 	gpio_clear(LED3_PORT, LED3_PIN);
 }
 
+// ==============================================================================
+// UART SETUP
+// ==============================================================================
+static void usart_setup(void) {
+    // Nucleo-H723ZG VCP is on USART3: PD8 (TX) and PD9 (RX)
+    rcc_periph_clock_enable(RCC_GPIOD);
+    rcc_periph_clock_enable(RCC_USART3);
+
+    // TX Pin (PD8)
+    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8);
+    gpio_set_af(GPIOD, GPIO_AF7, GPIO8);
+
+    // RX Pin (PD9)
+    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
+    gpio_set_af(GPIOD, GPIO_AF7, GPIO9);
+
+    // Setup USART parameters
+    usart_set_baudrate(USART3, 115200);
+    usart_set_databits(USART3, 8);
+    usart_set_stopbits(USART3, USART_STOPBITS_1);
+    usart_set_mode(USART3, USART_MODE_TX_RX);
+    usart_set_parity(USART3, USART_PARITY_NONE);
+    usart_set_flow_control(USART3, USART_FLOWCONTROL_NONE);
+
+    usart_enable(USART3);
+}
+
+// Custom printf implementation for UART
+static void debug_printf(const char *format, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+
+    for (int i = 0; buffer[i] != '\0'; i++) {
+        usart_send_blocking(USART3, buffer[i]);
+        // Add CR before LF for terminal compatibility if needed
+        if (buffer[i] == '\n') {
+             // usart_send_blocking(USART3, '\r'); 
+             // Intentionally commented out, usually terminals handle LF locally
+        }
+    }
+}
+
 static void systick_setup(uint32_t ahb_hz) {
 	if (ahb_hz == 0) {
-		ahb_hz = 8000000u;  // 8MHz from HSE
+		ahb_hz = 64000000u;  // 64MHz from HSI (Reset default)
 	}
 	uint32_t reload = (ahb_hz / 1000u) - 1u;
 	systick_set_reload(reload);
@@ -117,8 +147,6 @@ static void systick_setup(uint32_t ahb_hz) {
 }
 
 static void error_handler(const char* error_msg, stai_return_code err_code) {
-	(void)error_msg;
-	(void)err_code;
 	debug_printf("ERROR: %s (Code: 0x%X)\n", error_msg, err_code);
 	for (;;) {
 		gpio_set(LED3_PORT, LED3_PIN);
@@ -142,25 +170,28 @@ int main(void) {
 	// STEP 1: Disable MPU
 	mpu_config();
 	
-	#ifdef DEBUG_SEMIHOSTING
-	initialise_monitor_handles();
-	#endif
-	
-	// STEP 2: Configure system clock and Cache
-    // Note: Cache enablement can be tricky with some linkers, keeping disabled if unstable
-    // cache_enable(); 
+	// STEP 2: Configure system clock (HSI Default)
 	system_clock_config();
 	
 	// STEP 3: Initialize peripherals
 	gpio_setup();
-	systick_setup(8000000);  // 8MHz HSE clock
+    usart_setup();
+	systick_setup(64000000);  // 64MHz 
+
+    // Hello message
+    debug_printf("\n\n");
+    debug_printf("========================================\n");
+    debug_printf("STM32 AI Inference v3.0\n");
+    debug_printf("System Clock: ~64 MHz (HSI)\n");
+    debug_printf("UART: Enabled (115200 8N1)\n");
+    debug_printf("========================================\n");
 
 	// ========================
 	// AI NETWORK INITIALIZATION
 	// ========================
-	debug_printf("Initializing ST.AI Network (v3 API)...\n");
+	debug_printf("Initializing ST.AI Network...\n");
 
-    // Initialize Runtime (Good practice in V3)
+    // Initialize Runtime 
     stai_return_code err = stai_runtime_init();
     if (err != STAI_SUCCESS) error_handler("Runtime Init Failed", err);
 
@@ -176,7 +207,6 @@ int main(void) {
     if (err != STAI_SUCCESS) error_handler("Set Activations Failed", err);
 
     // Set Weights
-    // g_network_weights_array is from network_data.h
     const stai_ptr weights_ptrs[] = { (stai_ptr)g_network_weights_array };
     err = stai_network_set_weights(network, weights_ptrs, 1);
     if (err != STAI_SUCCESS) error_handler("Set Weights Failed", err);
@@ -202,7 +232,7 @@ int main(void) {
 	int counter = 0;
 
 	for (;;) {
-		debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
+		// debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
 		
 		// Reset LEDs
 		gpio_clear(LED1_PORT, LED1_PIN);
@@ -218,15 +248,10 @@ int main(void) {
 		}
 
 		// Run inference
-		debug_printf("Running inference...\n");
+		// debug_printf("Running inference...\n");
 		
-		// DEBUG: Check input
-		debug_printf("DEBUG: First 5 inputs:\n");
-		for(int i=0; i<5; i++) {
-            #ifndef QUANTIZED_INT8
-			    debug_printf("  [%d] = %f\n", i, (double)input_data[i]);
-            #endif
-		}
+		// DEBUG: Check input (print first element only to avoid spam)
+		// debug_printf("  Input[0] = %f\n", (double)input_data[0]);
 
 		// Red LED ON: inference
         gpio_clear(LED2_PORT, LED2_PIN);
@@ -241,7 +266,7 @@ int main(void) {
 		uint32_t inference_time = end_time - start_time;
 		
 		if (err != STAI_SUCCESS) {
-			debug_printf(" FAILED! (Code: 0x%X)\n", err);
+			debug_printf("FAILED! (Code: 0x%X)\n", err);
 			
 			// Blink red LED rapidly
 			for (int i = 0; i < 6; i++) {
@@ -249,12 +274,13 @@ int main(void) {
 				delay_ms(50);
 			}
 		} else {
-			debug_printf(" SUCCESS! (%lu ms)\n", inference_time);
-			debug_printf("  Output: %.4f\n", (double)output_data[0]);
+			// Compact output
+            #ifdef QUANTIZED_INT8
+                debug_printf("INF: OK (%lu ms) | Out: %.4f | Mode: INT8\n", inference_time, (double)output_data[0]);
+            #else
+			    debug_printf("INF: OK (%lu ms) | Out: %.4f | Mode: FP32\n", inference_time, (double)output_data[0]);
+            #endif
 			
-            if (inference_time > 0)
-			    debug_printf("  Performance: %lu inferences/sec\n", 1000 / (inference_time));
-
 			// Blink green LED for success
             gpio_clear(LED3_PORT, LED3_PIN);
 			for(int i=0; i<2; i++) {
@@ -266,14 +292,14 @@ int main(void) {
             gpio_set(LED1_PORT, LED1_PIN); // Keep green on
 		}
 
-		debug_printf("\n");
 		delay_ms(200);
 
 		counter++;
-		// Reset logic similar to previous
+		// Reset logic
 		if(system_millis > 10000 || counter > 10000) {
 			system_millis = 0;
 			counter = 0;
+            debug_printf("--- RESET COUNTERS ---\n");
 			gpio_set(LED1_PORT, LED1_PIN);
 			gpio_set(LED2_PORT, LED2_PIN);
 			gpio_set(LED3_PORT, LED3_PIN);

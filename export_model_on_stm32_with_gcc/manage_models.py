@@ -162,15 +162,29 @@ def flash_model():
     """Flash the built binary."""
     print("Flashing model...")
     try:
-        subprocess.run(["./flash.sh"], check=True)
-    except subprocess.CalledProcessError:
-        print("Flash failed.")
-    except FileNotFoundError:
-        # Fallback to make flash if script is missing
-        try:
-             subprocess.run(["make", "flash"], check=True)
-        except subprocess.CalledProcessError:
-             print("Flash failed.")
+        # Try running flash.sh
+        if os.path.exists("./flash.sh"):
+            result = subprocess.run(["./flash.sh"], capture_output=True, text=True)
+        else:
+            result = subprocess.run(["make", "flash"], capture_output=True, text=True)
+
+        print(result.stdout)
+        print(result.stderr)
+
+        if result.returncode != 0:
+            if "libusb" in result.stderr or "ACCESS" in result.stderr or "Permission denied" in result.stderr:
+                print("\n\033[91mError: Permission denied accessing USB device.\033[0m")
+                print("Please try running this script with sudo:")
+                print(f"    sudo python3 {os.path.basename(sys.argv[0])}")
+                print("Or verify your udev rules for the ST-Link.")
+            else:
+                print("Flash failed.")
+    except Exception as e:
+        print(f"An error occurred during flashing: {e}")
+
+def get_basename(path):
+    return os.path.basename(path) # Helper for the above string formatting if needed, but os.path is imported
+
 
 def debug_model():
     """Build, Flash and Debug (not fully automated, just runs build/flash for now)."""
