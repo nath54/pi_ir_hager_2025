@@ -110,14 +110,14 @@ def is_int8_model(model_name):
     lower_name = model_name.lower()
     return "int8" in lower_name or "quant" in lower_name
 
-def build_model(fast_mode=False):
+def build_model(fast_mode=False, debug_semihosting=False):
     """Build the currently loaded model."""
     model_name = get_current_model()
     if not model_name:
         print("Error: No model loaded. Please load a model first.")
         return
 
-    print(f"Building model: {model_name} (Fast Mode: {fast_mode})")
+    print(f"Building model: {model_name} (Fast Mode: {fast_mode}, Debug Semihosting: {debug_semihosting})")
 
     # Clean build
     subprocess.run(["make", "clean"], check=False)
@@ -134,6 +134,10 @@ def build_model(fast_mode=False):
         cmd.append("INT_QUANTIZATION=1")
     else:
         print("Detected Float32 model. Building standard version.")
+
+    if debug_semihosting:
+        print("Debug Semihosting enabled: Adding DEBUG=1")
+        cmd.append("DEBUG=1")
 
     try:
         subprocess.run(cmd, check=True)
@@ -165,13 +169,13 @@ def flash_model():
     except Exception as e:
         print(f"An error occurred during flashing: {e}")
 
-def debug_model(fast_mode=False):
+def debug_model(fast_mode=False, debug_semihosting=False):
     """Build, Flash and Debug (not fully automated, just runs build/flash for now)."""
     # This matches user request "build and flash and run in debug mode"
     # Usually this implies running openocd or st-util, but standard practice via script
     # might just be flashing.
     # We will implement Build + Flash.
-    build_model(fast_mode=fast_mode)
+    build_model(fast_mode=fast_mode, debug_semihosting=debug_semihosting)
     flash_model()
     print("For debug output, please connect via UART or use: screen /dev/ttyACM0 115200")
 
@@ -185,7 +189,7 @@ def main():
         print("1. List and Load Model")
         print("2. Build Current Model")
         print("3. Flash Current Model")
-        print("4. Build, Flash & Run (Debug)")
+        print("4. Build, Flash & Run (Debug with semi-hosting)")
         print("5. Build, Flash & Run (FAST MODE - No Sleeps)")
         print("6. Quit")
 
@@ -212,7 +216,7 @@ def main():
             flash_model()
 
         elif choice == '4':
-            debug_model(fast_mode=False)
+            debug_model(fast_mode=False, debug_semihosting=True)
 
         elif choice == '5':
             debug_model(fast_mode=True)
@@ -220,6 +224,7 @@ def main():
         elif choice == '6':
             print("Exiting.")
             break
+
         else:
             print("Invalid choice.")
 

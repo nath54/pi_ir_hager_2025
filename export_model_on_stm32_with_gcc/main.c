@@ -2,7 +2,7 @@
 // All critical fixes + performance optimizations based on official STM32 export
 // - MPU configuration
 // - I-Cache and D-Cache enabled
-// - 550MHz clock from PLL (simulated via HSE/HSI here)
+// - 480MHz clock from PLL1 (HSI 64MHz -> PLL -> 480MHz SYSCLK)
 // - 32-byte aligned buffers
 // - Proper initialization sequence
 // - UART3 Logging enabled (PD8/PD9)
@@ -10,6 +10,8 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/flash.h>
+#include <libopencm3/stm32/pwr.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/mpu.h>
@@ -72,9 +74,96 @@ static void mpu_config(void) {
 }
 
 static void system_clock_config(void) {
-    // Basic HSI setup (64MHz) is default on reset.
-    // For UART at 115200 with 64MHz, standard PCLK settings work fine.
-    // We won't touch PLL to keep it robust for now.
+    // ===================================================================
+    // Configure STM32H723ZG to run at 480MHz using PLL1 from HSI (64MHz)
+    // Simplified version compatible with libopencm3
+    // ===================================================================
+    
+    // Wait for HSI to be ready
+    while (!(RCC_CR & RCC_CR_HSIRDY));
+    
+    // Set Flash latency FIRST before increasing clock speed
+    // For 480MHz we need 4 wait states
+    flash_set_ws(FLASH_ACR_LATENCY_4WS);
+    
+    // Configure VOS (Voltage Scaling) for high performance
+    // For STM32H723, use VOS0 for max performance (up to 550MHz)
+    PWR_D3CR = (PWR_D3CR & ~(PWR_D3CR_VOS_MASK << PWR_D3CR_VOS_SHIFT)) | 
+               (PWR_D3CR_VOS_SCALE_0 << PWR_D3CR_VOS_SHIFT);
+    
+    // Wait for voltage scaling to be ready
+    while (!(PWR_D3CR & PWR_D3CR_VOSRDY));
+    
+    // Disable PLL1 before configuration
+    RCC_CR &= ~RCC_CR_PLL1ON;
+    while (RCC_CR & RCC_CR_PLL1RDY);
+    
+    // Configure PLL1:
+    // HSI = 64 MHz
+    // Target: 480 MHz
+    // PLL formula: SYSCLK = (HSI / PLLM) * PLLN / PLLP
+    //
+    // Configuration: (64 / 4) * 120 / 2 = 16 * 120 / 2 = 960 / 2 = 480 MHz
+    // - PLLM = 4  (64MHz / 4 = 16MHz - within 2-16MHz range)
+    // - PLLN = 120 (16MHz * 120 = 1920 MHz VCO - within range)
+    // - PLLP = 2  (1920MHz / 2 = 960 MHz... wait that's too high)
+    //
+    // Let's use: (64 / 8) * 120 / 1 = 8 * 120 = 960 MHz VCO, PLLP = 2 -> 480 MHz
+    // Actually PLL dividers are (bitfield / 2) for bypass, so PLLP=1 means /2
+    //
+    // Better: PLLM=4, PLLN=60, PLLP=1 -> (64/4)*60/2 = 16*60/2 = 480 MHz
+    
+    // Set PLL source to HSI
+    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~0x3) | RCC_PLLCKSELR_PLLSRC_HSI;
+    
+    // Set DIVM1 = 4
+    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~(0x3F << RCC_PLLCKSELR_DIVM1_SHIFT)) | 
+                     RCC_PLLCKSELR_DIVM1(4);
+    
+    // Configure PLL1 dividers using libopencm3 macros
+    // DIVN = 60-1 = 59, DIVP = 2-1 = 1
+    RCC_PLL1DIVR = RCC_PLLNDIVR_DIVN(60) | RCC_PLLNDIVR_DIVP(2);
+    
+    // Set PLL1 input range (4-8 MHz after /M divider)
+    RCC_PLLCFGR = (RCC_PLLCFGR & ~(0x3 << RCC_PLLCFGR_PLL1RGE_SHIFT)) | 
+                   (RCC_PLLCFGR_PLLRGE_4_8MHZ << RCC_PLLCFGR_PLL1RGE_SHIFT);
+    
+    // Set PLL1 VCO range to wide (for higher frequencies)
+    RCC_PLLCFGR &= ~RCC_PLLCFGR_PLL1VCO_MED;  // Clear = wide range
+    
+    // Enable PLL1 P output
+    RCC_PLLCFGR |= RCC_PLLCFGR_DIVP1EN;
+    
+    // Enable PLL1
+    RCC_CR |= RCC_CR_PLL1ON;
+    while (!(RCC_CR & RCC_CR_PLL1RDY));
+    
+    // Configure bus dividers BEFORE switching to PLL
+    // D1 Domain: AHB (HCLK3), APB3
+    RCC_D1CFGR = RCC_D1CFGR_D1HPRE(RCC_D1CFGR_D1HPRE_BYP) |  // AHB = SYSCLK  
+                 RCC_D1CFGR_D1PPRE(RCC_D1CFGR_D1PPRE_DIV2) | // APB3 = AHB / 2
+                 RCC_D1CFGR_D1CPRE(RCC_D1CFGR_D1CPRE_BYP);   // CPU = SYSCLK
+    
+    // D2 Domain: APB1, APB2
+    RCC_D2CFGR = RCC_D2CFGR_D2PPRE1(RCC_D2CFGR_D2PPRE_DIV2) |  // APB1 = AHB / 2
+                 RCC_D2CFGR_D2PPRE2(RCC_D2CFGR_D2PPRE_DIV2);   // APB2 = AHB / 2
+    
+    // D3 Domain: APB4
+    RCC_D3CFGR = RCC_D3CFGR_D3PPRE(RCC_D3CFGR_D3PPRE_DIV2);    // APB4 = AHB / 2
+    
+    // Switch system clock to PLL1
+    RCC_CFGR = (RCC_CFGR & ~(RCC_CFGR_SW_MASK << RCC_CFGR_SW_SHIFT)) | 
+               (RCC_CFGR_SW_PLL1 << RCC_CFGR_SW_SHIFT);
+    
+    // Wait for PLL1 to be active as system clock
+    while (((RCC_CFGR >> RCC_CFGR_SWS_SHIFT) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL1);
+    
+    // Enable I-Cache and D-Cache for performance
+    // libopencm3 doesn't have scb_enable_icache/dcache, so use direct register access
+    SCB_ICIALLU = 0;  // Invalidate I-Cache
+    SCB_CCR |= SCB_CCR_IC;  // Enable I-Cache
+    SCB_DCISW = 0;  // Invalidate D-Cache
+    SCB_CCR |= SCB_CCR_DC;  // Enable D-Cache
 }
 
 static void gpio_setup(void) {
@@ -136,7 +225,8 @@ static void debug_printf(const char *format, ...) {
 
 static void systick_setup(uint32_t ahb_hz) {
 	if (ahb_hz == 0) {
-		ahb_hz = 64000000u;  // 64MHz from HSI (Reset default)
+		// ahb_hz = 64000000u;  // 64MHz from HSI (Reset default)
+		ahb_hz = 480000000u;  // 480MHz from PLL1
 	}
 	uint32_t reload = (ahb_hz / 1000u) - 1u;
 	systick_set_reload(reload);
@@ -210,7 +300,8 @@ int main(void) {
 	gpio_setup();
     usart_setup();
     gpio_signal_setup(); // SIGNAL OUTPUT INIT
-	systick_setup(64000000);  // 64MHz
+	// systick_setup(64000000);  // 64MHz
+	systick_setup(480000000);  // 480MHz from PLL1
 
     // Hello message
     debug_printf("\n\n");
