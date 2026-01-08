@@ -1,11 +1,12 @@
-// STM32H723ZG AI Inference - UPDATED FOR ST.AI V3 API + UART Logging
-// All critical fixes + performance optimizations based on official STM32 export
-// - MPU configuration
-// - I-Cache and D-Cache enabled
-// - 480MHz clock from PLL1 (HSI 64MHz -> PLL -> 480MHz SYSCLK)
-// - 32-byte aligned buffers
-// - Proper initialization sequence
-// - UART3 Logging enabled (PD8/PD9)
+// =============================================================================
+// STM32H723ZG AI Inference Firmware
+// =============================================================================
+// Features:
+// - Configurable CPU frequency via TARGET_SYSCLK_MHZ
+// - Debug mode with UART logging (DEBUG build)
+// - Release mode optimized for performance (default)
+// - Signal output on GPIO (PE2-PE9: data, PE10: strobe)
+// =============================================================================
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
@@ -17,442 +18,444 @@
 #include <libopencm3/cm3/mpu.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "network.h"
 #include "network_data.h"
-// #include "debug_log.h" // We implement our own debug_printf now
 
-// LED definitions for NUCLEO-H723ZG
-#define LED1_PORT GPIOB  // Green LED
-#define LED1_PIN  GPIO0
-#define LED2_PORT GPIOE  // Yellow LED
-#define LED2_PIN  GPIO1
-#define LED3_PORT GPIOB  // Red LED
-#define LED3_PIN  GPIO14
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+// Target CPU frequency in MHz (choose one: 64, 120, 240, 480)
+// Note: Higher frequencies require proper voltage scaling and flash latency
+#ifndef TARGET_SYSCLK_MHZ
+#define TARGET_SYSCLK_MHZ  64  // Default: Use HSI without PLL (safest)
+#endif
+
+// Enable UART debug output (defined via Makefile DEBUG=1 flag)
+// #define DEBUG_UART  // Uncomment to force enable, or use DEBUG build
+
+#ifdef DEBUG_SEMIHOSTING
+#define DEBUG_UART
+#endif
+
+// =============================================================================
+// CLOCK CONFIGURATION - AUTO-CALCULATED FROM TARGET_SYSCLK_MHZ
+// =============================================================================
+// HSI frequency is fixed at 64 MHz
+// PLL formula: SYSCLK = (HSI_FREQ / PLLM) * PLLN / PLLP
+//
+// Constraints:
+// - PLL input (after /M): 2-16 MHz (ideally 4-8 MHz for stability)
+// - VCO output: 192-836 MHz
+// - SYSCLK max: 550 MHz (VOS0), 480 MHz (VOS1), 300 MHz (VOS2)
+// =============================================================================
+
+#define HSI_FREQ_MHZ       64
+#define HSI_FREQ_HZ        (HSI_FREQ_MHZ * 1000000UL)
+#define SYSCLK_FREQ_HZ     (TARGET_SYSCLK_MHZ * 1000000UL)
+
+#if TARGET_SYSCLK_MHZ == 64
+    // No PLL needed - run directly from HSI
+    #define USE_PLL         0
+    #define FLASH_LATENCY   FLASH_ACR_LATENCY_1WS
+    #define VOS_SCALE       PWR_D3CR_VOS_SCALE_3
+#elif TARGET_SYSCLK_MHZ == 120
+    #define USE_PLL         1
+    #define PLL_M           8   // 64/8 = 8 MHz
+    #define PLL_N           60  // 8*60 = 480 MHz VCO
+    #define PLL_P           4   // 480/4 = 120 MHz
+    #define PLL_INPUT_RANGE RCC_PLLCFGR_PLLRGE_4_8MHZ
+    #define FLASH_LATENCY   FLASH_ACR_LATENCY_1WS
+    #define VOS_SCALE       PWR_D3CR_VOS_SCALE_3
+#elif TARGET_SYSCLK_MHZ == 240
+    #define USE_PLL         1
+    #define PLL_M           8   // 64/8 = 8 MHz
+    #define PLL_N           60  // 8*60 = 480 MHz VCO
+    #define PLL_P           2   // 480/2 = 240 MHz
+    #define PLL_INPUT_RANGE RCC_PLLCFGR_PLLRGE_4_8MHZ
+    #define FLASH_LATENCY   FLASH_ACR_LATENCY_2WS
+    #define VOS_SCALE       PWR_D3CR_VOS_SCALE_2
+#elif TARGET_SYSCLK_MHZ == 480
+    #define USE_PLL         1
+    #define PLL_M           4   // 64/4 = 16 MHz
+    #define PLL_N           60  // 16*60 = 960 MHz VCO
+    #define PLL_P           2   // 960/2 = 480 MHz
+    #define PLL_INPUT_RANGE RCC_PLLCFGR_PLLRGE_8_16MHZ
+    #define FLASH_LATENCY   FLASH_ACR_LATENCY_4WS
+    #define VOS_SCALE       PWR_D3CR_VOS_SCALE_1
+#else
+    #error "Unsupported TARGET_SYSCLK_MHZ. Choose 64, 120, 240, or 480."
+#endif
+
+// APB clocks = SYSCLK / 2 (max ~275 MHz for APB)
+#define APB_FREQ_HZ        (SYSCLK_FREQ_HZ / 2)
+
+// =============================================================================
+// HARDWARE DEFINITIONS
+// =============================================================================
+
+// LED pins (NUCLEO-H723ZG)
+#define LED1_PORT   GPIOB   // Green LED
+#define LED1_PIN    GPIO0
+#define LED2_PORT   GPIOE   // Yellow LED
+#define LED2_PIN    GPIO1
+#define LED3_PORT   GPIOB   // Red LED
+#define LED3_PIN    GPIO14
+
+// Signal output pins
+#define SIGNAL_DATA_PORT    GPIOE
+#define SIGNAL_DATA_PINS    (GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO6 | GPIO7 | GPIO8 | GPIO9)
+#define SIGNAL_STROBE_PIN   GPIO10
+
+// =============================================================================
+// GLOBAL VARIABLES
+// =============================================================================
 
 static volatile uint32_t system_millis = 0;
 
-// ==============================================================================
-// ST.AI V3 DATA STRUCTURES
-// ==============================================================================
-
-// 1. Network Context
+// ST.AI Network buffers
 STAI_ALIGNED(STAI_NETWORK_CONTEXT_ALIGNMENT)
 static stai_network network[STAI_NETWORK_CONTEXT_SIZE];
 
-// 2. Activations Buffer
 STAI_ALIGNED(STAI_NETWORK_ACTIVATION_1_ALIGNMENT)
 static uint8_t activations[STAI_NETWORK_ACTIVATIONS_SIZE];
 
-// 3. Input/Output Buffers
 static float input_data[STAI_NETWORK_IN_1_SIZE];
 static float output_data[STAI_NETWORK_OUT_1_SIZE];
 
-// Input generator macro
+// Input data generator macro
 #define MODEL_INPUT_GEN(i) ((float)((system_millis * 13 + counter * 7 + i * 3) % 100) / 100.0f)
 
-// ==============================================================================
-// SYSTEM FUNCTIONS
-// ==============================================================================
+// =============================================================================
+// DEBUG OUTPUT (conditional compilation)
+// =============================================================================
 
-void sys_tick_handler(void) {
-	system_millis++;
-}
+#ifdef DEBUG_UART
 
-static void delay_ms(uint32_t ms) {
-	uint32_t start = system_millis;
-	while ((system_millis - start) < ms) {
-		__asm__("wfi");
-	}
-}
-
-// CRITICAL FIX 1: MPU Configuration
-static void mpu_config(void) {
-	// Simply disable MPU to avoid conflicts
-	MPU_CTRL = 0;
-}
-
-static void system_clock_config(void) {
-    // ===================================================================
-    // Configure STM32H723ZG to run at 480MHz using PLL1 from HSI (64MHz)
-    // Simplified version compatible with libopencm3
-    // ===================================================================
-    
-    // Wait for HSI to be ready
-    while (!(RCC_CR & RCC_CR_HSIRDY));
-    
-    // Set Flash latency FIRST before increasing clock speed
-    // For 480MHz we need 4 wait states
-    flash_set_ws(FLASH_ACR_LATENCY_4WS);
-    
-    // Configure VOS (Voltage Scaling) for high performance
-    // For STM32H723, use VOS0 for max performance (up to 550MHz)
-    PWR_D3CR = (PWR_D3CR & ~(PWR_D3CR_VOS_MASK << PWR_D3CR_VOS_SHIFT)) | 
-               (PWR_D3CR_VOS_SCALE_0 << PWR_D3CR_VOS_SHIFT);
-    
-    // Wait for voltage scaling to be ready
-    while (!(PWR_D3CR & PWR_D3CR_VOSRDY));
-    
-    // Disable PLL1 before configuration
-    RCC_CR &= ~RCC_CR_PLL1ON;
-    while (RCC_CR & RCC_CR_PLL1RDY);
-    
-    // Configure PLL1:
-    // HSI = 64 MHz
-    // Target: 480 MHz
-    // PLL formula: SYSCLK = (HSI / PLLM) * PLLN / PLLP
-    //
-    // Configuration: (64 / 4) * 120 / 2 = 16 * 120 / 2 = 960 / 2 = 480 MHz
-    // - PLLM = 4  (64MHz / 4 = 16MHz - within 2-16MHz range)
-    // - PLLN = 120 (16MHz * 120 = 1920 MHz VCO - within range)
-    // - PLLP = 2  (1920MHz / 2 = 960 MHz... wait that's too high)
-    //
-    // Let's use: (64 / 8) * 120 / 1 = 8 * 120 = 960 MHz VCO, PLLP = 2 -> 480 MHz
-    // Actually PLL dividers are (bitfield / 2) for bypass, so PLLP=1 means /2
-    //
-    // Better: PLLM=4, PLLN=60, PLLP=1 -> (64/4)*60/2 = 16*60/2 = 480 MHz
-    
-    // Set PLL source to HSI
-    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~0x3) | RCC_PLLCKSELR_PLLSRC_HSI;
-    
-    // Set DIVM1 = 4
-    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~(0x3F << RCC_PLLCKSELR_DIVM1_SHIFT)) | 
-                     RCC_PLLCKSELR_DIVM1(4);
-    
-    // Configure PLL1 dividers using libopencm3 macros
-    // DIVN = 60-1 = 59, DIVP = 2-1 = 1
-    RCC_PLL1DIVR = RCC_PLLNDIVR_DIVN(60) | RCC_PLLNDIVR_DIVP(2);
-    
-    // Set PLL1 input range (4-8 MHz after /M divider)
-    RCC_PLLCFGR = (RCC_PLLCFGR & ~(0x3 << RCC_PLLCFGR_PLL1RGE_SHIFT)) | 
-                   (RCC_PLLCFGR_PLLRGE_4_8MHZ << RCC_PLLCFGR_PLL1RGE_SHIFT);
-    
-    // Set PLL1 VCO range to wide (for higher frequencies)
-    RCC_PLLCFGR &= ~RCC_PLLCFGR_PLL1VCO_MED;  // Clear = wide range
-    
-    // Enable PLL1 P output
-    RCC_PLLCFGR |= RCC_PLLCFGR_DIVP1EN;
-    
-    // Enable PLL1
-    RCC_CR |= RCC_CR_PLL1ON;
-    while (!(RCC_CR & RCC_CR_PLL1RDY));
-    
-    // Configure bus dividers BEFORE switching to PLL
-    // D1 Domain: AHB (HCLK3), APB3
-    RCC_D1CFGR = RCC_D1CFGR_D1HPRE(RCC_D1CFGR_D1HPRE_BYP) |  // AHB = SYSCLK  
-                 RCC_D1CFGR_D1PPRE(RCC_D1CFGR_D1PPRE_DIV2) | // APB3 = AHB / 2
-                 RCC_D1CFGR_D1CPRE(RCC_D1CFGR_D1CPRE_BYP);   // CPU = SYSCLK
-    
-    // D2 Domain: APB1, APB2
-    RCC_D2CFGR = RCC_D2CFGR_D2PPRE1(RCC_D2CFGR_D2PPRE_DIV2) |  // APB1 = AHB / 2
-                 RCC_D2CFGR_D2PPRE2(RCC_D2CFGR_D2PPRE_DIV2);   // APB2 = AHB / 2
-    
-    // D3 Domain: APB4
-    RCC_D3CFGR = RCC_D3CFGR_D3PPRE(RCC_D3CFGR_D3PPRE_DIV2);    // APB4 = AHB / 2
-    
-    // Switch system clock to PLL1
-    RCC_CFGR = (RCC_CFGR & ~(RCC_CFGR_SW_MASK << RCC_CFGR_SW_SHIFT)) | 
-               (RCC_CFGR_SW_PLL1 << RCC_CFGR_SW_SHIFT);
-    
-    // Wait for PLL1 to be active as system clock
-    while (((RCC_CFGR >> RCC_CFGR_SWS_SHIFT) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL1);
-    
-    // Enable I-Cache and D-Cache for performance
-    // libopencm3 doesn't have scb_enable_icache/dcache, so use direct register access
-    SCB_ICIALLU = 0;  // Invalidate I-Cache
-    SCB_CCR |= SCB_CCR_IC;  // Enable I-Cache
-    SCB_DCISW = 0;  // Invalidate D-Cache
-    SCB_CCR |= SCB_CCR_DC;  // Enable D-Cache
-}
-
-static void gpio_setup(void) {
-	rcc_periph_clock_enable(RCC_GPIOB);
-	rcc_periph_clock_enable(RCC_GPIOE);
-	gpio_mode_setup(LED1_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED1_PIN);
-	gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
-	gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
-
-	gpio_clear(LED1_PORT, LED1_PIN);
-	gpio_clear(LED2_PORT, LED2_PIN);
-	gpio_clear(LED3_PORT, LED3_PIN);
-}
-
-// ==============================================================================
-// UART SETUP
-// ==============================================================================
 static void usart_setup(void) {
-    // Nucleo-H723ZG VCP is on USART3: PD8 (TX) and PD9 (RX)
     rcc_periph_clock_enable(RCC_GPIOD);
     rcc_periph_clock_enable(RCC_USART3);
 
-    // TX Pin (PD8)
-    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8);
-    gpio_set_af(GPIOD, GPIO_AF7, GPIO8);
+    // USART3: PD8 (TX), PD9 (RX) - VCP on Nucleo board
+    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8 | GPIO9);
+    gpio_set_af(GPIOD, GPIO_AF7, GPIO8 | GPIO9);
 
-    // RX Pin (PD9)
-    gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
-    gpio_set_af(GPIOD, GPIO_AF7, GPIO9);
-
-    // Setup USART parameters
     usart_set_baudrate(USART3, 115200);
     usart_set_databits(USART3, 8);
     usart_set_stopbits(USART3, USART_STOPBITS_1);
     usart_set_mode(USART3, USART_MODE_TX_RX);
     usart_set_parity(USART3, USART_PARITY_NONE);
     usart_set_flow_control(USART3, USART_FLOWCONTROL_NONE);
-
     usart_enable(USART3);
 }
 
-// Custom printf implementation for UART
 static void debug_printf(const char *format, ...) {
     char buffer[256];
     va_list args;
     va_start(args, format);
     vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
-
     for (int i = 0; buffer[i] != '\0'; i++) {
         usart_send_blocking(USART3, buffer[i]);
-        // Add CR before LF for terminal compatibility if needed
-        if (buffer[i] == '\n') {
-             // usart_send_blocking(USART3, '\r');
-             // Intentionally commented out, usually terminals handle LF locally
-        }
     }
 }
 
-static void systick_setup(uint32_t ahb_hz) {
-	if (ahb_hz == 0) {
-		// ahb_hz = 64000000u;  // 64MHz from HSI (Reset default)
-		ahb_hz = 480000000u;  // 480MHz from PLL1
-	}
-	uint32_t reload = (ahb_hz / 1000u) - 1u;
-	systick_set_reload(reload);
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
-	systick_clear();
-	systick_interrupt_enable();
-	systick_counter_enable();
+#else
+
+// Release mode: UART disabled, debug_printf does nothing
+#define usart_setup()       ((void)0)
+#define debug_printf(...)   ((void)0)
+
+#endif
+
+// =============================================================================
+// SYSTEM FUNCTIONS
+// =============================================================================
+
+void sys_tick_handler(void) {
+    system_millis++;
 }
 
-static void error_handler(const char* error_msg, stai_return_code err_code) {
-	debug_printf("ERROR: %s (Code: 0x%X)\n", error_msg, err_code);
-	for (;;) {
-		gpio_set(LED3_PORT, LED3_PIN);
-		delay_ms(100);
-		gpio_clear(LED3_PORT, LED3_PIN);
-		delay_ms(100);
-	}
+static void delay_ms(uint32_t ms) {
+    uint32_t start = system_millis;
+    while ((system_millis - start) < ms) {
+        __asm__("wfi");
+    }
 }
 
-// ==============================================================================
-// SIGNAL OUTPUT SETUP (GPIO PORT E)
-// PINS: PE2-PE9 (Data D0-D7), PE10 (Valid Strobe)
-// ==============================================================================
-static void gpio_signal_setup(void) {
+static void mpu_config(void) {
+    // Disable MPU to avoid memory access conflicts
+    MPU_CTRL = 0;
+}
+
+static void systick_setup(void) {
+    uint32_t reload = (SYSCLK_FREQ_HZ / 1000u) - 1u;
+    systick_set_reload(reload);
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
+    systick_clear();
+    systick_interrupt_enable();
+    systick_counter_enable();
+}
+
+// =============================================================================
+// CLOCK CONFIGURATION
+// =============================================================================
+
+// Timeout value: ~1 second at 64MHz (rough estimate, actual timing depends on loop overhead)
+#define CLOCK_TIMEOUT  10000000UL
+
+static bool system_clock_config(void) {
+    uint32_t timeout;
+
+    // Wait for HSI to be ready (with timeout)
+    timeout = CLOCK_TIMEOUT;
+    while (!(RCC_CR & RCC_CR_HSIRDY)) {
+        if (--timeout == 0) return false;
+    }
+
+#if USE_PLL
+    // Set flash latency before increasing clock
+    flash_set_ws(FLASH_LATENCY);
+
+    // Configure voltage scaling
+    PWR_D3CR = (PWR_D3CR & ~(PWR_D3CR_VOS_MASK << PWR_D3CR_VOS_SHIFT)) |
+               (VOS_SCALE << PWR_D3CR_VOS_SHIFT);
+
+    timeout = CLOCK_TIMEOUT;
+    while (!(PWR_D3CR & PWR_D3CR_VOSRDY)) {
+        if (--timeout == 0) return false;
+    }
+
+    // Disable PLL before configuration
+    RCC_CR &= ~RCC_CR_PLL1ON;
+    timeout = CLOCK_TIMEOUT;
+    while (RCC_CR & RCC_CR_PLL1RDY) {
+        if (--timeout == 0) return false;
+    }
+
+    // Configure PLL source (HSI) and divider M
+    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~0x3) | RCC_PLLCKSELR_PLLSRC_HSI;
+    RCC_PLLCKSELR = (RCC_PLLCKSELR & ~(0x3F << RCC_PLLCKSELR_DIVM1_SHIFT)) |
+                     RCC_PLLCKSELR_DIVM1(PLL_M);
+
+    // Configure PLL multiplier N and divider P
+    RCC_PLL1DIVR = RCC_PLLNDIVR_DIVN(PLL_N) | RCC_PLLNDIVR_DIVP(PLL_P);
+
+    // Configure PLL input range and VCO
+    RCC_PLLCFGR = (RCC_PLLCFGR & ~(0x3 << RCC_PLLCFGR_PLL1RGE_SHIFT)) |
+                   (PLL_INPUT_RANGE << RCC_PLLCFGR_PLL1RGE_SHIFT);
+    RCC_PLLCFGR &= ~RCC_PLLCFGR_PLL1VCO_MED;  // Wide VCO range
+    RCC_PLLCFGR |= RCC_PLLCFGR_DIVP1EN;       // Enable P output
+
+    // Enable PLL and wait
+    RCC_CR |= RCC_CR_PLL1ON;
+    timeout = CLOCK_TIMEOUT;
+    while (!(RCC_CR & RCC_CR_PLL1RDY)) {
+        if (--timeout == 0) return false;
+    }
+
+    // Configure bus dividers
+    RCC_D1CFGR = RCC_D1CFGR_D1HPRE(RCC_D1CFGR_D1HPRE_BYP) |
+                 RCC_D1CFGR_D1PPRE(RCC_D1CFGR_D1PPRE_DIV2) |
+                 RCC_D1CFGR_D1CPRE(RCC_D1CFGR_D1CPRE_BYP);
+    RCC_D2CFGR = RCC_D2CFGR_D2PPRE1(RCC_D2CFGR_D2PPRE_DIV2) |
+                 RCC_D2CFGR_D2PPRE2(RCC_D2CFGR_D2PPRE_DIV2);
+    RCC_D3CFGR = RCC_D3CFGR_D3PPRE(RCC_D3CFGR_D3PPRE_DIV2);
+
+    // Switch to PLL
+    RCC_CFGR = (RCC_CFGR & ~(RCC_CFGR_SW_MASK << RCC_CFGR_SW_SHIFT)) |
+               (RCC_CFGR_SW_PLL1 << RCC_CFGR_SW_SHIFT);
+
+    timeout = CLOCK_TIMEOUT;
+    while (((RCC_CFGR >> RCC_CFGR_SWS_SHIFT) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL1) {
+        if (--timeout == 0) return false;
+    }
+
+    // Enable caches
+    SCB_ICIALLU = 0;
+    SCB_CCR |= SCB_CCR_IC;
+    SCB_DCISW = 0;
+    SCB_CCR |= SCB_CCR_DC;
+#endif
+    // If USE_PLL == 0, we stay on HSI at 64 MHz (default after reset)
+    return true;
+}
+
+// =============================================================================
+// GPIO SETUP
+// =============================================================================
+
+static void gpio_setup(void) {
+    rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_GPIOE);
-    // PE2-PE10 as Output Push-Pull
-    gpio_mode_setup(GPIOE, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
-                    GPIO2 | GPIO3 | GPIO4 | GPIO5 |
-                    GPIO6 | GPIO7 | GPIO8 | GPIO9 | GPIO10);
-    // Initial state Low
-    gpio_clear(GPIOE, GPIO2 | GPIO3 | GPIO4 | GPIO5 |
-                      GPIO6 | GPIO7 | GPIO8 | GPIO9 | GPIO10);
+
+    // LEDs
+    gpio_mode_setup(LED1_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED1_PIN);
+    gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
+    gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
+    gpio_clear(LED1_PORT, LED1_PIN);
+    gpio_clear(LED2_PORT, LED2_PIN);
+    gpio_clear(LED3_PORT, LED3_PIN);
+}
+
+static void signal_gpio_setup(void) {
+    rcc_periph_clock_enable(RCC_GPIOE);
+    // Data pins PE2-PE9 and strobe PE10
+    gpio_mode_setup(SIGNAL_DATA_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                    SIGNAL_DATA_PINS | SIGNAL_STROBE_PIN);
+    gpio_clear(SIGNAL_DATA_PORT, SIGNAL_DATA_PINS | SIGNAL_STROBE_PIN);
 }
 
 static void emit_signal(uint8_t value) {
-    // 1. Set Data Pins (PE2-PE9)
-    // Clear first to be safe (masked)
-    uint16_t mask = (0xFF << 2); // 0x03FC
-    gpio_clear(GPIOE, mask);
+    // Set data on PE2-PE9 (shift by 2 for pin alignment)
+    uint16_t mask = 0xFF << 2;
+    gpio_clear(SIGNAL_DATA_PORT, mask);
+    gpio_set(SIGNAL_DATA_PORT, ((uint16_t)value << 2) & mask);
 
-    // Set bits based on value shifted by 2 (PE2 is LSB)
-    uint16_t set_bits = ((uint16_t)value) << 2;
-    gpio_set(GPIOE, set_bits & mask);
-
-    // 2. Pulse Valid Strobe (PE10)
-    gpio_set(GPIOE, GPIO10);
-    // Short delay for signal integrity (~1us is enough usually, but we do more for visibility if needed)
-    // For fast signaling, just a few cycles.
-    for(volatile int i=0; i<100; i++) __asm__("nop");
-    gpio_clear(GPIOE, GPIO10);
+    // Pulse strobe
+    gpio_set(SIGNAL_DATA_PORT, SIGNAL_STROBE_PIN);
+    for (volatile int i = 0; i < 100; i++) __asm__("nop");
+    gpio_clear(SIGNAL_DATA_PORT, SIGNAL_STROBE_PIN);
 }
 
-// ==============================================================================
+// =============================================================================
+// ERROR HANDLER
+// =============================================================================
+
+static void error_handler(const char* msg, stai_return_code code) {
+    (void)msg;  // Used only in debug builds
+    (void)code; // Used only in debug builds
+    debug_printf("ERROR: %s (0x%X)\n", msg, code);
+    for (;;) {
+        gpio_toggle(LED3_PORT, LED3_PIN);
+        delay_ms(100);
+    }
+}
+
+// =============================================================================
 // MAIN
-// ==============================================================================
+// =============================================================================
 
 int main(void) {
+    // Enable FPU
+    SCB_CPACR |= (0xF << 20);
+    __asm__ volatile("dsb");
+    __asm__ volatile("isb");
 
-	// STEP 0: Enable FPU
-	SCB_CPACR |= (0xF << 20);
-	__asm__ volatile ("dsb");
-	__asm__ volatile ("isb");
+    // System initialization
+    mpu_config();
+    gpio_setup();  // Setup LEDs first for error indication
 
-	// STEP 1: Disable MPU
-	mpu_config();
+    // Configure clock (with timeout protection)
+    if (!system_clock_config()) {
+        // Clock config failed - blink red LED rapidly and continue at 64MHz HSI
+        for (int i = 0; i < 10; i++) {
+            gpio_toggle(LED3_PORT, LED3_PIN);
+            for (volatile int j = 0; j < 500000; j++) __asm__("nop");
+        }
+        // Continue anyway at default 64MHz HSI
+    }
 
-	// STEP 2: Configure system clock (HSI Default)
-	system_clock_config();
-
-	// STEP 3: Initialize peripherals
-	gpio_setup();
+    signal_gpio_setup();
     usart_setup();
-    gpio_signal_setup(); // SIGNAL OUTPUT INIT
-	// systick_setup(64000000);  // 64MHz
-	systick_setup(480000000);  // 480MHz from PLL1
+    systick_setup();
 
-    // Hello message
-    debug_printf("\n\n");
-    debug_printf("========================================\n");
-    debug_printf("STM32 AI Inference v3.0 + SIGNAL OUTPUT\n");
-    debug_printf("Signal: PE2-PE9 (Data), PE10 (Strobe)\n");
-    debug_printf("UART: Enabled (115200 8N1)\n");
-    debug_printf("========================================\n");
+    // Startup message
+    debug_printf("\n\n====================================\n");
+    debug_printf("STM32 AI Inference - %d MHz\n", TARGET_SYSCLK_MHZ);
+    debug_printf("====================================\n");
 
-	// ========================
-	// AI NETWORK INITIALIZATION
-	// ========================
-	debug_printf("Initializing ST.AI Network...\n");
+    // Initialize AI network
+    debug_printf("Initializing network...\n");
 
-    // Initialize Runtime
     stai_return_code err = stai_runtime_init();
-    if (err != STAI_SUCCESS) error_handler("Runtime Init Failed", err);
+    if (err != STAI_SUCCESS) error_handler("Runtime Init", err);
 
-	debug_printf("  Model: %s\n", STAI_NETWORK_MODEL_NAME);
-
-    // Initialize Network Context
     err = stai_network_init(network);
-    if (err != STAI_SUCCESS) error_handler("Network Init Failed", err);
+    if (err != STAI_SUCCESS) error_handler("Network Init", err);
 
-    // Set Activations
-    const stai_ptr activations_ptrs[] = { (stai_ptr)activations };
-    err = stai_network_set_activations(network, activations_ptrs, 1);
-    if (err != STAI_SUCCESS) error_handler("Set Activations Failed", err);
+    const stai_ptr act_ptrs[] = {(stai_ptr)activations};
+    err = stai_network_set_activations(network, act_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Activations", err);
 
-    // Set Weights
-    const stai_ptr weights_ptrs[] = { (stai_ptr)g_network_weights_array };
-    err = stai_network_set_weights(network, weights_ptrs, 1);
-    if (err != STAI_SUCCESS) error_handler("Set Weights Failed", err);
+    const stai_ptr wgt_ptrs[] = {(stai_ptr)g_network_weights_array};
+    err = stai_network_set_weights(network, wgt_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Weights", err);
 
-    // Set Inputs (bind static buffer)
-    const stai_ptr inputs_ptrs[] = { (stai_ptr)input_data };
-    err = stai_network_set_inputs(network, inputs_ptrs, 1);
-    if (err != STAI_SUCCESS) error_handler("Set Inputs Failed", err);
+    const stai_ptr in_ptrs[] = {(stai_ptr)input_data};
+    err = stai_network_set_inputs(network, in_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Inputs", err);
 
-    // Set Outputs (bind static buffer)
-    const stai_ptr outputs_ptrs[] = { (stai_ptr)output_data };
-    err = stai_network_set_outputs(network, outputs_ptrs, 1);
-    if (err != STAI_SUCCESS) error_handler("Set Outputs Failed", err);
+    const stai_ptr out_ptrs[] = {(stai_ptr)output_data};
+    err = stai_network_set_outputs(network, out_ptrs, 1);
+    if (err != STAI_SUCCESS) error_handler("Set Outputs", err);
 
-	debug_printf("Network initialized successfully!\n");
-	debug_printf("Network context: %p\n\n", (void*)network);
+    debug_printf("Network ready: %s\n", STAI_NETWORK_MODEL_NAME);
 
-
-	// ========================
-	// MAIN INFERENCE LOOP
-	// ========================
-
-	int counter = 0;
-
-	for (;;) {
-		// debug_printf("--- Iteration (t=%lu ms) ---\n", system_millis);
-
-		// Reset LEDs
-		gpio_clear(LED1_PORT, LED1_PIN);
-		gpio_clear(LED2_PORT, LED2_PIN);
-		gpio_clear(LED3_PORT, LED3_PIN);
-
-		// Orange LED ON: input preparation
-		gpio_set(LED2_PORT, LED2_PIN);
-
-		// Fill input buffer with dummy data
-		for (int i = 0; i < STAI_NETWORK_IN_1_SIZE; i++) {
-			input_data[i] = MODEL_INPUT_GEN(i);
-		}
-
-		// Run inference
-		// debug_printf("Running inference...\n");
-
-		// DEBUG: Check input (print first element only to avoid spam)
-		// debug_printf("  Input[0] = %f\n", (double)input_data[0]);
-
-		// Red LED ON: inference
+    // Main inference loop
+    int counter = 0;
+    for (;;) {
+        // Clear LEDs
+        gpio_clear(LED1_PORT, LED1_PIN);
         gpio_clear(LED2_PORT, LED2_PIN);
-		gpio_set(LED3_PORT, LED3_PIN);
+        gpio_clear(LED3_PORT, LED3_PIN);
 
-		uint32_t start_time = system_millis;
+        // Prepare input
+        gpio_set(LED2_PORT, LED2_PIN);
+        for (int i = 0; i < STAI_NETWORK_IN_1_SIZE; i++) {
+            input_data[i] = MODEL_INPUT_GEN(i);
+        }
 
-        // V3 API Run
-		err = stai_network_run(network, STAI_MODE_SYNC);
+        // Run inference
+        gpio_clear(LED2_PORT, LED2_PIN);
+        gpio_set(LED3_PORT, LED3_PIN);
 
-		uint32_t end_time = system_millis;
-		uint32_t inference_time = end_time - start_time;
+        uint32_t t_start = system_millis;
+        err = stai_network_run(network, STAI_MODE_SYNC);
+        uint32_t t_elapsed = system_millis - t_start;
+        (void)t_elapsed; // Used only in debug builds
 
-		if (err != STAI_SUCCESS) {
-			debug_printf("FAILED! (Code: 0x%X)\n", err);
-
-			// Blink red LED rapidly
-			for (int i = 0; i < 6; i++) {
-				gpio_toggle(LED3_PORT, LED3_PIN);
-				delay_ms(50);
-			}
-		} else {
-            uint8_t out_byte = 0;
-
+        if (err != STAI_SUCCESS) {
+            debug_printf("Inference FAILED (0x%X)\n", err);
+            for (int i = 0; i < 6; i++) {
+                gpio_toggle(LED3_PORT, LED3_PIN);
+                delay_ms(50);
+            }
+        } else {
+            // Output result
             #ifdef QUANTIZED_INT8
-                out_byte = (uint8_t)output_data[0];
+            uint8_t out_byte = (uint8_t)output_data[0];
+            debug_printf("OK %lums | Out: %d | INT8\n", t_elapsed, (int8_t)output_data[0]);
             #else
-                out_byte = (uint8_t)(output_data[0] * 100); // Scale float
+            uint8_t out_byte = (uint8_t)(output_data[0] * 100);
+            debug_printf("OK %lums | Out: %.4f | FP32\n", t_elapsed, (double)output_data[0]);
             #endif
 
-            // EMIT SIGNAL
             emit_signal(out_byte);
 
-			// Compact output
-            #ifdef QUANTIZED_INT8
-                debug_printf("INF: OK (%lu ms) | Out: %d (0x%02X) | Mode: INT8\n", inference_time, (int8_t)output_data[0], out_byte);
-            #else
-			    debug_printf("INF: OK (%lu ms) | Out: %.4f (0x%02X) | Mode: FP32\n", inference_time, (double)output_data[0], out_byte);
-            #endif
-
-			// Blink green LED for success
             gpio_clear(LED3_PORT, LED3_PIN);
-			for(int i=0; i<2; i++) {
-				gpio_set(LED1_PORT, LED1_PIN);
-				delay_ms(50);
-				gpio_clear(LED1_PORT, LED1_PIN);
-				delay_ms(50);
-			}
-            gpio_set(LED1_PORT, LED1_PIN); // Keep green on
-		}
+            gpio_set(LED1_PORT, LED1_PIN);
+            delay_ms(100);
+        }
 
+        #ifndef NO_SLEEP
+        delay_ms(200);
+        #endif
 
-		#ifndef NO_SLEEP
-		delay_ms(200);
-		#endif
+        counter++;
+        if (system_millis > 10000 || counter > 10000) {
+            system_millis = 0;
+            counter = 0;
+            debug_printf("--- COUNTER RESET ---\n");
+        }
 
-		counter++;
-		// Reset logic
-		if(system_millis > 10000 || counter > 10000) {
-			system_millis = 0;
-			counter = 0;
-            debug_printf("--- RESET COUNTERS ---\n");
-			gpio_set(LED1_PORT, LED1_PIN);
-			gpio_set(LED2_PORT, LED2_PIN);
-			gpio_set(LED3_PORT, LED3_PIN);
-			#ifndef NO_SLEEP
-			delay_ms(2000);
-			#endif
-		}
+        gpio_clear(LED1_PORT, LED1_PIN);
 
-		gpio_clear(LED1_PORT, LED1_PIN);
-		gpio_clear(LED2_PORT, LED2_PIN);
-		gpio_clear(LED3_PORT, LED3_PIN);
-
-		#ifndef NO_SLEEP
-		delay_ms(400);
-		#endif
-	}
+        #ifndef NO_SLEEP
+        delay_ms(400);
+        #endif
+    }
 }

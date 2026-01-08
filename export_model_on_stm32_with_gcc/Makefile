@@ -48,6 +48,13 @@ ifneq ($(FAST_MODE),)
     CFLAGS += -DNO_SLEEP
 endif
 
+# CPU Frequency configuration
+# Usage: make SYSCLK=240 (options: 64, 120, 240, 480)
+# Default: 64 MHz (safe HSI mode without PLL)
+ifdef SYSCLK
+    CFLAGS += -DTARGET_SYSCLK_MHZ=$(SYSCLK)
+endif
+
 # Source files - main.c gets replaced by MAIN_SRC
 SRCS = $(MAIN_SRC) network.c network_data.c network_data_params.c
 OBJS = $(addprefix $(BUILD_DIR)/, $(notdir $(SRCS:.c=.o)))
