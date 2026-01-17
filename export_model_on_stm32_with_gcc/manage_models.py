@@ -357,6 +357,81 @@ def select_clock():
     return input(f"\nEnter clock speed in MHz (default: {info['default_clock']}): ").strip()
 
 
+def custom_build():
+    """Interactive custom build with all options configurable."""
+    model_name = get_current_model()
+    if not model_name:
+        print("Error: No model loaded. Please load a model first.")
+        return
+
+    device = get_current_device()
+    device_info = DEVICES[device]
+
+    print("\n" + "=" * 55)
+    print("           CUSTOM BUILD CONFIGURATION")
+    print("=" * 55)
+    print(f"Model: {model_name}")
+    print(f"Type:  {'INT8 (Quantized)' if is_int8_model(model_name) else 'F32 (Float)'}")
+    print("=" * 55)
+
+    # Option 1: Device
+    print(f"\n[1] Device: {device_info['name']}")
+    change = input("    Change device? (y/N): ").strip().lower()
+    if change == 'y':
+        select_device()
+        device = get_current_device()
+        device_info = DEVICES[device]
+
+    # Option 2: Clock Speed
+    print(f"\n[2] Clock Speed Options: {device_info['clock_options']} MHz")
+    clock_input = input(f"    Enter clock (default={device_info['default_clock']}): ").strip()
+    sysclk = int(clock_input) if clock_input else device_info['default_clock']
+    if sysclk not in device_info['clock_options']:
+        print(f"    Warning: {sysclk} not valid, using {device_info['default_clock']}")
+        sysclk = device_info['default_clock']
+
+    # Option 3: Debug Mode
+    print("\n[3] Debug Mode: Enables UART output via semihosting")
+    debug = input("    Enable debug? (y/N): ").strip().lower() == 'y'
+
+    # Option 4: Fast Mode
+    print("\n[4] Fast Mode: Removes all delays between inferences")
+    fast_mode = input("    Enable fast mode? (y/N): ").strip().lower() == 'y'
+
+    # Option 5: Safe Mode
+    print("\n[5] Safe Mode: Skips PLL/Cache/MPU init (use if program won't run)")
+    safe_mode = input("    Enable safe mode? (y/N): ").strip().lower() == 'y'
+
+    # Option 6: Library Selection
+    print("\n[6] Library: Which low-level library to use")
+    print("    1. libopencm3 (open-source, default)")
+    print("    2. ST HAL (proprietary, not yet fully implemented)")
+    lib_choice = input("    Select (1 or 2, default=1): ").strip()
+    library = "hal" if lib_choice == "2" else "opencm3"
+
+    # Summary
+    print("\n" + "-" * 55)
+    print("BUILD CONFIGURATION SUMMARY:")
+    print("-" * 55)
+    print(f"  Device:       {device_info['name']}")
+    print(f"  Clock:        {sysclk} MHz")
+    print(f"  Model Type:   {'INT8' if is_int8_model(model_name) else 'F32'}")
+    print(f"  Debug Mode:   {'YES' if debug else 'NO'}")
+    print(f"  Fast Mode:    {'YES (no delays)' if fast_mode else 'NO'}")
+    print(f"  Safe Mode:    {'YES (skip init)' if safe_mode else 'NO'}")
+    print(f"  Library:      {'ST HAL' if library == 'hal' else 'libopencm3'}")
+    print("-" * 55)
+
+    confirm = input("\nProceed with build? (Y/n): ").strip().lower()
+    if confirm == 'n':
+        print("Build cancelled.")
+        return
+
+    # Build!
+    build_model(device=device, fast_mode=fast_mode, debug=debug,
+                sysclk=sysclk, safe_mode=safe_mode, library=library)
+
+
 def main_menu():
     """Main interactive menu."""
     while True:
@@ -375,8 +450,9 @@ def main_menu():
         print("  2. Select Device")
         print("  3. Build (Release)")
         print("  4. Build (Debug + Semihosting)")
-        print("  5. Build (FAST MODE - Max Performance)")
+        print("  5. Build (FAST MODE)")
         print("  6. Build (SAFE MODE - Skip PLL/Cache/MPU)")
+        print("  c. Build (CUSTOM - All Options)")
         print("  7. Flash")
         print("  8. Build + Flash + Run Debug")
         print("  9. Show Build Info")
@@ -408,6 +484,9 @@ def main_menu():
             print("\n[SAFE MODE] Skipping PLL, cache, and MPU initialization.")
             print("Runs at default HSI clock (~64MHz on H723ZG, ~16MHz on U545RE).")
             build_model(safe_mode=True)
+
+        elif choice.lower() == 'c':
+            custom_build()
 
         elif choice == '7':
             flash_model()

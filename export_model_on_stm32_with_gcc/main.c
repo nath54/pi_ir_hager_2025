@@ -55,48 +55,74 @@ static void prepare_input_data(void) {
     }
 }
 
-// =============================================================================
-// AI NETWORK INITIALIZATION
-// =============================================================================
+// Error blink pattern (non-fatal)
+static void blink_error(int count) {
+    for (int i = 0; i < count; i++) {
+        led_set(LED_RED);
+        for (volatile int j = 0; j < 200000; j++) __asm__("nop");
+        led_clear(LED_RED);
+        for (volatile int j = 0; j < 200000; j++) __asm__("nop");
+    }
+    // Pause between error codes
+    for (volatile int j = 0; j < 500000; j++) __asm__("nop");
+}
 
-static void ai_network_init(void) {
+static bool ai_network_init(void) {
     debug_printf("Initializing AI network...\n");
+    bool success = true;
 
     stai_return_code err = stai_runtime_init();
     if (err != STAI_SUCCESS) {
-        error_handler("Runtime Init", err);
+        debug_printf("ERROR: Runtime Init failed (0x%X)\n", err);
+        blink_error(1);  // 1 blink = runtime init failed
+        success = false;
     }
 
     err = stai_network_init(network);
     if (err != STAI_SUCCESS) {
-        error_handler("Network Init", err);
+        debug_printf("ERROR: Network Init failed (0x%X)\n", err);
+        blink_error(2);  // 2 blinks = network init failed
+        success = false;
     }
 
     const stai_ptr act_ptrs[] = {(stai_ptr)activations};
     err = stai_network_set_activations(network, act_ptrs, 1);
     if (err != STAI_SUCCESS) {
-        error_handler("Set Activations", err);
+        debug_printf("ERROR: Set Activations failed (0x%X)\n", err);
+        blink_error(3);  // 3 blinks = activations failed
+        success = false;
     }
 
     const stai_ptr wgt_ptrs[] = {(stai_ptr)g_network_weights_array};
     err = stai_network_set_weights(network, wgt_ptrs, 1);
     if (err != STAI_SUCCESS) {
-        error_handler("Set Weights", err);
+        debug_printf("ERROR: Set Weights failed (0x%X)\n", err);
+        blink_error(4);  // 4 blinks = weights failed
+        success = false;
     }
 
     const stai_ptr in_ptrs[] = {(stai_ptr)input_data};
     err = stai_network_set_inputs(network, in_ptrs, 1);
     if (err != STAI_SUCCESS) {
-        error_handler("Set Inputs", err);
+        debug_printf("ERROR: Set Inputs failed (0x%X)\n", err);
+        blink_error(5);  // 5 blinks = inputs failed
+        success = false;
     }
 
     const stai_ptr out_ptrs[] = {(stai_ptr)output_data};
     err = stai_network_set_outputs(network, out_ptrs, 1);
     if (err != STAI_SUCCESS) {
-        error_handler("Set Outputs", err);
+        debug_printf("ERROR: Set Outputs failed (0x%X)\n", err);
+        blink_error(6);  // 6 blinks = outputs failed  
+        success = false;
     }
 
-    debug_printf("Network ready: %s\n", STAI_NETWORK_MODEL_NAME);
+    if (success) {
+        debug_printf("Network ready: %s\n", STAI_NETWORK_MODEL_NAME);
+    } else {
+        debug_printf("Network init had errors - will try to continue anyway\n");
+    }
+    return success;
 }
 
 // =============================================================================
@@ -110,6 +136,17 @@ int main(void) {
     // Initialize signal output for oscilloscope
     signal_gpio_init();
 
+    // === LED TEST: Blink all LEDs once to show we're alive ===
+    led_set(LED_GREEN);
+    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    led_clear(LED_GREEN);
+    led_set(LED_YELLOW);
+    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    led_clear(LED_YELLOW);
+    led_set(LED_RED);
+    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    led_clear(LED_RED);
+
     // Startup message
     debug_printf("\n\n====================================\n");
     debug_printf("STM32 AI Inference - %s\n", DEVICE_NAME);
@@ -120,24 +157,26 @@ int main(void) {
     ai_network_init();
 
     // Main inference loop
+    int loop_count = 0;
     for (;;) {
-        // Clear LEDs
-        led_clear_all();
+        loop_count++;
+        // Clear LEDs (except yellow - it alternates)
+        led_clear(LED_GREEN);
+        led_clear(LED_RED);
 
         // Prepare input data
-        led_set(LED_YELLOW);
         prepare_input_data();
-        led_clear(LED_YELLOW);
 
         // Run inference with timing signal
         led_set(LED_RED);
-        signal_inference_start();  // Signal goes HIGH or LOW (alternating)
+        led_toggle(LED_YELLOW);     // Yellow LED alternates each inference (visual signal)
+        signal_inference_start();    // Signal pin also alternates (for oscilloscope)
 
         uint32_t t_start = millis();
         stai_return_code err = stai_network_run(network, STAI_MODE_SYNC);
         uint32_t t_elapsed = millis() - t_start;
 
-        signal_inference_end();  // Mark end (signal stays for next toggle)
+        signal_inference_end();
         led_clear(LED_RED);
 
         if (err != STAI_SUCCESS) {
