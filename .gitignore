@@ -29,3 +29,5 @@ pyvenv.cfg
 stm32_example_export_opensource/libopencm3
 EXPORTED*
 *.pdf
+.metadata
+.*

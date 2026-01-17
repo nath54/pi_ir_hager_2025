@@ -119,7 +119,7 @@ static bool ai_network_init(void) {
     err = stai_network_set_outputs(network, out_ptrs, 1);
     if (err != STAI_SUCCESS) {
         debug_printf("ERROR: Set Outputs failed (0x%X)\n", err);
-        blink_error(6);  // 6 blinks = outputs failed  
+        blink_error(6);  // 6 blinks = outputs failed
         success = false;
     }
 
@@ -147,11 +147,11 @@ int main(void) {
     led_set(LED_GREEN);
     for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec
     led_clear(LED_GREEN);
-    
+
     led_set(LED_YELLOW);  // Should be PE1 on NUCLEO-H723ZG
-    for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec  
+    for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec
     led_clear(LED_YELLOW);
-    
+
     led_set(LED_RED);
     for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec
     led_clear(LED_RED);
