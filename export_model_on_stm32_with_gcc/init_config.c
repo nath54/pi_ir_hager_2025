@@ -271,29 +271,21 @@ bool clock_config(void) {
 // =============================================================================
 
 void gpio_led_init(void) {
-    // Enable clocks for LED GPIOs
-    rcc_periph_clock_enable(LED1_RCC);
-#if LED2_RCC != LED1_RCC
-    rcc_periph_clock_enable(LED2_RCC);
-#endif
-#if LED3_RCC != LED1_RCC && LED3_RCC != LED2_RCC
-    rcc_periph_clock_enable(LED3_RCC);
-#endif
+    // Enable clocks for ALL LED GPIOs - always enable explicitly
+    // (The preprocessor conditionals don't work with libopencm3 RCC macros)
+    rcc_periph_clock_enable(LED1_RCC);  // GPIOB for LED1/LED3
+    rcc_periph_clock_enable(LED2_RCC);  // GPIOE for LED2 (yellow)
+    rcc_periph_clock_enable(LED3_RCC);  // Already enabled if same as LED1
 
-    // Configure LED pins as outputs
+    // Configure ALL LED pins as outputs
     gpio_mode_setup(LED1_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED1_PIN);
     gpio_clear(LED1_PORT, LED1_PIN);
 
-#if LED2_PORT != LED1_PORT || LED2_PIN != LED1_PIN
     gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
     gpio_clear(LED2_PORT, LED2_PIN);
-#endif
 
-#if (LED3_PORT != LED1_PORT || LED3_PIN != LED1_PIN) && \
-    (LED3_PORT != LED2_PORT || LED3_PIN != LED2_PIN)
     gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
     gpio_clear(LED3_PORT, LED3_PIN);
-#endif
 }
 
 // =============================================================================

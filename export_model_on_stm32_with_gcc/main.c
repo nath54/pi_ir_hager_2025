@@ -55,16 +55,22 @@ static void prepare_input_data(void) {
     }
 }
 
-// Error blink pattern (non-fatal)
+// Error blink pattern (non-fatal)/
+// Pattern: [count short blinks] -> [long ON] -> repeat
 static void blink_error(int count) {
+    // Short blinks = error code number
     for (int i = 0; i < count; i++) {
         led_set(LED_RED);
-        for (volatile int j = 0; j < 200000; j++) __asm__("nop");
+        for (volatile int j = 0; j < 100000; j++) __asm__("nop");  // Short ON
         led_clear(LED_RED);
-        for (volatile int j = 0; j < 200000; j++) __asm__("nop");
+        for (volatile int j = 0; j < 100000; j++) __asm__("nop");  // Short OFF
     }
-    // Pause between error codes
-    for (volatile int j = 0; j < 500000; j++) __asm__("nop");
+    // LONG ON to mark end of code (very visible)
+    led_set(LED_RED);
+    for (volatile int j = 0; j < 800000; j++) __asm__("nop");  // Long ON
+    led_clear(LED_RED);
+    // LONG OFF before next error
+    for (volatile int j = 0; j < 800000; j++) __asm__("nop");  // Long OFF
 }
 
 static bool ai_network_init(void) {
@@ -137,14 +143,17 @@ int main(void) {
     signal_gpio_init();
 
     // === LED TEST: Blink all LEDs once to show we're alive ===
+    // Each LED stays on for ~1 second to verify all are working
     led_set(LED_GREEN);
-    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec
     led_clear(LED_GREEN);
-    led_set(LED_YELLOW);
-    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    
+    led_set(LED_YELLOW);  // Should be PE1 on NUCLEO-H723ZG
+    for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec  
     led_clear(LED_YELLOW);
+    
     led_set(LED_RED);
-    for (volatile int i = 0; i < 500000; i++) __asm__("nop");
+    for (volatile int i = 0; i < 2000000; i++) __asm__("nop");  // ~1 sec
     led_clear(LED_RED);
 
     // Startup message
@@ -160,31 +169,40 @@ int main(void) {
     int loop_count = 0;
     for (;;) {
         loop_count++;
-        // Clear LEDs (except yellow - it alternates)
+        // Clear LEDs (except yellow - it alternates every 50 inferences)
         led_clear(LED_GREEN);
         led_clear(LED_RED);
 
         // Prepare input data
         prepare_input_data();
 
+        // Toggle yellow LED every 50 inferences for visibility
+        if (loop_count % 50 == 0) {
+            led_toggle(LED_YELLOW);
+        }
+
         // Run inference with timing signal
-        led_set(LED_RED);
-        led_toggle(LED_YELLOW);     // Yellow LED alternates each inference (visual signal)
-        signal_inference_start();    // Signal pin also alternates (for oscilloscope)
+        led_set(LED_RED);  // RED ON = running inference
+        signal_inference_start();  // Pin signal toggles every inference (for oscilloscope)
 
         uint32_t t_start = millis();
         stai_return_code err = stai_network_run(network, STAI_MODE_SYNC);
         uint32_t t_elapsed = millis() - t_start;
 
         signal_inference_end();
-        led_clear(LED_RED);
+        led_clear(LED_RED);  // RED OFF = inference done
 
         if (err != STAI_SUCCESS) {
             debug_printf("Inference FAILED (0x%X)\n", err);
+            // Error: fast blink 6 times using NOP (no systick dependency)
             for (int i = 0; i < 6; i++) {
                 led_toggle(LED_RED);
-                delay_ms(50);
+                for (volatile int j = 0; j < 100000; j++) __asm__("nop");
             }
+            // VERY LONG pause after failure (all LEDs off)
+            led_clear(LED_RED);
+            led_clear(LED_GREEN);
+            for (volatile int j = 0; j < 5000000; j++) __asm__("nop");  // ~1 second
         } else {
             // Process output
 #ifdef QUANTIZED_INT8
@@ -198,11 +216,9 @@ int main(void) {
             // Emit output data on parallel bus (if available)
             signal_emit_data(out_byte);
 
-            // Success indication
+            // Success indication - GREEN stays on briefly
             led_set(LED_GREEN);
-#ifndef NO_SLEEP
-            delay_ms(100);
-#endif
+            for (volatile int j = 0; j < 500000; j++) __asm__("nop");
         }
 
         // Counter management
