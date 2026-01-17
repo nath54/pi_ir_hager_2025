@@ -77,6 +77,13 @@ ifneq ($(FAST_MODE),)
     CFLAGS += -DNO_SLEEP
 endif
 
+# Safe Mode configuration (Skip advanced init - PLL, cache, MPU)
+# Usage: make SAFE_MODE=1
+# Use this if the program hangs during initialization
+ifneq ($(SAFE_MODE),)
+    CFLAGS += -DSAFE_MODE
+endif
+
 # CPU Frequency configuration
 # Usage: make SYSCLK=550 (H723ZG: 64, 120, 240, 480, 550; U545RE: 16, 80, 160)
 ifdef SYSCLK
@@ -144,4 +151,5 @@ info:
 	@echo "Debug:        $(if $(DEBUG),enabled,disabled)"
 	@echo "Quantization: $(if $(INT_QUANTIZATION),INT8,F32)"
 	@echo "Fast Mode:    $(if $(FAST_MODE),enabled,disabled)"
+	@echo "Safe Mode:    $(if $(SAFE_MODE),enabled (skip PLL/cache/MPU),disabled)"
 	@echo "Source:       $(MAIN_SRC)"

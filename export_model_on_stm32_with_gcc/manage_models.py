@@ -188,7 +188,7 @@ def load_model(model_name):
 # BUILD AND FLASH FUNCTIONS
 # =============================================================================
 
-def build_model(device=None, fast_mode=False, debug=False, sysclk=None, library="opencm3"):
+def build_model(device=None, fast_mode=False, debug=False, sysclk=None, library="opencm3", safe_mode=False):
     """Build the currently loaded model."""
     model_name = get_current_model()
     if not model_name:
@@ -215,7 +215,7 @@ def build_model(device=None, fast_mode=False, debug=False, sysclk=None, library=
     print(f"Device:   {device_info['name']} ({device_info['core']})")
     print(f"Clock:    {sysclk} MHz")
     print(f"Type:     {'INT8' if is_int8_model(model_name) else 'F32'}")
-    print(f"Mode:     {'Debug' if debug else 'Release'}{' (FAST)' if fast_mode else ''}")
+    print(f"Mode:     {'Debug' if debug else 'Release'}{' (FAST)' if fast_mode else ''}{' (SAFE)' if safe_mode else ''}")
     print(f"Library:  {'ST HAL' if library == 'hal' else 'libopencm3'}")
     print(f"{'='*50}\n")
 
@@ -236,6 +236,9 @@ def build_model(device=None, fast_mode=False, debug=False, sysclk=None, library=
 
     if library == "hal":
         cmd.append("LIB=hal")
+
+    if safe_mode:
+        cmd.append("SAFE_MODE=1")
 
     try:
         subprocess.run(cmd, check=True)
@@ -373,10 +376,11 @@ def main_menu():
         print("  3. Build (Release)")
         print("  4. Build (Debug + Semihosting)")
         print("  5. Build (FAST MODE - Max Performance)")
-        print("  6. Flash")
-        print("  7. Build + Flash + Run Debug")
-        print("  8. Show Build Info")
-        print("  9. Quit")
+        print("  6. Build (SAFE MODE - Skip PLL/Cache/MPU)")
+        print("  7. Flash")
+        print("  8. Build + Flash + Run Debug")
+        print("  9. Show Build Info")
+        print("  0. Quit")
         print("-" * 50)
 
         choice = input("Enter choice: ").strip()
@@ -400,18 +404,30 @@ def main_menu():
             build_model(fast_mode=True, sysclk=sysclk)
 
         elif choice == '6':
-            flash_model()
+            # Safe mode: skip PLL/cache/MPU init
+            print("\n[SAFE MODE] Skipping PLL, cache, and MPU initialization.")
+            print("Runs at default HSI clock (~64MHz on H723ZG, ~16MHz on U545RE).")
+            build_model(safe_mode=True)
 
         elif choice == '7':
+            flash_model()
+
+        elif choice == '8':
             if build_model(debug=True):
                 if flash_model():
                     print("\nStarting debug session...")
                     run_debug()
 
-        elif choice == '8':
-            subprocess.run(["make", "info", f"DEVICE={current_device}"])
-
         elif choice == '9':
+            # Show current build info based on loaded model
+            model_name = current_model
+            int8_flag = "INT_QUANTIZATION=1" if model_name and is_int8_model(model_name) else ""
+            cmd = ["make", "info", f"DEVICE={current_device}"]
+            if int8_flag:
+                cmd.append(int8_flag)
+            subprocess.run(cmd)
+
+        elif choice == '0':
             print("Goodbye!")
             break
 

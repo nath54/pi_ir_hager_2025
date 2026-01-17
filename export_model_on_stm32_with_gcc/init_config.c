@@ -9,6 +9,21 @@
 #include "device_config.h"
 
 // =============================================================================
+// BUILD OPTIONS
+// =============================================================================
+
+// SAFE_MODE: Skip advanced init that may hang (PLL, cache, MPU)
+// Set via make SAFE_MODE=1
+#ifdef SAFE_MODE
+    #define SKIP_ADVANCED_INIT  1
+#else
+    #define SKIP_ADVANCED_INIT  0
+#endif
+
+// Maximum timeout iterations (prevents infinite hangs)
+#define INIT_TIMEOUT_MAX  100000UL
+
+// =============================================================================
 // GLOBAL VARIABLES
 // =============================================================================
 
@@ -43,6 +58,12 @@ void fpu_enable(void) {
 // =============================================================================
 
 void mpu_config(void) {
+#if SKIP_ADVANCED_INIT
+    // Safe mode: just disable MPU, don't configure
+    MPU_CTRL = 0;
+    return;
+#endif
+
 #if defined(DEVICE_STM32H723ZG)
     // Disable MPU first
     MPU_CTRL = 0;
@@ -74,6 +95,11 @@ void mpu_config(void) {
 // =============================================================================
 
 void cache_enable(void) {
+#if SKIP_ADVANCED_INIT
+    // Safe mode: skip cache enable entirely
+    return;
+#endif
+
 #if DEVICE_HAS_ICACHE
     // Invalidate I-cache before enabling
     __asm__ volatile("dsb");
@@ -137,10 +163,15 @@ void cache_enable(void) {
 bool clock_config(void) {
     uint32_t timeout;
 
-    // Wait for HSI to be ready
-    timeout = CLOCK_TIMEOUT;
+#if SKIP_ADVANCED_INIT
+    // Safe mode: just run on HSI, no PLL
+    return true;
+#endif
+
+    // Wait for HSI to be ready (with timeout)
+    timeout = INIT_TIMEOUT_MAX;
     while (!(RCC_CR & RCC_CR_HSIRDY)) {
-        if (--timeout == 0) return false;
+        if (--timeout == 0) return false;  // Timeout - continue anyway
     }
 
 #if USE_PLL
