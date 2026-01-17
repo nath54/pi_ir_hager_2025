@@ -1,47 +1,127 @@
-# STM32H723ZG AI Inference Project
+# STM32 AI Inference Project
 
-This project runs an AI model on the STM32H723ZG Nucleo board.
+Run ONNX models on STM32 microcontrollers using libopencm3 (open-source) or ST HAL (optional).
 
-## Build System
+## Supported Devices
 
-The build system supports two modes: **Release** (default) and **Debug**.
+| Device              | Core       | Max Clock | Features                |
+| ------------------- | ---------- | --------- | ----------------------- |
+| **NUCLEO-H723ZG**   | Cortex-M7  | 550 MHz   | D-cache, I-cache, FPU   |
+| **NUCLEO-U545RE-Q** | Cortex-M33 | 160 MHz   | I-cache, FPU, TrustZone |
 
-### 1. Release Mode (Default)
-- **Optimized for performance**
-- **No Semihosting** (runs standalone without debugger)
-- **No Debug Output** (printf is disabled)
-- Uses `nosys.specs`
+## Quick Start
 
-**Build & Flash:**
 ```bash
-./build.sh
+# 1. Load a model
+python3 manage_models.py
+# Select option 1 → choose a model
+
+# 2. Build
+make DEVICE=H723ZG SYSCLK=240
+
+# 3. Flash
 ./flash.sh
 ```
 
-### 2. Debug Mode
-- **Semihosting Enabled** (requires debugger connection)
-- **Debug Output** (printf works via OpenOCD)
-- Uses `rdimon.specs`
+## Model Manager
 
-**Build, Flash & Run:**
+Interactive menu for managing AI models:
+
 ```bash
-./build.sh debug
-./flash.sh
-./run.sh
+python3 manage_models.py
 ```
 
-## LED Status Indicators
+Features:
+- **Auto-detect device** from model name (H723ZG, U545RE)
+- **Auto-detect type** (F32 or INT8 quantized)
+- **Clock speed selection** per device
+- **Debug mode** with UART output
 
-| LED | Color | Status |
-|-----|-------|--------|
-| **LED1** | Green | **Success** / Idle (Blinking slowly = All good) |
-| **LED2** | Yellow | **Input Preparation** / Initialization |
-| **LED3** | Red | **Inference Running** (Fast blink = Error) |
+## Build Options
+
+```bash
+# Basic build (default: H723ZG @ 64MHz, Release mode)
+make
+
+# Full performance (H723ZG @ 550MHz, max speed)
+make DEVICE=H723ZG SYSCLK=550 FAST_MODE=1
+
+# Debug with semihosting
+make DEVICE=H723ZG SYSCLK=64 DEBUG=1
+
+# INT8 quantized model
+make DEVICE=H723ZG INT_QUANTIZATION=1
+
+# Show build info
+make info
+```
+
+| Option                      | Description                   |
+| --------------------------- | ----------------------------- |
+| `DEVICE=H723ZG` or `U545RE` | Target board                  |
+| `SYSCLK=64/120/240/480/550` | CPU frequency (H723ZG)        |
+| `SYSCLK=16/80/160`          | CPU frequency (U545RE)        |
+| `INT_QUANTIZATION=1`        | Enable INT8 mode              |
+| `FAST_MODE=1`               | No delays, max inference rate |
+| `DEBUG=1`                   | Enable UART debug output      |
+
+## Signal Output (Oscilloscope)
+
+The firmware outputs an **alternating signal** for precise timing:
+
+- **Pin:** PE10 (H723ZG) / PA8 (U545RE)
+- **Pattern:** Toggles HIGH↔LOW at each inference start
+- **Benefit:** Clear square wave shows exact inference duration
+
+```
+Signal:  _____|‾‾‾‾‾|_____|‾‾‾‾‾|_____
+              ^     ^     ^     ^
+           Start  End  Start  End
+           Inf1      Inf2      Inf3
+```
 
 ## Project Structure
 
-- `main.c`: Main application with AI inference loop.
-- `network.c` / `network_data.c`: AI model implementation (generated).
-- `debug_log.h`: Macros for debug printing (maps to printf or empty).
-- `build.sh`: Build script wrapper around Make.
-- `run.sh`: Script to launch OpenOCD and capture semihosting output.
+```
+├── main.c              # Main application loop
+├── device_config.h     # Device-specific definitions
+├── init_config.c/h     # Clock, cache, MPU initialization
+├── utils.c/h           # LED control, signal output, delays
+├── network.c/h         # AI model (copied from models/)
+├── manage_models.py    # Model manager (interactive)
+├── Makefile            # Build system
+├── models/             # Exported AI models from ST Edge AI
+└── STM32_PROJECTS/     # Reference CUBE IDE projects
+```
+
+## Performance Notes
+
+### Recommended Settings for Benchmarking
+
+```bash
+# Maximum performance on H723ZG
+make DEVICE=H723ZG SYSCLK=550 FAST_MODE=1
+```
+
+This enables:
+- 550 MHz clock (VOS0 + HSE)
+- I-cache and D-cache with proper initialization
+- MPU with privileged default mode
+- No inter-inference delays
+
+## LED Indicators
+
+| LED  | Color  | Status                                 |
+| ---- | ------ | -------------------------------------- |
+| LED1 | Green  | Success / Idle                         |
+| LED2 | Yellow | Input preparation                      |
+| LED3 | Red    | Inference running (fast blink = error) |
+
+## Adding New Models
+
+1. Export from [ST Edge AI Developer Cloud](https://stedgeai-dc.st.com)
+2. Select target device and output type
+3. Place in `models/` with appropriate naming:
+   - `model_name.onnx-NUCLEO-H723ZG-code_F32`
+   - `model_name.onnx-NUCLEO-H723ZG-code_INT8`
+4. Load via `manage_models.py`
