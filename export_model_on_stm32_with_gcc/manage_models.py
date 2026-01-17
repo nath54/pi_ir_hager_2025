@@ -163,6 +163,7 @@ def load_model(model_name):
             print(f"  Warning: {file} not found in model directory.")
 
     # Copy directories
+    lib_missing = False
     for directory in DIRS_TO_COPY:
         src = os.path.join(model_path, directory)
         dst = os.path.join(ROOT_DIR, directory)
@@ -170,7 +171,11 @@ def load_model(model_name):
             shutil.copytree(src, dst)
             print(f"  Copied {directory}/")
         else:
-            print(f"  Warning: {directory}/ not found in model directory.")
+            if directory == "Lib":
+                lib_missing = True
+                print(f"  \033[91mERROR: Lib/ not found! Build will fail.\033[0m")
+            else:
+                print(f"  Warning: {directory}/ not found in model directory.")
 
     set_current_model(model_name)
 
@@ -181,6 +186,16 @@ def load_model(model_name):
         print(f"  Auto-detected device: {DEVICES[detected_device]['name']}")
 
     print(f"\nModel '{model_name}' loaded successfully.")
+    
+    if lib_missing:
+        print("\n\033[93m╔════════════════════════════════════════════════════════════╗")
+        print("║  WARNING: This model is missing the Lib/ directory!        ║")
+        print("║  The ST.AI runtime library was not exported with it.       ║")
+        print("║                                                            ║")
+        print("║  Load a different model that has Lib/ (e.g. conv2d model)  ║")
+        print("║  OR copy Lib/ from another exported model directory.       ║")
+        print("╚════════════════════════════════════════════════════════════╝\033[0m\n")
+    
     return True
 
 
@@ -193,6 +208,17 @@ def build_model(device=None, fast_mode=False, debug=False, sysclk=None, library=
     model_name = get_current_model()
     if not model_name:
         print("Error: No model loaded. Please load a model first.")
+        return False
+
+    # Check if Lib/ directory exists
+    if not os.path.exists("Lib"):
+        print("\n\033[91m╔════════════════════════════════════════════════════════════╗")
+        print("║  ERROR: Lib/ directory not found!                          ║")
+        print("║  The ST.AI runtime library is required to build.           ║")
+        print("║                                                            ║")
+        print("║  Load a model that includes Lib/ (e.g. a conv2d model)     ║")
+        print("║  OR manually copy Lib/ from another exported model.        ║")
+        print("╚════════════════════════════════════════════════════════════╝\033[0m\n")
         return False
 
     if device is None:
@@ -456,6 +482,7 @@ def main_menu():
         print("  7. Flash")
         print("  8. Build + Flash + Run Debug")
         print("  9. Show Build Info")
+        print("  x. Clean Build")
         print("  0. Quit")
         print("-" * 50)
 
@@ -505,6 +532,11 @@ def main_menu():
             if int8_flag:
                 cmd.append(int8_flag)
             subprocess.run(cmd)
+
+        elif choice.lower() == 'x':
+            print("\nCleaning build directory...")
+            subprocess.run(["make", "clean"])
+            print("Build cleaned.")
 
         elif choice == '0':
             print("Goodbye!")
