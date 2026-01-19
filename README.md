@@ -47,3 +47,7 @@ This project explores and implements different types and architectures of neural
 - Detailed reporting and recommendations
   * Documentation of steps, tools used, results obtained, and limitations.
   * Recommendations for future improvements.
+
+## Note:
+
+The previously done here part about the custom handmade conversion of the model block into embedded code can be found [here](https://github.com/nath54/Pytorch_ModelBlock_IntermediateLayer_Conversion).
