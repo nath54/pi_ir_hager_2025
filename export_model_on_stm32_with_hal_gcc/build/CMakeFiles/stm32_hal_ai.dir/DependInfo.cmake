@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_ASM
-  "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/startup_stm32u545xx.s" "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/stm32_hal_ai.dir/startup_stm32u545xx.s.o"
+  "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/startup_stm32u545xx.s" "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles/stm32_hal_ai.dir/startup_stm32u545xx.s.o"
   )
 set(CMAKE_ASM_COMPILER_ID "GNU")
 
@@ -30,6 +30,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/AI/network_data.c" "CMakeFiles/stm32_hal_ai.dir/AI/network_data.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/AI/network_data.c.o.d"
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/ai_led.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_led.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_led.c.o.d"
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/ai_network.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_network.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_network.c.o.d"
+  "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/ai_signal.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.o.d"
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/icache.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/icache.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/icache.c.o.d"
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/main_ai.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/main_ai.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/main_ai.c.o.d"
   "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/Core/Src/stm32u5xx_hal_msp.c" "CMakeFiles/stm32_hal_ai.dir/Core/Src/stm32u5xx_hal_msp.c.o" "gcc" "CMakeFiles/stm32_hal_ai.dir/Core/Src/stm32u5xx_hal_msp.c.o.d"

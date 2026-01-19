@@ -60,7 +60,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release
+CMAKE_BINARY_DIR = /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -224,6 +224,30 @@ Core/Src/ai_network.s: Core/Src/ai_network.c.s
 Core/Src/ai_network.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/stm32_hal_ai.dir/build.make CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_network.c.s
 .PHONY : Core/Src/ai_network.c.s
+
+Core/Src/ai_signal.o: Core/Src/ai_signal.c.o
+.PHONY : Core/Src/ai_signal.o
+
+# target to build an object file
+Core/Src/ai_signal.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/stm32_hal_ai.dir/build.make CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.o
+.PHONY : Core/Src/ai_signal.c.o
+
+Core/Src/ai_signal.i: Core/Src/ai_signal.c.i
+.PHONY : Core/Src/ai_signal.i
+
+# target to preprocess a source file
+Core/Src/ai_signal.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/stm32_hal_ai.dir/build.make CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.i
+.PHONY : Core/Src/ai_signal.c.i
+
+Core/Src/ai_signal.s: Core/Src/ai_signal.c.s
+.PHONY : Core/Src/ai_signal.s
+
+# target to generate assembly for a file
+Core/Src/ai_signal.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/stm32_hal_ai.dir/build.make CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.s
+.PHONY : Core/Src/ai_signal.c.s
 
 Core/Src/icache.o: Core/Src/icache.c.o
 .PHONY : Core/Src/icache.o
@@ -806,6 +830,9 @@ help:
 	@echo "... Core/Src/ai_network.o"
 	@echo "... Core/Src/ai_network.i"
 	@echo "... Core/Src/ai_network.s"
+	@echo "... Core/Src/ai_signal.o"
+	@echo "... Core/Src/ai_signal.i"
+	@echo "... Core/Src/ai_signal.s"
 	@echo "... Core/Src/icache.o"
 	@echo "... Core/Src/icache.i"
 	@echo "... Core/Src/icache.s"

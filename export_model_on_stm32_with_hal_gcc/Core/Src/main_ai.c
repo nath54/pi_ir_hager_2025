@@ -11,6 +11,7 @@
 #include "system_init.h"
 #include "ai_network.h"
 #include "ai_led.h"
+#include "ai_signal.h"
 #include <stdio.h>
 
 /* Private variables ---------------------------------------------------------*/
@@ -37,6 +38,9 @@ int main(void)
   
   /* Initialize BSP (LED, button, COM) */
   BSP_Init();
+  
+  /* Initialize signal output for oscilloscope (PA8) */
+  ai_signal_init();
   
   /* Startup LED blink */
   ai_led_startup_blink();
@@ -94,10 +98,16 @@ static void run_ai_inference_loop(void)
       ai_led_toggle();
     }
     
+    /* Signal inference start (for oscilloscope) */
+    ai_signal_inference_start();
+    
     /* Run inference with timing */
     tick_start = HAL_GetTick();
     ai_error_t err = ai_network_run_inference();
     tick_elapsed = HAL_GetTick() - tick_start;
+    
+    /* Signal inference end */
+    ai_signal_inference_end();
     
     if (err != AI_OK)
     {

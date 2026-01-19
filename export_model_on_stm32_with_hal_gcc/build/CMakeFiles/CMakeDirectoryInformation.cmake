@@ -3,7 +3,7 @@
 
 # Relative path conversion top directories.
 set(CMAKE_RELATIVE_PATH_TOP_SOURCE "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc")
-set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release")
+set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build")
 
 # Force unix paths in dependencies.
 set(CMAKE_FORCE_UNIX_PATHS 1)

@@ -8,6 +8,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_led.c.o.d"
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_network.c.o"
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_network.c.o.d"
+  "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.o"
+  "CMakeFiles/stm32_hal_ai.dir/Core/Src/ai_signal.c.o.d"
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/icache.c.o"
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/icache.c.o.d"
   "CMakeFiles/stm32_hal_ai.dir/Core/Src/main_ai.c.o"
