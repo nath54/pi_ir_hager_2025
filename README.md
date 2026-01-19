@@ -60,6 +60,12 @@ Located in [`export_model_on_stm32_with_gcc/`](./export_model_on_stm32_with_gcc/
 - **Pipeline**: Converts ONNX models to optimized C headers using ST's proprietary kernels.
 - **Embedded Env**: Integration with `libopencm3` and `arm-none-eabi-gcc` for a purely open-source build system (no dependence on heavy IDEs for production).
 
+### 3. The Modern Path: STM32U5 HAL (CMake)
+Located in [`export_model_on_stm32_with_hal_gcc/`](./export_model_on_stm32_with_hal_gcc/), this path targets the **NUCLEO-U545RE-Q** board using the official STM32 HAL.
+- **Build System**: Uses **CMake** for a modern, standard build workflow.
+- **Automation**: Includes `manage_models.py`, a script to easily select models, switch between INT8/F32 quantization, build, and flash.
+- **HAL**: leveraged for peripheral access (GPIO, UART, etc.), offering a more standardized approach than libopencm3 for newer chips.
+
 ---
 
 ## 📂 Repository Structure
@@ -76,7 +82,7 @@ Located in [`export_model_on_stm32_with_gcc/`](./export_model_on_stm32_with_gcc/
 │   ├── lib_onnx_convert.py             # PyTorch -> ONNX utility
 │   ├── lib_model_loader.py             # Architecture loading
 │   └── script_test_and_measures.py     # Local benchmarking script
-└── export_model_on_stm32_with_hal_gcc/ # Alternative HAL-based implementation
+└── export_model_on_stm32_with_hal_gcc/ # STM32U5 HAL + CMake implementation (NUCLEO-U545RE-Q)
 ```
 
 ---
@@ -99,19 +105,14 @@ cd pi_hager_2025
 cd export_model_on_stm32_with_gcc
 bash build.sh
 
-# Flash a model
+# Flash a model (GCC Path)
 bash flash.sh
+
+# OR: Setup for HAL Project (NUCLEO-U545RE-Q)
+cd export_model_on_stm32_with_hal_gcc
+python3 manage_models.py
+# (Follow the interactive menu to load, build, and flash)
 ```
-
----
-
-## 📊 Benchmarking Highlights
-
-The project evaluated several model families on **STM32H7** and **U5** boards.
-- **Linear Models**: < 1ms inference, very low memory (ideal for simple sensors).
-- **CNNs**: Balanced performance, but memory intensive for high filter counts.
-- **RNNs/LSTMs**: Good temporal modeling, slightly higher latency in conversion.
-- **Transformers/Attention**: High representational power, currently at the limit of embedded deployment (high RAM requirements).
 
 ---
 
