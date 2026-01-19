@@ -48,10 +48,12 @@ The project followed a multi-stage evolution, documented in detailed reports loc
 The project is split into two complementary approaches:
 
 ### 1. The Expert Path: ModelBlocks (Open-Source)
-Located in [`onnx_models_conversion_and_benchmark/`](./onnx_models_conversion_and_benchmark/), this path aims to be fully transparent and framework-independent.
-- **Parser**: Uses Python's `ast` library to extract the structural logic of PyTorch models.
-- **Weight Linker**: Maps `.pth` weights to the extracted architecture.
-- **Interpreter**: Validates execution correctness before conversion to C/C++.
+The **ModelBlock** path has been moved to its own repository: [Pytorch_ModelBlock_IntermediateLayer_Conversion](https://github.com/nath54/Pytorch_ModelBlock_IntermediateLayer_Conversion).
+
+The local directory [`onnx_models_conversion_and_benchmark/`](./onnx_models_conversion_and_benchmark/) now serves as the **first stage of the Main Pipeline**:
+- **Library of Models**: instead of a single model, we host a library of models to be tested.
+- **ONNX Conversion**: converts PyTorch models from the library into ONNX format.
+- **Pre-Benchmark**: allows running a preliminary benchmark on the computer to test models before deploying to the STM32.
 
 ### 2. The Industrial Path: ST Edge AI Cloud
 Located in [`export_model_on_stm32_with_gcc/`](./export_model_on_stm32_with_gcc/), this path uses professional tools for deployment.
@@ -70,7 +72,7 @@ Located in [`export_model_on_stm32_with_gcc/`](./export_model_on_stm32_with_gcc/
 │   ├── manage_models.py                # Automation script for flashing/debugging
 │   ├── Makefile                        # ARM GCC build configuration
 │   └── network.c                       # Generated model code (from ST Cloud)
-├── onnx_models_conversion_and_benchmark/ # Model analysis and conversion tools
+├── onnx_models_conversion_and_benchmark/ # PyTorch -> ONNX conversion and pre-benchmarking
 │   ├── lib_onnx_convert.py             # PyTorch -> ONNX utility
 │   ├── lib_model_loader.py             # Architecture loading
 │   └── script_test_and_measures.py     # Local benchmarking script
