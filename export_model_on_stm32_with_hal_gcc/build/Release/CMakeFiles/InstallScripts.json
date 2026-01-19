@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
