@@ -46,6 +46,7 @@ extern "C" {
   * @{
   */
 /* Nucleo pin and part number defines */
+#define USE_NUCLEO_64
 #define USE_STM32U5XX_NUCLEO
 
 /* COM define */

@@ -22,7 +22,7 @@ import sys
 # CONFIGURATION
 # =============================================================================
 
-MODELS_DIR = "models"
+MODELS_DIR = "../stm32_ai_models"
 CURRENT_MODEL_FILE = os.path.join(MODELS_DIR, "current_loaded_model.txt")
 CURRENT_DEVICE_FILE = os.path.join(MODELS_DIR, "current_device.txt")
 BUILD_DIR = "build"

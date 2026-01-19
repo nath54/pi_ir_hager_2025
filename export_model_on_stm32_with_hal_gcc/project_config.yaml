@@ -1,0 +1,13 @@
+device:
+  name: NUCLEO-U545RE-Q
+  cpu: cortex-m33
+  fpu: fpv5-sp-d16
+  float_abi: hard
+build:
+  main_source: main_ai.c
+  quantization: F32
+  build_type: Release
+paths:
+  models_dir: ../stm32_ai_models
+  ai_dir: AI
+current_model: model_conv2d_standard_c16_d5.onnx-NUCLEO-U545RE-Q-code_F32
