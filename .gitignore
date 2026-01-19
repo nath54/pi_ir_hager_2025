@@ -13,7 +13,6 @@
 **/database
 **prompt**
 **/*cache*
-**/build
 Lib
 Scripts
 pyvenv.cfg
@@ -31,3 +30,8 @@ EXPORTED*
 *.pdf
 .metadata
 .*
+*.elf
+*.map
+*.hex
+*.obj
+*.o
