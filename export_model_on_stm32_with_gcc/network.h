@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    network.h
   * @author  AST Embedded Analytics Research Platform
-  * @date    2026-01-17T11:48:33+0000
+  * @date    2026-01-17T10:40:55+0000
   * @brief   ST.AI Tool Automatic Code Generator for Embedded NN computing
   ******************************************************************************
   * @attention
@@ -23,12 +23,12 @@
 
 /*****************************************************************************/
 /*  Original model name and signature  */
-#define STAI_NETWORK_ORIGIN_MODEL_NAME         "model_simple_lin_n_6"
-#define STAI_NETWORK_ORIGIN_MODEL_SIGNATURE    "0xaa57ae3e7f1ee820438860a505bfc3b4"
+#define STAI_NETWORK_ORIGIN_MODEL_NAME         "model_conv2d_standard_c16_d5"
+#define STAI_NETWORK_ORIGIN_MODEL_SIGNATURE    "0x2f1704263a5aa57181a57c0153402f0e"
 
 /*  Generated model name and signature  */
 #define STAI_NETWORK_MODEL_NAME                "network"
-#define STAI_NETWORK_MODEL_SIGNATURE           (0x0fb3a1785d51b9b5)
+#define STAI_NETWORK_MODEL_SIGNATURE           (0x427e73a4748b6772)
 
 
 /*****************************************************************************/
@@ -43,7 +43,7 @@
 #define STAI_NETWORK_NODES_NUM           (13)
 
 /*  Macro to declare number macc for generated network model  */
-#define STAI_NETWORK_MACC_NUM            (36529)
+#define STAI_NETWORK_MACC_NUM            (20571512)
 
 /*  Macros to declare input buffers characteristics  */
 #define STAI_NETWORK_IN_NUM              (1)
@@ -62,12 +62,12 @@
 
 #define STAI_NETWORK_IN_1_ALIGNMENT   4
 #define STAI_NETWORK_IN_1_NAME        (NULL)
-#define STAI_NETWORK_IN_1_FLAGS       (STAI_FLAG_INPUTS|STAI_FLAG_PREALLOCATED|STAI_FLAG_CHANNEL_LAST|STAI_FLAG_HAS_BATCH)
+#define STAI_NETWORK_IN_1_FLAGS       (STAI_FLAG_INPUTS|STAI_FLAG_PREALLOCATED|STAI_FLAG_CHANNEL_FIRST|STAI_FLAG_HAS_BATCH)
 #define STAI_NETWORK_IN_1_FORMAT      (STAI_FORMAT_FLOAT32)
 #define STAI_NETWORK_IN_1_SHAPE       {1,30,10}
 #define STAI_NETWORK_IN_1_BATCH       (1)
-#define STAI_NETWORK_IN_1_HEIGHT      (30)
-#define STAI_NETWORK_IN_1_CHANNEL     (10)
+#define STAI_NETWORK_IN_1_CHANNEL     (30)
+#define STAI_NETWORK_IN_1_HEIGHT      (10)
 #define STAI_NETWORK_IN_1_RANK        (2)
 #define STAI_NETWORK_IN_1_SIZE        (300)
 #define STAI_NETWORK_IN_1_SIZE_BYTES  (1200)
@@ -100,31 +100,31 @@
 
 /*****************************************************************************/
 /*  Macros to declare activations buffers characteristics  */
-#define STAI_NETWORK_ACTIVATIONS_SIZE              (3120)
-#define STAI_NETWORK_ACTIVATIONS_SIZE_BYTES        (3120)
+#define STAI_NETWORK_ACTIVATIONS_SIZE              (194400)
+#define STAI_NETWORK_ACTIVATIONS_SIZE_BYTES        (194400)
 #define STAI_NETWORK_ACTIVATIONS_ALIGNMENTS \
   { 4}
 #define STAI_NETWORK_ACTIVATIONS_SIZES \
-  { 3120}
+  { 194400}
 #define STAI_NETWORK_ACTIVATIONS_NUM               (1)
 
 #define STAI_NETWORK_ACTIVATION_1_FLAGS      (STAI_FLAG_ACTIVATIONS)
-#define STAI_NETWORK_ACTIVATION_1_SIZE       (3120)
-#define STAI_NETWORK_ACTIVATION_1_SIZE_BYTES (3120)
+#define STAI_NETWORK_ACTIVATION_1_SIZE       (194400)
+#define STAI_NETWORK_ACTIVATION_1_SIZE_BYTES (194400)
 #define STAI_NETWORK_ACTIVATION_1_ALIGNMENT  4
 /*  Macros to declare weights buffers characteristics  */
 
 #define STAI_NETWORK_WEIGHTS_NUM                  (1)
-#define STAI_NETWORK_WEIGHTS_SIZE                  (122692)
-#define STAI_NETWORK_WEIGHTS_SIZE_BYTES            (122692)
+#define STAI_NETWORK_WEIGHTS_SIZE                  (371000)
+#define STAI_NETWORK_WEIGHTS_SIZE_BYTES            (371000)
 #define STAI_NETWORK_WEIGHTS_ALIGNMENTS \
   { 4}
 #define STAI_NETWORK_WEIGHTS_SIZES \
-  { 122692}
+  { 371000}
 #define STAI_NETWORK_WEIGHTS_NUM        (1)
 #define STAI_NETWORK_WEIGHT_1_FLAGS       ((STAI_FLAG_PREALLOCATED))
-#define STAI_NETWORK_WEIGHT_1_SIZE        (122692)
-#define STAI_NETWORK_WEIGHT_1_SIZE_BYTES  (122692)
+#define STAI_NETWORK_WEIGHT_1_SIZE        (371000)
+#define STAI_NETWORK_WEIGHT_1_SIZE_BYTES  (371000)
 
 
 /*****************************************************************************/
