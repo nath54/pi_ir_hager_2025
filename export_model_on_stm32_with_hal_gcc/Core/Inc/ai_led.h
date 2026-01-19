@@ -17,7 +17,7 @@ extern "C" {
 #include "main.h"
 
 /* LED toggle interval for inference feedback */
-#define AI_LED_TOGGLE_INTERVAL  50  /* Toggle every N inferences */
+#define AI_LED_TOGGLE_INTERVAL  1  /* Toggle every N inferences */
 
 /**
   * @brief  Toggle LED (called periodically during inference)
