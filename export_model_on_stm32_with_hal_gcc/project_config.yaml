@@ -5,9 +5,9 @@ device:
   float_abi: hard
 build:
   main_source: main_ai.c
-  quantization: INT8
+  quantization: F32
   build_type: Release
 paths:
   models_dir: ../stm32_ai_models
   ai_dir: AI
-current_model: model_conv2d_standard_c16_d5_PerChannel_quant_random_1.onnx-NUCLEO-U545RE-Q-code_INT8
+current_model: model_simple_lin_1.onnx-NUCLEO-U545RE-Q-code_F32

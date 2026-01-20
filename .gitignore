@@ -12,8 +12,6 @@
 *cache
 **/database
 **prompt**
-Lib
-Scripts
 pyvenv.cfg
 **/executorch
 **/tensorflow_src

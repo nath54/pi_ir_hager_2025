@@ -3,13 +3,13 @@
 
 # compile ASM with /usr/bin/arm-none-eabi-gcc
 # compile C with /usr/bin/arm-none-eabi-gcc
-ASM_DEFINES = -DAI_QUANTIZATION_INT8 -DSTM32U545xx -DUSE_HAL_DRIVER -DUSE_NUCLEO_64
+ASM_DEFINES = -DAI_QUANTIZATION_F32 -DSTM32U545xx -DUSE_HAL_DRIVER -DUSE_NUCLEO_64
 
 ASM_INCLUDES = -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/AI -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/AI/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Core/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/STM32U5xx_HAL_Driver/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/STM32U5xx_HAL_Driver/Inc/Legacy -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/BSP/STM32U5xx_Nucleo -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32U5xx/Include -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/CMSIS/Include
 
 ASM_FLAGS =  -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -x assembler-with-cpp -MMD -MP -O3 -DNDEBUG
 
-C_DEFINES = -DAI_QUANTIZATION_INT8 -DSTM32U545xx -DUSE_HAL_DRIVER -DUSE_NUCLEO_64
+C_DEFINES = -DAI_QUANTIZATION_F32 -DSTM32U545xx -DUSE_HAL_DRIVER -DUSE_NUCLEO_64
 
 C_INCLUDES = -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/AI -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/AI/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Core/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/STM32U5xx_HAL_Driver/Inc -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/STM32U5xx_HAL_Driver/Inc/Legacy -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/BSP/STM32U5xx_Nucleo -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32U5xx/Include -I/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx/../../Drivers/CMSIS/Include
 
