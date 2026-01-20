@@ -51,7 +51,7 @@ This document details the pinout and access methods for the NUCLEO-U545RE-Q boar
         ```c
         /* Enable Clock */
         __HAL_RCC_GPIOA_CLK_ENABLE();
-        
+
         /* Configure GPIO */
         GPIO_InitTypeDef GPIO_InitStruct = {0};
         GPIO_InitStruct.Pin = GPIO_PIN_8;

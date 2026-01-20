@@ -19,17 +19,17 @@ static uint8_t signal_state = 0;
 void ai_signal_init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  
+
   /* Enable GPIOA clock */
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  
+
   /* Configure PA8 as push-pull output, high speed */
   GPIO_InitStruct.Pin = SIGNAL_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(SIGNAL_PORT, &GPIO_InitStruct);
-  
+
   /* Start with signal LOW */
   HAL_GPIO_WritePin(SIGNAL_PORT, SIGNAL_PIN, GPIO_PIN_RESET);
   signal_state = 0;
@@ -45,7 +45,7 @@ void ai_signal_inference_start(void)
 {
   /* Toggle state */
   signal_state = !signal_state;
-  
+
   if (signal_state)
   {
     HAL_GPIO_WritePin(SIGNAL_PORT, SIGNAL_PIN, GPIO_PIN_SET);

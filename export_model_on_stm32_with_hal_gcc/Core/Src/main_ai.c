@@ -29,22 +29,22 @@ int main(void)
 {
   /* MCU Configuration */
   HAL_Init();
-  
+
   /* Configure the system clock */
   SystemClock_Config();
-  
+
   /* Configure the System Power */
   SystemPower_Config();
-  
+
   /* Initialize BSP (LED, button, COM) */
   BSP_Init();
-  
+
   /* Initialize signal output for oscilloscope (PA8) */
   ai_signal_init();
-  
+
   /* Startup LED blink */
   ai_led_startup_blink();
-  
+
   /* Print startup message */
   printf("\r\n========================================\r\n");
   printf("STM32 AI Inference - NUCLEO-U545RE-Q\r\n");
@@ -54,11 +54,11 @@ int main(void)
   printf("Model Type: FLOAT32\r\n");
 #endif
   printf("========================================\r\n\r\n");
-  
+
   /* Initialize AI network */
   printf("Initializing AI network...\r\n");
   ai_error_t err = ai_network_init();
-  
+
   if (err != AI_OK)
   {
     printf("ERROR: AI init failed (code %d)\r\n", err);
@@ -71,10 +71,10 @@ int main(void)
     printf("Input size: %lu elements\r\n", ai_network_get_input_size());
     printf("Output size: %lu elements\r\n\r\n", ai_network_get_output_size());
   }
-  
+
   /* Run inference loop */
   run_ai_inference_loop();
-  
+
   /* Should never reach here */
   return 0;
 }
@@ -86,29 +86,29 @@ static void run_ai_inference_loop(void)
 {
   uint32_t tick_start;
   uint32_t tick_elapsed;
-  
+
   while (1)
   {
     /* Prepare test input data */
     ai_network_prepare_test_input(HAL_GetTick() + inference_counter);
-    
+
     /* Toggle LED every N inferences (like yellow on H723ZG) */
     if (inference_counter % AI_LED_TOGGLE_INTERVAL == 0)
     {
       ai_led_toggle();
     }
-    
+
     /* Signal inference start (for oscilloscope) */
     ai_signal_inference_start();
-    
+
     /* Run inference with timing */
     tick_start = HAL_GetTick();
     ai_error_t err = ai_network_run_inference();
     tick_elapsed = HAL_GetTick() - tick_start;
-    
+
     /* Signal inference end */
     ai_signal_inference_end();
-    
+
     if (err != AI_OK)
     {
       printf("Inference FAILED!\r\n");
@@ -125,14 +125,14 @@ static void run_ai_inference_loop(void)
       printf("OK %lums | Out[0]: %.4f | F32\r\n", tick_elapsed, (double)output[0]);
 #endif
     }
-    
+
     /* Increment counter */
     inference_counter++;
     if (inference_counter > 10000)
     {
       inference_counter = 0;
     }
-    
+
     /* Small delay between inferences */
     HAL_Delay(100);
   }
