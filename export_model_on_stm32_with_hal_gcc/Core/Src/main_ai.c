@@ -43,7 +43,7 @@ int main(void)
   ai_signal_init();
 
   /* Startup LED blink */
-  ai_led_startup_blink();
+  // ai_led_startup_blink();
 
   /* Print startup message */
   printf("\r\n========================================\r\n");
@@ -62,7 +62,7 @@ int main(void)
   if (err != AI_OK)
   {
     printf("ERROR: AI init failed (code %d)\r\n", err);
-    ai_led_error_blink(err);
+    // ai_led_error_blink(err);
     /* Continue anyway - may recover */
   }
   else
@@ -87,6 +87,9 @@ static void run_ai_inference_loop(void)
   uint32_t tick_start;
   uint32_t tick_elapsed;
 
+  bool toggle = false;
+
+  /* Run inference loop */
   while (1)
   {
     /* Prepare test input data */
@@ -95,34 +98,42 @@ static void run_ai_inference_loop(void)
     /* Toggle LED every N inferences (like yellow on H723ZG) */
     if (inference_counter % AI_LED_TOGGLE_INTERVAL == 0)
     {
-      ai_led_toggle();
+      // ai_led_toggle();
     }
 
-    /* Signal inference start (for oscilloscope) */
-    ai_signal_inference_start();
+    if (toggle) {
+      toggle = false;
+
+      /* Signal inference end */
+      ai_signal_inference_end();
+
+    } else {
+      toggle = true;
+
+      /* Signal inference start (for oscilloscope) */
+      ai_signal_inference_start();
+    }
 
     /* Run inference with timing */
-    tick_start = HAL_GetTick();
+    // tick_start = HAL_GetTick();
     ai_error_t err = ai_network_run_inference();
-    tick_elapsed = HAL_GetTick() - tick_start;
+    // tick_elapsed = HAL_GetTick() - tick_start;
 
-    /* Signal inference end */
-    ai_signal_inference_end();
 
     if (err != AI_OK)
     {
       printf("Inference FAILED!\r\n");
-      ai_led_error_blink(AI_ERROR_INFERENCE);
+      // ai_led_error_blink(AI_ERROR_INFERENCE);
     }
     else
     {
       /* Print result */
 #ifdef QUANTIZED_INT8
       int8_t* output = (int8_t*)ai_network_get_output();
-      printf("OK %lums | Out[0]: %d | INT8\r\n", tick_elapsed, (int)output[0]);
+      // printf("OK %lums | Out[0]: %d | INT8\r\n", tick_elapsed, (int)output[0]);
 #else
       float* output = (float*)ai_network_get_output();
-      printf("OK %lums | Out[0]: %.4f | F32\r\n", tick_elapsed, (double)output[0]);
+      // printf("OK %lums | Out[0]: %.4f | F32\r\n", tick_elapsed, (double)output[0]);
 #endif
     }
 
@@ -160,7 +171,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
-    ai_led_error_blink(10);
+    // ai_led_error_blink(10);
   }
 }
 

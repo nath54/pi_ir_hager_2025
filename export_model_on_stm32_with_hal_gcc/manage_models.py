@@ -186,6 +186,16 @@ def load_model(model_name):
 # BUILD FUNCTIONS
 # =============================================================================
 
+def clean_all_builds():
+    """Remove the entire build directory."""
+    if os.path.exists(BUILD_DIR):
+        print(f"Cleaning entire build directory: {BUILD_DIR}...")
+        shutil.rmtree(BUILD_DIR)
+        print("✓ Done. All build artifacts removed.")
+    else:
+        print("Build directory already clean.")
+
+
 def build_project(main_source=None, quantization=None, build_type=None, clean=False):
     """Build the project using CMake."""
     config = load_config()
@@ -198,6 +208,12 @@ def build_project(main_source=None, quantization=None, build_type=None, clean=Fa
     if build_type is None:
         build_type = config['build']['build_type']
     
+    # Update config with current choices so Flash picks it up
+    config['build']['main_source'] = main_source
+    config['build']['quantization'] = quantization
+    config['build']['build_type'] = build_type
+    save_config(config)
+
     build_path = os.path.join(BUILD_DIR, build_type)
     
     print(f"\n{'='*50}")
@@ -209,7 +225,7 @@ def build_project(main_source=None, quantization=None, build_type=None, clean=Fa
     print(f"  Build path:   {build_path}")
     print(f"{'='*50}\n")
     
-    # Clean if requested
+    # Clean if requested (but preferably use clean_all_builds from menu)
     if clean and os.path.exists(build_path):
         print("Cleaning build directory...")
         shutil.rmtree(build_path)
@@ -241,47 +257,111 @@ def build_project(main_source=None, quantization=None, build_type=None, clean=Fa
         print("Build failed!")
         return False
     
+    # Verify binary exists, or create it if needed
+    bin_file = os.path.join(build_path, "stm32_hal_ai.bin")
+    elf_file = os.path.join(build_path, "stm32_hal_ai.elf")
+    
+    if not os.path.exists(bin_file) and os.path.exists(elf_file):
+        print("\nInternal bin file missing, creating from ELF...")
+        # Try to make bin
+        try:
+             subprocess.run(["arm-none-eabi-objcopy", "-O", "binary", elf_file, bin_file], check=True)
+             print("Created binary file.")
+        except Exception as e:
+             print(f"Warning: Could not create binary file: {e}")
+
     print("\n✓ Build successful!")
     return True
 
 
 def flash_project(build_type=None):
-    """Flash the built binary to the board."""
+    """Flash the built binary to the board with multiple fallbacks."""
     config = load_config()
     if build_type is None:
         build_type = config['build']['build_type']
     
     build_path = os.path.join(BUILD_DIR, build_type)
     bin_file = os.path.join(build_path, "stm32_hal_ai.bin")
+    elf_file = os.path.join(build_path, "stm32_hal_ai.elf")
     
     if not os.path.exists(bin_file):
         print(f"Error: Binary not found: {bin_file}")
-        print("Run build first!")
+        if os.path.exists(elf_file):
+            print("ELF exists but BIN missing. Re-build or check objcopy.")
+        else:
+            print("Run build first!")
         return False
     
     print(f"\nFlashing: {bin_file}")
     
-    # Try st-flash first
-    result = subprocess.run(
-        ["st-flash", "write", bin_file, "0x08000000"],
-        capture_output=True, text=True
-    )
-    
+    # 1. Try st-flash (with reset)
+    print("Attempting: st-flash --connect-under-reset")
+    cmd = ["st-flash", "--connect-under-reset", "write", bin_file, "0x08000000"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode == 0:
-        print("✓ Flash successful!")
+        print("✓ Flash successful (st-flash w/ reset)!")
         return True
-    
-    # Try STM32_Programmer_CLI as fallback
-    result = subprocess.run(
-        ["STM32_Programmer_CLI", "-c", "port=SWD", "-w", bin_file, "0x08000000", "-v", "-rst"],
-        capture_output=True, text=True
-    )
-    
+    else:
+        print(f"  Failed: {result.stderr.strip()}")
+
+    # 2. Try st-flash (standard)
+    print("Attempting: st-flash (standard)")
+    cmd = ["st-flash", "write", bin_file, "0x08000000"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode == 0:
-        print("✓ Flash successful!")
+        print("✓ Flash successful (st-flash)!")
         return True
+    else:
+        print(f"  Failed: {result.stderr.strip()}")
     
-    print("Flash failed. Check connection and try again.")
+    # 3. Try OpenOCD (since we found it on the system and flash.sh uses it)
+    print("Attempting: OpenOCD")
+    openocd_cmd = [
+        "openocd",
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32u5x.cfg",
+        "-c", "init",
+        "-c", "reset halt",
+        "-c", f"flash write_image erase {elf_file}",  # OpenOCD likes ELF usually
+        "-c", "verify_image {elf_file}",
+        "-c", "reset run",
+        "-c", "exit"
+    ]
+    # If elf file is missing, try bin with offset
+    if not os.path.exists(elf_file):
+         openocd_cmd[8] = f"flash write_image erase {bin_file} 0x08000000"
+         openocd_cmd[10] = f"verify_image {bin_file} 0x08000000"
+
+    try:
+        result = subprocess.run(openocd_cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✓ Flash successful (OpenOCD)!")
+            return True
+        else:
+            print(f"  Failed. Output snippet: {result.stderr[-200:] if result.stderr else 'No output'}")
+    except FileNotFoundError:
+        print("  OpenOCD not found.")
+
+    # 4. Try STM32_Programmer_CLI as last resort
+    print("Attempting: STM32_Programmer_CLI")
+    try:
+        result = subprocess.run(
+            ["STM32_Programmer_CLI", "-c", "port=SWD", "-w", bin_file, "0x08000000", "-v", "-rst"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print("✓ Flash successful (STM32_Programmer_CLI)!")
+            return True
+        else:
+            print(f"  Failed: {result.stdout.strip()}")
+    except FileNotFoundError:
+        print("  STM32_Programmer_CLI not found in PATH.")
+    
+    print("\n❌ All flash methods failed.")
+    print("Suggestions:")
+    print("  - Check USB connection")
+    print("  - Try holding the RESET button while starting flash")
+    print("  - Disconnect and reconnect the board")
     return False
 
 
@@ -381,7 +461,7 @@ def main_menu():
         print("  4. Build (Debug)")
         print("  5. Build + Flash")
         print("  6. Flash Only")
-        print("  7. Clean Build")
+        print("  7. Clean All Builds")
         print("  8. Show Status")
         print("  0. Quit")
         print("-" * 50)
@@ -408,7 +488,7 @@ def main_menu():
             flash_project()
         
         elif choice == '7':
-            build_project(clean=True)
+            clean_all_builds()
         
         elif choice == '8':
             show_status()
