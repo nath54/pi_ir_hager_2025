@@ -1,6 +1,6 @@
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/stm32_hal_ai.dir
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/edit_cache.dir
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/rebuild_cache.dir
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/edit_cache.dir
-/home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/stm32_hal_ai.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/edit_cache.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/edit_cache.dir
+/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/cmake/stm32cubemx/CMakeFiles/rebuild_cache.dir

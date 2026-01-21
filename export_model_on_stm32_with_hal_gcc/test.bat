@@ -1,0 +1,1 @@
+C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe -c port=SWD -w .\build\Release\stm32_hal_ai.bin 0x08000000 -v -rst

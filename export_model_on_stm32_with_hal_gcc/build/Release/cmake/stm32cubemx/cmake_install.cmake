@@ -1,4 +1,4 @@
-# Install script for directory: /home/nathancerisara/Documents/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx
+# Install script for directory: /mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/cmake/stm32cubemx
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,6 +34,6 @@ endif()
 
 # Set default install directory permissions.
 if(NOT DEFINED CMAKE_OBJDUMP)
-  set(CMAKE_OBJDUMP "/usr/bin/arm-none-eabi-objdump")
+  set(CMAKE_OBJDUMP "/usr/bin/objdump")
 endif()
 

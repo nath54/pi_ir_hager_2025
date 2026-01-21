@@ -96,7 +96,7 @@ static void run_ai_inference_loop(void)
     ai_network_prepare_test_input(HAL_GetTick() + inference_counter);
 
     /* Toggle LED every N inferences (like yellow on H723ZG) */
-    if (inference_counter % AI_LED_TOGGLE_INTERVAL == 0)
+    if (inference_counter % // ai_led_TOGGLE_INTERVAL == 0)
     {
       // ai_led_toggle();
     }

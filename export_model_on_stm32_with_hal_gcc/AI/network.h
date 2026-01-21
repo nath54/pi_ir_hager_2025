@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    network.h
   * @author  AST Embedded Analytics Research Platform
-  * @date    2026-01-20T09:58:38+0000
+  * @date    2026-01-19T21:06:49+0000
   * @brief   ST.AI Tool Automatic Code Generator for Embedded NN computing
   ******************************************************************************
   * @attention
@@ -23,12 +23,12 @@
 
 /*****************************************************************************/
 /*  Original model name and signature  */
-#define STAI_NETWORK_ORIGIN_MODEL_NAME         "model_simple_lin_1"
-#define STAI_NETWORK_ORIGIN_MODEL_SIGNATURE    "0xe7ffea58e9ddd6b2bd34e02e5142b17b"
+#define STAI_NETWORK_ORIGIN_MODEL_NAME         "model_simple_lin_n_4"
+#define STAI_NETWORK_ORIGIN_MODEL_SIGNATURE    "0x5b2b1edc89388929e7caebeb5b4115d8"
 
 /*  Generated model name and signature  */
 #define STAI_NETWORK_MODEL_NAME                "network"
-#define STAI_NETWORK_MODEL_SIGNATURE           (0x7aab0a524b56c9f6)
+#define STAI_NETWORK_MODEL_SIGNATURE           (0xe37f084f971ad1af)
 
 
 /*****************************************************************************/
@@ -40,10 +40,10 @@
 #define STAI_NETWORK_FLAGS               (STAI_FLAG_INPUTS|STAI_FLAG_OUTPUTS|STAI_FLAG_WEIGHTS)
 
 /*  Macro to declare number of network C nodes generated  */
-#define STAI_NETWORK_NODES_NUM           (3)
+#define STAI_NETWORK_NODES_NUM           (9)
 
 /*  Macro to declare number macc for generated network model  */
-#define STAI_NETWORK_MACC_NUM            (6241)
+#define STAI_NETWORK_MACC_NUM            (24433)
 
 /*  Macros to declare input buffers characteristics  */
 #define STAI_NETWORK_IN_NUM              (1)
@@ -115,16 +115,16 @@
 /*  Macros to declare weights buffers characteristics  */
 
 #define STAI_NETWORK_WEIGHTS_NUM                  (1)
-#define STAI_NETWORK_WEIGHTS_SIZE                  (2628)
-#define STAI_NETWORK_WEIGHTS_SIZE_BYTES            (2628)
+#define STAI_NETWORK_WEIGHTS_SIZE                  (74948)
+#define STAI_NETWORK_WEIGHTS_SIZE_BYTES            (74948)
 #define STAI_NETWORK_WEIGHTS_ALIGNMENTS \
   { 4}
 #define STAI_NETWORK_WEIGHTS_SIZES \
-  { 2628}
+  { 74948}
 #define STAI_NETWORK_WEIGHTS_NUM        (1)
 #define STAI_NETWORK_WEIGHT_1_FLAGS       ((STAI_FLAG_PREALLOCATED))
-#define STAI_NETWORK_WEIGHT_1_SIZE        (2628)
-#define STAI_NETWORK_WEIGHT_1_SIZE_BYTES  (2628)
+#define STAI_NETWORK_WEIGHT_1_SIZE        (74948)
+#define STAI_NETWORK_WEIGHT_1_SIZE_BYTES  (74948)
 
 
 /*****************************************************************************/
