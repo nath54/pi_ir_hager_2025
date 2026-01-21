@@ -134,7 +134,7 @@ static void run_ai_inference_loop(void)
     }
 
     /* Small delay between inferences */
-    HAL_Delay(100);
+    // HAL_Delay(100);
   }
 }
 
