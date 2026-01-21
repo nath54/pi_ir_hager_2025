@@ -43,7 +43,7 @@ int main(void)
   ai_signal_init();
 
   /* Startup LED blink */
-  ai_led_startup_blink();
+  // ai_led_startup_blink();
 
   /* Print startup message */
   printf("\r\n========================================\r\n");
@@ -62,7 +62,7 @@ int main(void)
   if (err != AI_OK)
   {
     printf("ERROR: AI init failed (code %d)\r\n", err);
-    ai_led_error_blink(err);
+    // ai_led_error_blink(err);
     /* Continue anyway - may recover */
   }
   else
@@ -95,7 +95,7 @@ static void run_ai_inference_loop(void)
     /* Toggle LED every N inferences (like yellow on H723ZG) */
     if (inference_counter % AI_LED_TOGGLE_INTERVAL == 0)
     {
-      ai_led_toggle();
+      // ai_led_toggle();
     }
 
     /* Signal inference start (for oscilloscope) */
@@ -112,7 +112,7 @@ static void run_ai_inference_loop(void)
     if (err != AI_OK)
     {
       printf("Inference FAILED!\r\n");
-      ai_led_error_blink(AI_ERROR_INFERENCE);
+      // ai_led_error_blink(AI_ERROR_INFERENCE);
     }
     else
     {
@@ -160,7 +160,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
-    ai_led_error_blink(10);
+    // ai_led_error_blink(10);
   }
 }
 

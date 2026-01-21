@@ -6,7 +6,7 @@ device:
 build:
   main_source: main_ai.c
   quantization: F32
-  build_type: Debug
+  build_type: Release
 paths:
   models_dir: ../stm32_ai_models
   ai_dir: AI
