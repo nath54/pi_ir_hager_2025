@@ -1,0 +1,321 @@
+ST Edge AI Core v3.0.0-20426 123672867
+Created date          : 2026-01-07 14:25:30
+Parameters            : generate --model /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/model_simple_lin_N_8.onnx --optimization balanced --target stm32f4 --name network --workspace /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/workspace --output /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output
+
+Exec/report summary (generate)
+-------------------------------------------------------------------------------------------------------------
+model file         :   /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/model_simple_lin_N_8.onnx   
+type               :   onnx                                                                                  
+c_name             :   network                                                                               
+compression        :   lossless                                                                              
+options            :   allocate-inputs, allocate-outputs, use-lite-runtime, use-st-ai                        
+optimization       :   balanced                                                                              
+target/series      :   stm32f4                                                                               
+workspace dir      :   /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/workspace                   
+output dir         :   /tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output                      
+model_fmt          :   float                                                                                 
+model_name         :   model_simple_lin_N_8                                                                  
+model_hash         :   0x1c806dd1237a4fdc73688412efce01a6                                                    
+params #           :   146,465 items (572.13 KiB)                                                            
+-------------------------------------------------------------------------------------------------------------
+input 1/1          :   'input', f32(1x30x10), 1.17 KBytes, activations                                       
+output 1/1         :   'output', f32(1x1), 4 Bytes, activations                                              
+macc               :   158,305                                                                               
+weights (ro)       :   585,860 B (572.13 KiB) (1 segment)                                                    
+activations (rw)   :   5,040 B (4.92 KiB) (1 segment) *                                                      
+ram (total)        :   5,040 B (4.92 KiB) = 5,040 + 0 + 0                                                    
+-------------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+
+Model name - model_simple_lin_N_8
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+m_id   layer (type,original)                        oshape            param/size            macc            connected to   | c_size              c_macc              c_type              
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+9      _Constant_7_output_0 (Placeholder, MatMul)   [b:10,c:32]       320/1,280                                            | -1,280(-100.0%)                         
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+11     _Constant_8_output_0 (Placeholder, Add)      [b:32]            32/128                                               | +1,280(+1000.0%)    +10,560(+100.0%)    Dense_[0]           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+15     _Constant_output_0 (Placeholder, Gemm)       [b:64,c:960]      61,440/245,760                                       | +256(+0.1%)         +61,504(+100.0%)    Dense_[2]           
+       _Constant_9_output_0 (Placeholder, Gemm)     [b:64]            64/256                                               | -256(-100.0%)                           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+1      _Constant_1_output_0 (Placeholder, Gemm)     [b:128,c:64]      8,192/32,768                                         | -32,768(-100.0%)                        
+       _Constant_10_output_0 (Placeholder, Gemm)    [b:128]           128/512                                              | -512(-100.0%)                           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+2      _Constant_2_output_0 (Placeholder, Gemm)     [b:256,c:128]     32,768/131,072                                       | -131,072(-100.0%)                       
+       _Constant_11_output_0 (Placeholder, Gemm)    [b:256]           256/1,024                                            | -1,024(-100.0%)                         
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+3      _Constant_3_output_0 (Placeholder, Gemm)     [b:128,c:256]     32,768/131,072                                       | -131,072(-100.0%)                       
+       _Constant_12_output_0 (Placeholder, Gemm)    [b:128]           128/512                                              | -512(-100.0%)                           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+4      _Constant_4_output_0 (Placeholder, Gemm)     [b:64,c:128]      8,192/32,768                                         | -32,768(-100.0%)                        
+       _Constant_13_output_0 (Placeholder, Gemm)    [b:64]            64/256                                               | -256(-100.0%)                           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+5      _Constant_5_output_0 (Placeholder, Gemm)     [b:32,c:64]       2,048/8,192                                          | -8,192(-100.0%)                         
+       _Constant_14_output_0 (Placeholder, Gemm)    [b:32]            32/128                                               | -128(-100.0%)                           
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+6      _Constant_6_output_0 (Placeholder, Gemm)     [b:1,c:32]        32/128                                               | -128(-100.0%)                           
+       _Constant_15_output_0 (Placeholder, Gemm)    [b:1]             1/4                                                  | -4(-100.0%)                             
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+0      input (Input, )                              [b:1,h:30,c:10]                                                        |                                         
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+9      _MatMul_output_0 (Gemm, MatMul)              [b:1,h:30,c:32]                      288,960                   input   |                     -288,960(-100.0%)   
+                                                                                                    _Constant_7_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+11     _Add_output_0 (Eltwise, Add)                 [b:1,h:30,c:32]                           32    _Constant_8_output_0   |                     -32(-100.0%)        
+                                                                                                        _MatMul_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+12     _Relu_output_0 (Nonlinearity, Relu)          [b:1,h:30,c:32]                          960           _Add_output_0   |                                         Nonlinearity_[1]    
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+13     _Flatten_output_0 (Reshape, Flatten)         [b:1,c:960]                                           _Relu_output_0   |                                         
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+15     _Gemm_output_0 (Gemm, Gemm)                  [b:1,c:64]                            61,504       _Flatten_output_0   |                     -61,504(-100.0%)    
+                                                                                                      _Constant_output_0   | 
+                                                                                                    _Constant_9_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+16     _Relu_1_output_0 (Nonlinearity, Relu)        [b:1,c:64]                                64          _Gemm_output_0   |                                         Nonlinearity_[3]    
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+18     _Gemm_1_output_0 (Gemm, Gemm)                [b:1,c:128]                            8,320        _Relu_1_output_0   | +33,280(+100.0%)                        Dense_[4]           
+                                                                                                    _Constant_1_output_0   | 
+                                                                                                   _Constant_10_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+19     _Relu_2_output_0 (Nonlinearity, Relu)        [b:1,c:128]                              128        _Gemm_1_output_0   |                                         Nonlinearity_[5]    
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+21     _Gemm_2_output_0 (Gemm, Gemm)                [b:1,c:256]                           33,024        _Relu_2_output_0   | +132,096(+100.0%)                       Dense_[6]           
+                                                                                                    _Constant_2_output_0   | 
+                                                                                                   _Constant_11_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+22     _Relu_3_output_0 (Nonlinearity, Relu)        [b:1,c:256]                              256        _Gemm_2_output_0   |                                         Nonlinearity_[7]    
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+24     _Gemm_3_output_0 (Gemm, Gemm)                [b:1,c:128]                           32,896        _Relu_3_output_0   | +131,584(+100.0%)                       Dense_[8]           
+                                                                                                    _Constant_3_output_0   | 
+                                                                                                   _Constant_12_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+25     _Relu_4_output_0 (Nonlinearity, Relu)        [b:1,c:128]                              128        _Gemm_3_output_0   |                                         Nonlinearity_[9]    
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+27     _Gemm_4_output_0 (Gemm, Gemm)                [b:1,c:64]                             8,256        _Relu_4_output_0   | +33,024(+100.0%)                        Dense_[10]          
+                                                                                                    _Constant_4_output_0   | 
+                                                                                                   _Constant_13_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+28     _Relu_5_output_0 (Nonlinearity, Relu)        [b:1,c:64]                                64        _Gemm_4_output_0   |                                         Nonlinearity_[11]   
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+30     _Gemm_5_output_0 (Gemm, Gemm)                [b:1,c:32]                             2,080        _Relu_5_output_0   | +8,320(+100.0%)                         Dense_[12]          
+                                                                                                    _Constant_5_output_0   | 
+                                                                                                   _Constant_14_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+31     _Relu_6_output_0 (Nonlinearity, Relu)        [b:1,c:32]                                32        _Gemm_5_output_0   |                                         Nonlinearity_[13]   
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+33     output (Gemm, Gemm)                          [b:1,c:1]                                 33        _Relu_6_output_0   | +132(+100.0%)                           Dense_[o][14]       
+                                                                                                    _Constant_6_output_0   | 
+                                                                                                   _Constant_15_output_0   | 
+------ -------------------------------------------- ----------------- ---------------- --------- ----------------------- --- ------------------- ------------------- ------------------- 
+model/c-model: macc=436,737/158,305 -278,432(-63.8%) weights=585,860/585,860  activations=--/5,040 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : model_simple_lin_N_8
+c-name                : network
+c-node #              : 15
+c-array #             : 32
+activations size      : 5040 (1 segment)
+weights size          : 585860 (1 segment)
+macc                  : 158305
+inputs                : ['input_output']
+outputs               : ['output_output']
+
+C-Arrays (32)
+------ -------------------------- -------------- ------------------------- ------------- --------- 
+c_id   name (*_array)             item/size      domain/mem-pool           c-type        comment   
+------ -------------------------- -------------- ------------------------- ------------- --------- 
+0      _Gemm_1_output_0_bias      128/512        weights/weights           const float             
+1      _Gemm_1_output_0_output    128/512        activations/**default**   float                   
+2      _Gemm_1_output_0_weights   8192/32768     weights/weights           const float             
+3      _Gemm_2_output_0_bias      256/1024       weights/weights           const float             
+4      _Gemm_2_output_0_output    256/1024       activations/**default**   float                   
+5      _Gemm_2_output_0_weights   32768/131072   weights/weights           const float             
+6      _Gemm_3_output_0_bias      128/512        weights/weights           const float             
+7      _Gemm_3_output_0_output    128/512        activations/**default**   float                   
+8      _Gemm_3_output_0_weights   32768/131072   weights/weights           const float             
+9      _Gemm_4_output_0_bias      64/256         weights/weights           const float             
+10     _Gemm_4_output_0_output    64/256         activations/**default**   float                   
+11     _Gemm_4_output_0_weights   8192/32768     weights/weights           const float             
+12     _Gemm_5_output_0_bias      32/128         weights/weights           const float             
+13     _Gemm_5_output_0_output    32/128         activations/**default**   float                   
+14     _Gemm_5_output_0_weights   2048/8192      weights/weights           const float             
+15     _Gemm_output_0_bias        64/256         weights/weights           const float             
+16     _Gemm_output_0_output      64/256         activations/**default**   float                   
+17     _Gemm_output_0_weights     61440/245760   weights/weights           const float             
+18     _MatMul_output_0_bias      32/128         weights/weights           const float             
+19     _MatMul_output_0_output    960/3840       activations/**default**   float                   
+20     _MatMul_output_0_weights   320/1280       weights/weights           const float             
+21     _Relu_1_output_0_output    64/256         activations/**default**   float                   
+22     _Relu_2_output_0_output    128/512        activations/**default**   float                   
+23     _Relu_3_output_0_output    256/1024       activations/**default**   float                   
+24     _Relu_4_output_0_output    128/512        activations/**default**   float                   
+25     _Relu_5_output_0_output    64/256         activations/**default**   float                   
+26     _Relu_6_output_0_output    32/128         activations/**default**   float                   
+27     _Relu_output_0_output      960/3840       activations/**default**   float                   
+28     input_output               300/1200       activations/**default**   float         /input    
+29     output_bias                1/4            weights/weights           const float             
+30     output_output              1/4            activations/**default**   float         /output   
+31     output_weights             32/128         weights/weights           const float             
+------ -------------------------- -------------- ------------------------- ------------- --------- 
+
+C-Layers (15)
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+c_id   name (*_layer)     id   layer_type      macc    rom      tensors                       shape (array id)    
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+0      _MatMul_output_0   11   Dense           10560   1408     I: input_output               f32(1x30x10) (28)   
+                                                                W: _MatMul_output_0_weights   f32(32x10) (20)     
+                                                                W: _MatMul_output_0_bias      f32(32) (18)        
+                                                                O: _MatMul_output_0_output    f32(1x30x32) (19)   
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+1      _Relu_output_0     12   Nonlinearity    960     0        I: _MatMul_output_0_output    f32(1x30x32) (19)   
+                                                                O: _Relu_output_0_output      f32(1x30x32) (27)   
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+2      _Gemm_output_0     15   Dense           61504   246016   I: _Relu_output_0_output      f32(1x30x32) (27)   
+                                                                W: _Gemm_output_0_weights     f32(64x960) (17)    
+                                                                W: _Gemm_output_0_bias        f32(64) (15)        
+                                                                O: _Gemm_output_0_output      f32(1x64) (16)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+3      _Relu_1_output_0   16   Nonlinearity    64      0        I: _Gemm_output_0_output      f32(1x64) (16)      
+                                                                O: _Relu_1_output_0_output    f32(1x64) (21)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+4      _Gemm_1_output_0   18   Dense           8320    33280    I: _Relu_1_output_0_output    f32(1x64) (21)      
+                                                                W: _Gemm_1_output_0_weights   f32(128x64) (2)     
+                                                                W: _Gemm_1_output_0_bias      f32(128) (0)        
+                                                                O: _Gemm_1_output_0_output    f32(1x128) (1)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+5      _Relu_2_output_0   19   Nonlinearity    128     0        I: _Gemm_1_output_0_output    f32(1x128) (1)      
+                                                                O: _Relu_2_output_0_output    f32(1x128) (22)     
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+6      _Gemm_2_output_0   21   Dense           33024   132096   I: _Relu_2_output_0_output    f32(1x128) (22)     
+                                                                W: _Gemm_2_output_0_weights   f32(256x128) (5)    
+                                                                W: _Gemm_2_output_0_bias      f32(256) (3)        
+                                                                O: _Gemm_2_output_0_output    f32(1x256) (4)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+7      _Relu_3_output_0   22   Nonlinearity    256     0        I: _Gemm_2_output_0_output    f32(1x256) (4)      
+                                                                O: _Relu_3_output_0_output    f32(1x256) (23)     
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+8      _Gemm_3_output_0   24   Dense           32896   131584   I: _Relu_3_output_0_output    f32(1x256) (23)     
+                                                                W: _Gemm_3_output_0_weights   f32(128x256) (8)    
+                                                                W: _Gemm_3_output_0_bias      f32(128) (6)        
+                                                                O: _Gemm_3_output_0_output    f32(1x128) (7)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+9      _Relu_4_output_0   25   Nonlinearity    128     0        I: _Gemm_3_output_0_output    f32(1x128) (7)      
+                                                                O: _Relu_4_output_0_output    f32(1x128) (24)     
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+10     _Gemm_4_output_0   27   Dense           8256    33024    I: _Relu_4_output_0_output    f32(1x128) (24)     
+                                                                W: _Gemm_4_output_0_weights   f32(64x128) (11)    
+                                                                W: _Gemm_4_output_0_bias      f32(64) (9)         
+                                                                O: _Gemm_4_output_0_output    f32(1x64) (10)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+11     _Relu_5_output_0   28   Nonlinearity    64      0        I: _Gemm_4_output_0_output    f32(1x64) (10)      
+                                                                O: _Relu_5_output_0_output    f32(1x64) (25)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+12     _Gemm_5_output_0   30   Dense           2080    8320     I: _Relu_5_output_0_output    f32(1x64) (25)      
+                                                                W: _Gemm_5_output_0_weights   f32(32x64) (14)     
+                                                                W: _Gemm_5_output_0_bias      f32(32) (12)        
+                                                                O: _Gemm_5_output_0_output    f32(1x32) (13)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+13     _Relu_6_output_0   31   Nonlinearity    32      0        I: _Gemm_5_output_0_output    f32(1x32) (13)      
+                                                                O: _Relu_6_output_0_output    f32(1x32) (26)      
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+14     output             33   Dense           33      132      I: _Relu_6_output_0_output    f32(1x32) (26)      
+                                                                W: output_weights             f32(1x32) (31)      
+                                                                W: output_bias                f32(1) (29)         
+                                                                O: output_output              f32(1x1) (30)       
+------ ------------------ ---- --------------- ------- -------- ----------------------------- ------------------- 
+
+
+
+Number of operations per c-layer
+------- ------ --------------------------------- --------- -------------- 
+c_id    m_id   name (type)                             #op           type 
+------- ------ --------------------------------- --------- -------------- 
+0       11     _MatMul_output_0 (Dense)             10,560   smul_f32_f32 
+1       12     _Relu_output_0 (Nonlinearity)           960     op_f32_f32 
+2       15     _Gemm_output_0 (Dense)               61,504   smul_f32_f32 
+3       16     _Relu_1_output_0 (Nonlinearity)          64     op_f32_f32 
+4       18     _Gemm_1_output_0 (Dense)              8,320   smul_f32_f32 
+5       19     _Relu_2_output_0 (Nonlinearity)         128     op_f32_f32 
+6       21     _Gemm_2_output_0 (Dense)             33,024   smul_f32_f32 
+7       22     _Relu_3_output_0 (Nonlinearity)         256     op_f32_f32 
+8       24     _Gemm_3_output_0 (Dense)             32,896   smul_f32_f32 
+9       25     _Relu_4_output_0 (Nonlinearity)         128     op_f32_f32 
+10      27     _Gemm_4_output_0 (Dense)              8,256   smul_f32_f32 
+11      28     _Relu_5_output_0 (Nonlinearity)          64     op_f32_f32 
+12      30     _Gemm_5_output_0 (Dense)              2,080   smul_f32_f32 
+13      31     _Relu_6_output_0 (Nonlinearity)          32     op_f32_f32 
+14      33     output (Dense)                           33   smul_f32_f32 
+------- ------ --------------------------------- --------- -------------- 
+total                                              158,305 
+
+Number of operation types
+---------------- --------- ----------- 
+operation type           #           % 
+---------------- --------- ----------- 
+smul_f32_f32       156,673       99.0% 
+op_f32_f32           1,632        1.0% 
+
+Complexity report (model)
+------ ---------------------- ------------------------- ------------------------- ------ 
+m_id   name                   c_macc                    c_rom                     c_id   
+------ ---------------------- ------------------------- ------------------------- ------ 
+11     _Constant_8_output_0   |||                6.7%   |                  0.2%   [0]    
+15     _Constant_output_0     ||||||||||||||||  38.9%   ||||||||||||||||  42.0%   [2]    
+12     _Relu_output_0         |                  0.6%   |                  0.0%   [1]    
+16     _Relu_1_output_0       |                  0.0%   |                  0.0%   [3]    
+18     _Gemm_1_output_0       |||                5.3%   |||                5.7%   [4]    
+19     _Relu_2_output_0       |                  0.1%   |                  0.0%   [5]    
+21     _Gemm_2_output_0       |||||||||         20.9%   |||||||||         22.5%   [6]    
+22     _Relu_3_output_0       |                  0.2%   |                  0.0%   [7]    
+24     _Gemm_3_output_0       |||||||||         20.8%   |||||||||         22.5%   [8]    
+25     _Relu_4_output_0       |                  0.1%   |                  0.0%   [9]    
+27     _Gemm_4_output_0       |||                5.2%   |||                5.6%   [10]   
+28     _Relu_5_output_0       |                  0.0%   |                  0.0%   [11]   
+30     _Gemm_5_output_0       |                  1.3%   |                  1.4%   [12]   
+31     _Relu_6_output_0       |                  0.0%   |                  0.0%   [13]   
+33     output                 |                  0.0%   |                  0.0%   [14]   
+------ ---------------------- ------------------------- ------------------------- ------ 
+macc=158,305 weights=585,860 act=5,040 ram_io=0
+ 
+ Requested memory size by section - "stm32f4" target
+ ------------------------------ ------- --------- ------ ------- 
+ module                            text    rodata   data     bss 
+ ------------------------------ ------- --------- ------ ------- 
+ NetworkRuntime1100_CM4_GCC.a     2,824         0      0       0 
+ network.o                        1,978        56    396       4 
+ lib (toolchain)*                     0         0      0       0 
+ ------------------------------ ------- --------- ------ ------- 
+ RT total**                       4,802        56    396       4 
+ ------------------------------ ------- --------- ------ ------- 
+ weights                              0   585,864      0       0 
+ activations                          0         0      0   5,040 
+ states                               0         0      0       0 
+ io                                   0         0      0       0 
+ ------------------------------ ------- --------- ------ ------- 
+ TOTAL                            4,802   585,920    396   5,044 
+ ------------------------------ ------- --------- ------ ------- 
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  
+  Summary - "stm32f4" target
+  -------------------------------------------------
+               FLASH (ro)     %*   RAM (rw)      % 
+  -------------------------------------------------
+  RT total          5,254   0.9%        400   7.4% 
+  -------------------------------------------------
+  TOTAL           591,118             5,440        
+  -------------------------------------------------
+  *  rt/total
+
+
+Generated files (5)
+------------------------------------------------------------------------------------ 
+/tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output/network_data.h      
+/tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output/network_data.c      
+/tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output/network.h           
+/tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output/network.c           
+/tmp/stm32ai_service/840e1054-3461-40ff-a4f4-63f0f580cc1e/output/network_details.h   
