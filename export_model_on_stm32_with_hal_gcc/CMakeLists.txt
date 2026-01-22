@@ -139,6 +139,22 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     m
 )
 
+target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -Ofast
+    -fno-math-errno
+    -funsafe-math-optimizations
+    -fno-trapping-math
+    -ffinite-math-only
+    -fsingle-precision-constant
+    -fdata-sections
+    -ffunction-sections
+)
+
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -Wl,--gc-sections
+    -flto
+)
+
 # ============================================================================
 # Post-Build: Generate .bin and .hex files
 # ============================================================================
