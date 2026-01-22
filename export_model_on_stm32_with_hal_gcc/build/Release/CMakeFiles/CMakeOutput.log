@@ -2,7 +2,7 @@ The target system is: Generic -  - arm
 The host system is: Linux - 5.15.167.4-microsoft-standard-WSL2 - x86_64
 Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
 Compiler: /usr/bin/arm-none-eabi-gcc 
-Build flags: ;-mcpu=cortex-m33;-mfpu=fpv5-sp-d16;-mfloat-abi=hard;;-Wall;-fdata-sections;-ffunction-sections
+Build flags: ;-mcpu=cortex-m33;-mfpu=fpv5-sp-d16;-mfloat-abi=hard;;-Wall;-fdata-sections;-ffunction-sections;-mcpu=cortex-m33;-mfpu=fpv5-sp-d16;-mfloat-abi=hard;;-Wall;-fdata-sections;-ffunction-sections
 Id flags: -c 
 
 The output was:
@@ -22,10 +22,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 Detecting C compiler ABI info compiled with the following output:
 Change Dir: /mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp
 
-Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_da4d9/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_da4d9.dir/build.make CMakeFiles/cmTC_da4d9.dir/build
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_c8382/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_c8382.dir/build.make CMakeFiles/cmTC_c8382.dir/build
 gmake[1]: Entering directory '/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj
-/usr/bin/arm-none-eabi-gcc   -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections    -v -std=gnu11 -o CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj -c /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c
+Building C object CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj
+/usr/bin/arm-none-eabi-gcc   -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections    -v -std=gnu11 -o CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj -c /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c
 Using built-in specs.
 COLLECT_GCC=/usr/bin/arm-none-eabi-gcc
 Target: arm-none-eabi
@@ -33,8 +33,8 @@ Configured with: ../configure --build=x86_64-linux-gnu --prefix=/usr --includedi
 Thread model: single
 Supported LTO compression algorithms: zlib
 gcc version 10.3.1 20210621 (release) (15:10.3-2021.07-4) 
-COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
- /usr/lib/gcc/arm-none-eabi/10.3.1/cc1 -quiet -v -imultilib thumb/v8-m.main+fp/hard -D__USES_INITFINI__ /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -mlibarch=armv8-m.main+dsp+fp -march=armv8-m.main+dsp+fp -auxbase-strip CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj -Wall -std=gnu11 -version -fdata-sections -ffunction-sections -o /tmp/ccI3jstk.s
+COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
+ /usr/lib/gcc/arm-none-eabi/10.3.1/cc1 -quiet -v -imultilib thumb/v8-m.main+fp/hard -D__USES_INITFINI__ /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -mlibarch=armv8-m.main+dsp+fp -march=armv8-m.main+dsp+fp -auxbase-strip CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj -Wall -std=gnu11 -version -fdata-sections -ffunction-sections -o /tmp/cc2OQfba.s
 GNU C11 (15:10.3-2021.07-4) version 10.3.1 20210621 (release) (arm-none-eabi)
 	compiled by GNU C version 11.2.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
 
@@ -51,17 +51,17 @@ GNU C11 (15:10.3-2021.07-4) version 10.3.1 20210621 (release) (arm-none-eabi)
 
 GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
 Compiler executable checksum: 4cf7574ae54eb0935abb4a8c56f8bcfe
-COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
- /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/as -v -march=armv8-m.main+dsp -mfloat-abi=hard -mfpu=fpv5-sp-d16 -meabi=5 -o CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj /tmp/ccI3jstk.s
+COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
+ /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/as -v -march=armv8-m.main+dsp -mfloat-abi=hard -mfloat-abi=hard -mfpu=fpv5-sp-d16 -mfpu=fpv5-sp-d16 -meabi=5 -o CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj /tmp/cc2OQfba.s
 GNU assembler version 2.38 (arm-none-eabi) using BFD version (2.38-3ubuntu1+15build1) 2.38
 COMPILER_PATH=/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/
 LIBRARY_PATH=/usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v8-m.main+fp/hard/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v8-m.main+fp/hard/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/
-COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
-Linking C static library libcmTC_da4d9.a
-/usr/bin/cmake -P CMakeFiles/cmTC_da4d9.dir/cmake_clean_target.cmake
-/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_da4d9.dir/link.txt --verbose=1
-/usr/bin/ar qc libcmTC_da4d9.a CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj
-/usr/bin/ranlib libcmTC_da4d9.a
+COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp'
+Linking C static library libcmTC_c8382.a
+/usr/bin/cmake -P CMakeFiles/cmTC_c8382.dir/cmake_clean_target.cmake
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8382.dir/link.txt --verbose=1
+/usr/bin/arm-none-eabi-ar qc libcmTC_c8382.a CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj
+/usr/bin/arm-none-eabi-ranlib libcmTC_c8382.a
 gmake[1]: Leaving directory '/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp'
 
 
@@ -83,10 +83,10 @@ Parsed C implicit link information from above output:
   link line regex: [^( *|.*[/\])(arm-none-eabi-g\+\+|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
   ignore line: [Change Dir: /mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp]
   ignore line: []
-  ignore line: [Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_da4d9/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_da4d9.dir/build.make CMakeFiles/cmTC_da4d9.dir/build]
+  ignore line: [Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_c8382/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_c8382.dir/build.make CMakeFiles/cmTC_c8382.dir/build]
   ignore line: [gmake[1]: Entering directory '/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp']
-  ignore line: [Building C object CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj]
-  ignore line: [/usr/bin/arm-none-eabi-gcc   -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections    -v -std=gnu11 -o CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj -c /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c]
+  ignore line: [Building C object CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj]
+  ignore line: [/usr/bin/arm-none-eabi-gcc   -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard  -Wall -fdata-sections -ffunction-sections    -v -std=gnu11 -o CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj -c /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c]
   ignore line: [Using built-in specs.]
   ignore line: [COLLECT_GCC=/usr/bin/arm-none-eabi-gcc]
   ignore line: [Target: arm-none-eabi]
@@ -94,8 +94,8 @@ Parsed C implicit link information from above output:
   ignore line: [Thread model: single]
   ignore line: [Supported LTO compression algorithms: zlib]
   ignore line: [gcc version 10.3.1 20210621 (release) (15:10.3-2021.07-4) ]
-  ignore line: [COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
-  ignore line: [ /usr/lib/gcc/arm-none-eabi/10.3.1/cc1 -quiet -v -imultilib thumb/v8-m.main+fp/hard -D__USES_INITFINI__ /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -mlibarch=armv8-m.main+dsp+fp -march=armv8-m.main+dsp+fp -auxbase-strip CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj -Wall -std=gnu11 -version -fdata-sections -ffunction-sections -o /tmp/ccI3jstk.s]
+  ignore line: [COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
+  ignore line: [ /usr/lib/gcc/arm-none-eabi/10.3.1/cc1 -quiet -v -imultilib thumb/v8-m.main+fp/hard -D__USES_INITFINI__ /usr/share/cmake-3.22/Modules/CMakeCCompilerABI.c -quiet -dumpbase CMakeCCompilerABI.c -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -mlibarch=armv8-m.main+dsp+fp -march=armv8-m.main+dsp+fp -auxbase-strip CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj -Wall -std=gnu11 -version -fdata-sections -ffunction-sections -o /tmp/cc2OQfba.s]
   ignore line: [GNU C11 (15:10.3-2021.07-4) version 10.3.1 20210621 (release) (arm-none-eabi)]
   ignore line: [	compiled by GNU C version 11.2.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
   ignore line: []
@@ -112,17 +112,17 @@ Parsed C implicit link information from above output:
   ignore line: []
   ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
   ignore line: [Compiler executable checksum: 4cf7574ae54eb0935abb4a8c56f8bcfe]
-  ignore line: [COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
-  ignore line: [ /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/as -v -march=armv8-m.main+dsp -mfloat-abi=hard -mfpu=fpv5-sp-d16 -meabi=5 -o CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj /tmp/ccI3jstk.s]
+  ignore line: [COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
+  ignore line: [ /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/as -v -march=armv8-m.main+dsp -mfloat-abi=hard -mfloat-abi=hard -mfpu=fpv5-sp-d16 -mfpu=fpv5-sp-d16 -meabi=5 -o CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj /tmp/cc2OQfba.s]
   ignore line: [GNU assembler version 2.38 (arm-none-eabi) using BFD version (2.38-3ubuntu1+15build1) 2.38]
   ignore line: [COMPILER_PATH=/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/bin/]
   ignore line: [LIBRARY_PATH=/usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v8-m.main+fp/hard/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v8-m.main+fp/hard/:/usr/lib/gcc/arm-none-eabi/10.3.1/:/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/]
-  ignore line: [COLLECT_GCC_OPTIONS='-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
-  ignore line: [Linking C static library libcmTC_da4d9.a]
-  ignore line: [/usr/bin/cmake -P CMakeFiles/cmTC_da4d9.dir/cmake_clean_target.cmake]
-  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_da4d9.dir/link.txt --verbose=1]
-  ignore line: [/usr/bin/ar qc libcmTC_da4d9.a CMakeFiles/cmTC_da4d9.dir/CMakeCCompilerABI.c.obj]
-  ignore line: [/usr/bin/ranlib libcmTC_da4d9.a]
+  ignore line: [COLLECT_GCC_OPTIONS='-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-mcpu=cortex-m33' '-mfpu=fpv5-sp-d16' '-mfloat-abi=hard' '-Wall' '-fdata-sections' '-ffunction-sections' '-v' '-std=gnu11' '-o' 'CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj' '-c' '-mthumb' '-mlibarch=armv8-m.main+dsp+fp' '-march=armv8-m.main+dsp+fp']
+  ignore line: [Linking C static library libcmTC_c8382.a]
+  ignore line: [/usr/bin/cmake -P CMakeFiles/cmTC_c8382.dir/cmake_clean_target.cmake]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8382.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/arm-none-eabi-ar qc libcmTC_c8382.a CMakeFiles/cmTC_c8382.dir/CMakeCCompilerABI.c.obj]
+  ignore line: [/usr/bin/arm-none-eabi-ranlib libcmTC_c8382.a]
   ignore line: [gmake[1]: Leaving directory '/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles/CMakeTmp']
   ignore line: []
   ignore line: []

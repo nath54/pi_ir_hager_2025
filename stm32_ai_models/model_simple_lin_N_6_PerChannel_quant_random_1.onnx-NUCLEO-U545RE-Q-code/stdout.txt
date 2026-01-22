@@ -1,0 +1,65 @@
+>>> stedgeai generate --model model_simple_lin_N_6_PerChannel_quant_random_1.onnx --optimization time --target stm32f4 --name network --workspace workspace --output output
+ST Edge AI Core v3.0.0-20426 123672867
+Creating c (debug) info json file network_c_info.json
+ Exec/report summary (generate)
+ ---------------------------------------------------------------------------------------------------------------------------------------
+ model file         :   model_simple_lin_N_6_PerChannel_quant_random_1.onnx   
+ type               :   onnx                                                                                                            
+ c_name             :   network                                                                                                         
+ compression        :   lossless                                                                                                        
+ options            :   allocate-inputs, allocate-outputs, use-lite-runtime, use-st-ai                                                  
+ optimization       :   time                                                                                                            
+ target/series      :   stm32f4                                                                                                         
+ workspace dir      :   workspace                                             
+ output dir         :   output                                                
+ model_fmt          :   ss/sa per channel                                                                                               
+ model_name         :   model_simple_lin_N_6_PerChannel_quant_random_1                                                                  
+ model_hash         :   0xb0c3fb87d767ab542a8da76ba22e12b1                                                                              
+ params #           :   30,673 items (119.82 KiB)                                                                                       
+ ---------------------------------------------------------------------------------------------------------------------------------------
+ input 1/1          :   'input', int8(1x30x10), 300 Bytes, QLinear(0.003920554,-128,int8), activations                                  
+ output 1/1         :   'output_QuantizeLinear_Input', int8(1x1), 1 Bytes, QLinear(0.000742241,-128,int8), activations                  
+ macc               :   35,329                                                                                                          
+ weights (ro)       :   31,556 B (30.82 KiB) (1 segment) / -91,136(-74.3%) vs float model                                               
+ activations (rw)   :   1,792 B (1.75 KiB) (1 segment) *                                                                                
+ ram (total)        :   1,792 B (1.75 KiB) = 1,792 + 0 + 0                                                                              
+ ---------------------------------------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+Computing AI RT data/code size (target=stm32f4)..
+ Requested memory size by section - "stm32f4" target
+ ------------------------------ -------- -------- ------- -------
+ module                             text   rodata    data     bss
+ ------------------------------ -------- -------- ------- -------
+ NetworkRuntime1100_CM4_GCC.a     12,884        0       0       0
+ network.o                         1,910    1,664   2,488       8
+ lib (toolchain)*                  2,116        0       0       0
+ ------------------------------ -------- -------- ------- -------
+ RT total**                       16,910    1,664   2,488       8
+ ------------------------------ -------- -------- ------- -------
+ weights                               0   31,560       0       0
+ activations                           0        0       0   1,792
+ states                                0        0       0       0
+ io                                    0        0       0       0
+ ------------------------------ -------- -------- ------- -------
+ TOTAL                            16,910   33,224   2,488   1,800
+ ------------------------------ -------- -------- ------- -------
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  Summary - "stm32f4" target
+  ---------------------------------------------------
+               FLASH (ro)      %*   RAM (rw)       %
+  ---------------------------------------------------
+  RT total         21,062   40.0%      2,496   58.2%
+  ---------------------------------------------------
+  TOTAL            52,622              4,288
+  ---------------------------------------------------
+  *  rt/total
+ Generated files (5)
+ ------------------------------------------------------------------------------------
+ network_data.h
+ network_data.c
+ network.h
+ network.c
+ network_details.h
+Creating txt report file network_generate_report.txt
+elapsed time (GENERATE): 4.313s

@@ -72,9 +72,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AI/network.c")
         file(GLOB AI_LIB_FILES "${CMAKE_CURRENT_SOURCE_DIR}/AI/Lib/*.a")
         if(AI_LIB_FILES)
             # Link using the full path directly
+            # foreach(LIB_PATH ${AI_LIB_FILES})
+            #     message(STATUS "AI library found: ${LIB_PATH}")
+            #     target_link_libraries(${CMAKE_PROJECT_NAME} ${LIB_PATH})
+            # endforeach()
+            set(AI_LIBRARIES "")
             foreach(LIB_PATH ${AI_LIB_FILES})
                 message(STATUS "AI library found: ${LIB_PATH}")
-                target_link_libraries(${CMAKE_PROJECT_NAME} ${LIB_PATH})
+                list(APPEND AI_LIBRARIES ${LIB_PATH})
             endforeach()
         else()
             message(WARNING "AI Lib/ directory exists but no .a files found!")
@@ -124,9 +129,14 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
 # Add linked libraries
+# target_link_libraries(${CMAKE_PROJECT_NAME}
+#     stm32cubemx
+#     # Add user defined libraries
+# )
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-    # Add user defined libraries
+    ${AI_LIBRARIES}
+    m
 )
 
 # ============================================================================

@@ -10,4 +10,4 @@ build:
 paths:
   models_dir: ../stm32_ai_models
   ai_dir: AI
-current_model: model_simple_lin_N_4.onnx-NUCLEO-U545RE-Q-code
+current_model: model_gru_h32_d1.onnx-NUCLEO-U545RE-Q-code

@@ -328,6 +328,7 @@ stm32_hal_ai.elf: cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/S
 stm32_hal_ai.elf: cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/__/__/Drivers/BSP/STM32U5xx_Nucleo/stm32u5xx_nucleo.c.obj
 stm32_hal_ai.elf: CMakeFiles/stm32_hal_ai.dir/build.make
 stm32_hal_ai.elf: ../../AI/Lib/NetworkRuntime1100_CM33_GCC.a
+stm32_hal_ai.elf: ../../AI/Lib/NetworkRuntime1100_CM33_GCC.a
 stm32_hal_ai.elf: CMakeFiles/stm32_hal_ai.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/c/Users/cleme/Documents/TPS/2A/PI/code/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/Release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking C executable stm32_hal_ai.elf"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/stm32_hal_ai.dir/link.txt --verbose=$(VERBOSE)
