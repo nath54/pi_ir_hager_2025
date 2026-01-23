@@ -1,0 +1,171 @@
+ST Edge AI Core v3.0.0-20426 123672867
+Created date          : 2026-01-19 21:01:07
+Parameters            : generate --model /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/model_simple_lin_1.onnx --optimization balanced --target stm32f4 --name network --workspace /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/workspace --output /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output
+
+Exec/report summary (generate)
+-----------------------------------------------------------------------------------------------------------
+model file         :   /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/model_simple_lin_1.onnx   
+type               :   onnx                                                                                
+c_name             :   network                                                                             
+compression        :   lossless                                                                            
+options            :   allocate-inputs, allocate-outputs, use-lite-runtime, use-st-ai                      
+optimization       :   balanced                                                                            
+target/series      :   stm32f4                                                                             
+workspace dir      :   /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/workspace                 
+output dir         :   /tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output                    
+model_fmt          :   float                                                                               
+model_name         :   model_simple_lin_1                                                                  
+model_hash         :   0xe7ffea58e9ddd6b2bd34e02e5142b17b                                                  
+params #           :   657 items (2.57 KiB)                                                                
+-----------------------------------------------------------------------------------------------------------
+input 1/1          :   'input', f32(1x30x10), 1.17 KBytes, activations                                     
+output 1/1         :   'output', f32(1x1), 4 Bytes, activations                                            
+macc               :   6,241                                                                               
+weights (ro)       :   2,628 B (2.57 KiB) (1 segment)                                                      
+activations (rw)   :   3,120 B (3.05 KiB) (1 segment) *                                                    
+ram (total)        :   3,120 B (3.05 KiB) = 3,120 + 0 + 0                                                  
+-----------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+
+Model name - model_simple_lin_1
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+m_id   layer (type,original)                        oshape            param/size        macc           connected to   | c_size           c_macc              c_type             
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+3      _Constant_1_output_0 (Placeholder, MatMul)   [b:10,c:16]       160/640                                         | -640(-100.0%)                        
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+5      _Constant_2_output_0 (Placeholder, Add)      [b:16]            16/64                                           | +640(+1000.0%)   +5,280(+100.0%)     Dense_[0]          
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+9      _Constant_output_0 (Placeholder, Gemm)       [b:1,c:480]       480/1,920                                       | +4(+0.2%)        +481(+100.0%)       Dense_[o][2]       
+       _Constant_3_output_0 (Placeholder, Gemm)     [b:1]             1/4                                             | -4(-100.0%)                          
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+0      input (Input, )                              [b:1,h:30,c:10]                                                   |                                      
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+3      _MatMul_output_0 (Gemm, MatMul)              [b:1,h:30,c:16]                  144,480                  input   |                  -144,480(-100.0%)   
+                                                                                               _Constant_1_output_0   | 
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+5      _Add_output_0 (Eltwise, Add)                 [b:1,h:30,c:16]                       16   _Constant_2_output_0   |                  -16(-100.0%)        
+                                                                                                   _MatMul_output_0   | 
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+6      _Relu_output_0 (Nonlinearity, Relu)          [b:1,h:30,c:16]                      480          _Add_output_0   |                                      Nonlinearity_[1]   
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+7      _Flatten_output_0 (Reshape, Flatten)         [b:1,c:480]                                      _Relu_output_0   |                                      
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+9      output (Gemm, Gemm)                          [b:1,c:1]                            481      _Flatten_output_0   |                  -481(-100.0%)       
+                                                                                                 _Constant_output_0   | 
+                                                                                               _Constant_3_output_0   | 
+------ -------------------------------------------- ----------------- ------------ --------- ---------------------- --- ---------------- ------------------- ------------------ 
+model/c-model: macc=145,457/6,241 -139,216(-95.7%) weights=2,628/2,628  activations=--/3,120 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : model_simple_lin_1
+c-name                : network
+c-node #              : 3
+c-array #             : 8
+activations size      : 3120 (1 segment)
+weights size          : 2628 (1 segment)
+macc                  : 6241
+inputs                : ['input_output']
+outputs               : ['output_output']
+
+C-Arrays (8)
+------ -------------------------- ----------- ------------------------- ------------- --------- 
+c_id   name (*_array)             item/size   domain/mem-pool           c-type        comment   
+------ -------------------------- ----------- ------------------------- ------------- --------- 
+0      _MatMul_output_0_bias      16/64       weights/weights           const float             
+1      _MatMul_output_0_output    480/1920    activations/**default**   float                   
+2      _MatMul_output_0_weights   160/640     weights/weights           const float             
+3      _Relu_output_0_output      480/1920    activations/**default**   float                   
+4      input_output               300/1200    activations/**default**   float         /input    
+5      output_bias                1/4         weights/weights           const float             
+6      output_output              1/4         activations/**default**   float         /output   
+7      output_weights             480/1920    weights/weights           const float             
+------ -------------------------- ----------- ------------------------- ------------- --------- 
+
+C-Layers (3)
+------ ------------------ ---- --------------- ------ ------ ----------------------------- ------------------ 
+c_id   name (*_layer)     id   layer_type      macc   rom    tensors                       shape (array id)   
+------ ------------------ ---- --------------- ------ ------ ----------------------------- ------------------ 
+0      _MatMul_output_0   5    Dense           5280   704    I: input_output               f32(1x30x10) (4)   
+                                                             W: _MatMul_output_0_weights   f32(16x10) (2)     
+                                                             W: _MatMul_output_0_bias      f32(16) (0)        
+                                                             O: _MatMul_output_0_output    f32(1x30x16) (1)   
+------ ------------------ ---- --------------- ------ ------ ----------------------------- ------------------ 
+1      _Relu_output_0     6    Nonlinearity    480    0      I: _MatMul_output_0_output    f32(1x30x16) (1)   
+                                                             O: _Relu_output_0_output      f32(1x30x16) (3)   
+------ ------------------ ---- --------------- ------ ------ ----------------------------- ------------------ 
+2      output             9    Dense           481    1924   I: _Relu_output_0_output      f32(1x30x16) (3)   
+                                                             W: output_weights             f32(1x480) (7)     
+                                                             W: output_bias                f32(1) (5)         
+                                                             O: output_output              f32(1x1) (6)       
+------ ------------------ ---- --------------- ------ ------ ----------------------------- ------------------ 
+
+
+
+Number of operations per c-layer
+------- ------ ------------------------------- ------- -------------- 
+c_id    m_id   name (type)                         #op           type 
+------- ------ ------------------------------- ------- -------------- 
+0       5      _MatMul_output_0 (Dense)          5,280   smul_f32_f32 
+1       6      _Relu_output_0 (Nonlinearity)       480     op_f32_f32 
+2       9      output (Dense)                      481   smul_f32_f32 
+------- ------ ------------------------------- ------- -------------- 
+total                                            6,241 
+
+Number of operation types
+---------------- ------- ----------- 
+operation type         #           % 
+---------------- ------- ----------- 
+smul_f32_f32       5,761       92.3% 
+op_f32_f32           480        7.7% 
+
+Complexity report (model)
+------ ---------------------- ------------------------- ------------------------- ------ 
+m_id   name                   c_macc                    c_rom                     c_id   
+------ ---------------------- ------------------------- ------------------------- ------ 
+5      _Constant_2_output_0   ||||||||||||||||  84.6%   ||||||            26.8%   [0]    
+9      _Constant_output_0     ||                 7.7%   ||||||||||||||||  73.2%   [2]    
+6      _Relu_output_0         ||                 7.7%   |                  0.0%   [1]    
+------ ---------------------- ------------------------- ------------------------- ------ 
+macc=6,241 weights=2,628 act=3,120 ram_io=0
+ 
+ Requested memory size by section - "stm32f4" target
+ ------------------------------ ------- -------- ------ ------- 
+ module                            text   rodata   data     bss 
+ ------------------------------ ------- -------- ------ ------- 
+ NetworkRuntime1100_CM4_GCC.a     2,824        0      0       0 
+ network.o                          942       56    396       4 
+ lib (toolchain)*                     0        0      0       0 
+ ------------------------------ ------- -------- ------ ------- 
+ RT total**                       3,766       56    396       4 
+ ------------------------------ ------- -------- ------ ------- 
+ weights                              0    2,632      0       0 
+ activations                          0        0      0   3,120 
+ states                               0        0      0       0 
+ io                                   0        0      0       0 
+ ------------------------------ ------- -------- ------ ------- 
+ TOTAL                            3,766    2,688    396   3,124 
+ ------------------------------ ------- -------- ------ ------- 
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  
+  Summary - "stm32f4" target
+  ---------------------------------------------------
+               FLASH (ro)      %*   RAM (rw)       % 
+  ---------------------------------------------------
+  RT total          4,218   61.6%        400   11.4% 
+  ---------------------------------------------------
+  TOTAL             6,850              3,520         
+  ---------------------------------------------------
+  *  rt/total
+
+
+Generated files (5)
+------------------------------------------------------------------------------------ 
+/tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output/network_data.h      
+/tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output/network_data.c      
+/tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output/network.h           
+/tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output/network.c           
+/tmp/stm32ai_service/a4825983-e788-4b9d-8cda-670a3bd4b601/output/network_details.h   

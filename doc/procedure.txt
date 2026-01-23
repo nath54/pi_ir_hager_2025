@@ -1,0 +1,19 @@
+===UBUNTU===
+
+git clone
+…(Conversion ONNX)
+cd .\export_model_on_stm32_with_hal_gcc\
+sudo apt install stlink-tools
+sudo apt install cmake
+sudo apt install gcc-arm-linux-gnueabi
+
+python3 manage_models.py : different options :
+ 1. Load Model
+  2. Select Main Source (AI/Demo)
+  3. Build (Release)
+  4. Build (Debug)
+  5. Build + Flash
+  6. Flash Only
+  7. Clean All Builds
+  8. Show Status
+  0. Quit

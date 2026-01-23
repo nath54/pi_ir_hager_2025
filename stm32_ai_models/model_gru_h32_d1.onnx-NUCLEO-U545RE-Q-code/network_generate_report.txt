@@ -1,0 +1,180 @@
+ST Edge AI Core v3.0.0-20426 123672867
+Created date          : 2026-01-19 21:05:00
+Parameters            : generate --model /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/model_gru_h32_d1.onnx --optimization balanced --target stm32f4 --name network --workspace /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/workspace --output /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output
+
+Exec/report summary (generate)
+---------------------------------------------------------------------------------------------------------
+model file         :   /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/model_gru_h32_d1.onnx   
+type               :   onnx                                                                              
+c_name             :   network                                                                           
+compression        :   lossless                                                                          
+options            :   allocate-inputs, allocate-outputs, use-lite-runtime, use-st-ai                    
+optimization       :   balanced                                                                          
+target/series      :   stm32f4                                                                           
+workspace dir      :   /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/workspace               
+output dir         :   /tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output                  
+model_fmt          :   float                                                                             
+model_name         :   model_gru_h32_d1                                                                  
+model_hash         :   0x57967b79669cd318296bbbdff960895f                                                
+params #           :   4,290 items (16.76 KiB)                                                           
+---------------------------------------------------------------------------------------------------------
+input 1/1          :   'input', f32(1x30x10), 1.17 KBytes, activations                                   
+output 1/1         :   'output', f32(1x1), 4 Bytes, activations                                          
+macc               :   122,913                                                                           
+weights (ro)       :   17,160 B (16.76 KiB) (1 segment)                                                  
+activations (rw)   :   5,936 B (5.80 KiB) (1 segment) *                                                  
+ram (total)        :   5,936 B (5.80 KiB) = 5,936 + 0 + 0                                                
+---------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+
+Model name - model_gru_h32_d1
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+m_id   layer (type,original)                          oshape                              param/size          macc            connected to   | c_size        c_macc          c_type         
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+1      _Constant_1_output_0 (Placeholder, Gather)     []                                  1/4                                                | -4(-100.0%)                   
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+23     _Constant_output_0 (Placeholder, Gemm)         [b:1,c:32]                          32/128                                             | +4(+3.1%)     +33(+100.0%)    Dense_[o][2]   
+       _Constant_9_output_0 (Placeholder, Gemm)       [b:1]                               1/4                                                | -4(-100.0%)                   
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+0      input (Input, )                                [b:1,h:30,c:10]                                                                        |                               
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+4      _Transpose_output_0 (Transpose, Transpose)     [b:1,h:30,c:10]                                          150                   input   |               -150(-100.0%)   
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+17     _GRU_output_0 (GRU, GRU)                       [b:1,h:30,w:1,c:32][b:1,h:1,c:32]   4,256/17,024     122,880     _Transpose_output_0   |                               GRU_[0]        
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+19     _Squeeze_output_0 (Reshape, Squeeze)           [b:1,h:30,c:32]                                                        _GRU_output_0   |                               
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+20     _Transpose_1_output_0 (Transpose, Transpose)   [b:1,h:30,c:32]                                          480       _Squeeze_output_0   |               -480(-100.0%)   
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+21     _Gather_1_output_0 (Gather, Gather)            [b:1,c:32]                                                     _Transpose_1_output_0   | +4(+100.0%)                   Gather_[1]     
+                                                                                                                      _Constant_1_output_0   | 
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+23     output (Gemm, Gemm)                            [b:1,c:1]                                                 33      _Gather_1_output_0   |               -33(-100.0%)    
+                                                                                                                        _Constant_output_0   | 
+                                                                                                                      _Constant_9_output_0   | 
+------ ---------------------------------------------- ----------------------------------- -------------- --------- ----------------------- --- ------------- --------------- -------------- 
+model/c-model: macc=123,543/122,913 -630(-0.5%) weights=17,160/17,160  activations=--/5,936 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : model_gru_h32_d1
+c-name                : network
+c-node #              : 3
+c-array #             : 13
+activations size      : 5936 (1 segment)
+weights size          : 17160 (1 segment)
+macc                  : 122913
+inputs                : ['input_output']
+outputs               : ['output_output']
+
+C-Arrays (13)
+------ --------------------------- ------------ ------------------------- ------------- --------- 
+c_id   name (*_array)              item/size    domain/mem-pool           c-type        comment   
+------ --------------------------- ------------ ------------------------- ------------- --------- 
+0      _Constant_1_output_0        1/4          weights/weights           const s32               
+1      _GRU_output_0_bias          192/768      weights/weights           const float             
+2      _GRU_output_0_initial_h     32/128       weights/weights           const float             
+3      _GRU_output_0_kernel        960/3840     weights/weights           const float             
+4      _GRU_output_0_output0       960/3840     activations/**default**   float                   
+5      _GRU_output_0_output1       32/128       activations/**default**   float                   
+6      _GRU_output_0_recurrent     3072/12288   weights/weights           const float             
+7      _GRU_output_0_scratch0      192/768      activations/**default**   float                   
+8      _Gather_1_output_0_output   32/128       activations/**default**   float                   
+9      input_output                300/1200     activations/**default**   float         /input    
+10     output_bias                 1/4          weights/weights           const float             
+11     output_output               1/4          activations/**default**   float         /output   
+12     output_weights              32/128       weights/weights           const float             
+------ --------------------------- ------------ ------------------------- ------------- --------- 
+
+C-Layers (3)
+------ -------------------- ---- ------------ -------- ------- ------------------------------ -------------------- 
+c_id   name (*_layer)       id   layer_type   macc     rom     tensors                        shape (array id)     
+------ -------------------- ---- ------------ -------- ------- ------------------------------ -------------------- 
+0      _GRU_output_0        17   GRU          122880   17024   I: input_output                f32(1x30x10) (9)     
+                                                               S: _GRU_output_0_scratch0                           
+                                                               W: _GRU_output_0_kernel        f32(96x10) (3)       
+                                                               W: _GRU_output_0_recurrent     f32(96x32) (6)       
+                                                               W: _GRU_output_0_bias          f32(192) (1)         
+                                                               W: _GRU_output_0_initial_h     f32(32) (2)          
+                                                               O: _GRU_output_0_output0       f32(1x30x1x32) (4)   
+                                                               O: _GRU_output_0_output1       f32(1x1x32) (5)      
+------ -------------------- ---- ------------ -------- ------- ------------------------------ -------------------- 
+1      _Gather_1_output_0   21   Gather       0        4       I: _GRU_output_0_output0       f32(1x30x1x32) (4)   
+                                                               W: _Constant_1_output_0        int32(1) (0)         
+                                                               O: _Gather_1_output_0_output   f32(1x1x32) (8)      
+------ -------------------- ---- ------------ -------- ------- ------------------------------ -------------------- 
+2      output               23   Dense        33       132     I: _Gather_1_output_0_output   f32(1x1x32) (8)      
+                                                               W: output_weights              f32(1x32) (12)       
+                                                               W: output_bias                 f32(1) (10)          
+                                                               O: output_output               f32(1x1) (11)        
+------ -------------------- ---- ------------ -------- ------- ------------------------------ -------------------- 
+
+
+
+Number of operations per c-layer
+------- ------ ----------------------------- --------- -------------- 
+c_id    m_id   name (type)                         #op           type 
+------- ------ ----------------------------- --------- -------------- 
+0       17     _GRU_output_0 (GRU)             122,880   smul_f32_f32 
+1       21     _Gather_1_output_0 (Gather)           0   smul_f32_s32 
+2       23     output (Dense)                       33   smul_f32_f32 
+------- ------ ----------------------------- --------- -------------- 
+total                                          122,913 
+
+Number of operation types
+---------------- --------- ----------- 
+operation type           #           % 
+---------------- --------- ----------- 
+smul_f32_f32       122,913      100.0% 
+smul_f32_s32             0        0.0% 
+
+Complexity report (model)
+------ -------------------- ------------------------- ------------------------- ------ 
+m_id   name                 c_macc                    c_rom                     c_id   
+------ -------------------- ------------------------- ------------------------- ------ 
+23     _Constant_output_0   |                  0.0%   |                  0.8%   [2]    
+17     _GRU_output_0        |||||||||||||||| 100.0%   ||||||||||||||||  99.2%   [0]    
+21     _Gather_1_output_0   |                  0.0%   |                  0.0%   [1]    
+------ -------------------- ------------------------- ------------------------- ------ 
+macc=122,913 weights=17,160 act=5,936 ram_io=0
+ 
+ Requested memory size by section - "stm32f4" target
+ ------------------------------ -------- -------- ------- ------- 
+ module                             text   rodata    data     bss 
+ ------------------------------ -------- -------- ------- ------- 
+ NetworkRuntime1100_CM4_GCC.a     10,588        0       0       0 
+ network.o                         1,090       64   1,004       8 
+ lib (toolchain)*                  1,360       24       0       0 
+ ------------------------------ -------- -------- ------- ------- 
+ RT total**                       13,038       88   1,004       8 
+ ------------------------------ -------- -------- ------- ------- 
+ weights                               0   17,160       0       0 
+ activations                           0        0       0   5,936 
+ states                                0        0       0       0 
+ io                                    0        0       0       0 
+ ------------------------------ -------- -------- ------- ------- 
+ TOTAL                            13,038   17,248   1,004   5,944 
+ ------------------------------ -------- -------- ------- ------- 
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  
+  Summary - "stm32f4" target
+  ---------------------------------------------------
+               FLASH (ro)      %*   RAM (rw)       % 
+  ---------------------------------------------------
+  RT total         14,130   45.2%      1,012   14.6% 
+  ---------------------------------------------------
+  TOTAL            31,290              6,948         
+  ---------------------------------------------------
+  *  rt/total
+
+
+Generated files (5)
+------------------------------------------------------------------------------------ 
+/tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output/network_data.h      
+/tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output/network_data.c      
+/tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output/network.h           
+/tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output/network.c           
+/tmp/stm32ai_service/d5b31a0c-07c1-4e76-ae0f-ddada814ce17/output/network_details.h   
