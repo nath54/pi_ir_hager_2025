@@ -79,6 +79,7 @@ Located in [`export_model_on_stm32_with_hal_gcc/`](./export_model_on_stm32_with_
 │   └── manage_models.py                        # [SCRIPT] Automation script for model loading, build, flashing and debugging
 ├── onnx_models_conversion_and_benchmark/       # PyTorch -> ONNX conversion and pre-benchmarking
 │   └── main_convert_to_onnx_and_measures.py    # [SCRIPT] Script to convert all the models pytorch into onnx and run a local benchmark
+└── requirements.txt                            # List of the python dependencies 
 ```
 
 ---
