@@ -1,0 +1,65 @@
+>>> stedgeai generate --model model_gru_h32_d1.onnx --optimization balanced --target stm32f4 --name network --workspace workspace --output output
+ST Edge AI Core v3.0.0-20426 123672867
+Creating c (debug) info json file network_c_info.json
+ Exec/report summary (generate)
+ ---------------------------------------------------------------------------------------------------------
+ model file         :   model_gru_h32_d1.onnx   
+ type               :   onnx                                                                              
+ c_name             :   network                                                                           
+ compression        :   lossless                                                                          
+ options            :   allocate-inputs, allocate-outputs, use-lite-runtime, use-st-ai                    
+ optimization       :   balanced                                                                          
+ target/series      :   stm32f4                                                                           
+ workspace dir      :   workspace               
+ output dir         :   output                  
+ model_fmt          :   float                                                                             
+ model_name         :   model_gru_h32_d1                                                                  
+ model_hash         :   0x57967b79669cd318296bbbdff960895f                                                
+ params #           :   4,290 items (16.76 KiB)                                                           
+ ---------------------------------------------------------------------------------------------------------
+ input 1/1          :   'input', f32(1x30x10), 1.17 KBytes, activations                                   
+ output 1/1         :   'output', f32(1x1), 4 Bytes, activations                                          
+ macc               :   122,913                                                                           
+ weights (ro)       :   17,160 B (16.76 KiB) (1 segment)                                                  
+ activations (rw)   :   5,936 B (5.80 KiB) (1 segment) *                                                  
+ ram (total)        :   5,936 B (5.80 KiB) = 5,936 + 0 + 0                                                
+ ---------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+Computing AI RT data/code size (target=stm32f4)..
+ Requested memory size by section - "stm32f4" target
+ ------------------------------ -------- -------- ------- -------
+ module                             text   rodata    data     bss
+ ------------------------------ -------- -------- ------- -------
+ NetworkRuntime1100_CM4_GCC.a     10,588        0       0       0
+ network.o                         1,090       64   1,004       8
+ lib (toolchain)*                  1,360       24       0       0
+ ------------------------------ -------- -------- ------- -------
+ RT total**                       13,038       88   1,004       8
+ ------------------------------ -------- -------- ------- -------
+ weights                               0   17,160       0       0
+ activations                           0        0       0   5,936
+ states                                0        0       0       0
+ io                                    0        0       0       0
+ ------------------------------ -------- -------- ------- -------
+ TOTAL                            13,038   17,248   1,004   5,944
+ ------------------------------ -------- -------- ------- -------
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  Summary - "stm32f4" target
+  ---------------------------------------------------
+               FLASH (ro)      %*   RAM (rw)       %
+  ---------------------------------------------------
+  RT total         14,130   45.2%      1,012   14.6%
+  ---------------------------------------------------
+  TOTAL            31,290              6,948
+  ---------------------------------------------------
+  *  rt/total
+ Generated files (5)
+ ------------------------------------------------------------------------------------
+ network_data.h
+ network_data.c
+ network.h
+ network.c
+ network_details.h
+Creating txt report file network_generate_report.txt
+elapsed time (GENERATE): 3.682s

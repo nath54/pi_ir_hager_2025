@@ -1,0 +1,3 @@
+/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles/stm32_hal_ai.dir
+/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles/edit_cache.dir
+/home/nathan/github/pi_ir_hager_2025/export_model_on_stm32_with_hal_gcc/build/CMakeFiles/rebuild_cache.dir
