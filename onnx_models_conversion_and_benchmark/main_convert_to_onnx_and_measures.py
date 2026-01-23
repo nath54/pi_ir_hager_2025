@@ -497,7 +497,7 @@ class MainTestAndMeasures:
             try:
                 #
                 self.test_one_model(model_idx=model_idx)
-            
+
             except Exception as e:
                 print(f"FAILED: {e}")
                 # traceback.print_exc()

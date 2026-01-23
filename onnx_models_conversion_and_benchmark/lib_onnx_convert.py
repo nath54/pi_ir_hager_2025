@@ -10,7 +10,7 @@ from torch import Tensor
 import onnx
 #
 import traceback
-
+import os
 
 #
 class ONNX_Converter:
@@ -31,6 +31,11 @@ class ONNX_Converter:
 
     #
     def convert_to_onnx(self, pt_model: nn.Module, input_shape: tuple[int, ...], onnx_filepath: str) -> bool:
+
+        #
+        ### Create the directory if it doesn't exist. ###
+        #
+        os.makedirs(os.path.dirname(os.path.abspath(onnx_filepath)), exist_ok=True)
 
         #
         try:

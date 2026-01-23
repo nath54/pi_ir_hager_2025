@@ -72,17 +72,13 @@ Located in [`export_model_on_stm32_with_hal_gcc/`](./export_model_on_stm32_with_
 
 ```text
 .
-├── doc/                                # Project reports (R1-R5) and format guides
-├── export_model_on_stm32_with_gcc/     # STM32 C implementation and build system
-│   ├── main.c                          # Main entry point for the MCU
-│   ├── manage_models.py                # Automation script for flashing/debugging
-│   ├── Makefile                        # ARM GCC build configuration
-│   └── network.c                       # Generated model code (from ST Cloud)
-├── onnx_models_conversion_and_benchmark/ # PyTorch -> ONNX conversion and pre-benchmarking
-│   ├── lib_onnx_convert.py             # PyTorch -> ONNX utility
-│   ├── lib_model_loader.py             # Architecture loading
-│   └── script_test_and_measures.py     # Local benchmarking script
-└── export_model_on_stm32_with_hal_gcc/ # STM32U5 HAL + CMake implementation (NUCLEO-U545RE-Q)
+├── doc/                                        # Project reports (R1-R5) and format guides
+├── export_model_on_stm32_with_gcc/             # STM32 C implementation and build system
+│   └── manage_models.py                        # [SCRIPT] Automation script for model loading, build, flashing and debugging
+├── export_model_on_stm32_with_hal_gcc/         # STM32U5 HAL + CMake implementation (NUCLEO-U545RE-Q)
+│   └── manage_models.py                        # [SCRIPT] Automation script for model loading, build, flashing and debugging
+├── onnx_models_conversion_and_benchmark/       # PyTorch -> ONNX conversion and pre-benchmarking
+│   └── main_convert_to_onnx_and_measures.py    # [SCRIPT] Script to convert all the models pytorch into onnx and run a local benchmark
 ```
 
 ---
@@ -90,36 +86,55 @@ Located in [`export_model_on_stm32_with_hal_gcc/`](./export_model_on_stm32_with_
 ## 🔧 Installation & Setup
 
 ### Prerequisites
-1. **Python 3.10+** (3.10 recommended for some ST tools compatibility).
-2. **ARM GNU Toolchain**: `arm-none-eabi-gcc` for compiling for STM32.
-3. **st-link**: To flash the binary onto the boards.
-4. **libopencm3**: Included as a submodule.
+1. **An Ubuntu Computer**
+2. **Python 3.10+** (3.10 recommended for some ST tools compatibility).
+3. **CMake**: Tool for the compilation
+4. **ARM GNU Toolchain**: `arm-none-eabi-gcc` for compiling for STM32.
+5. **st-link**: To flash the binary onto the boards.
 
 ### Commands
 ```bash
 # Clone the repository
-git clone https://gitlab.unistra.fr/cerisara/pi_hager_2025.git
-cd pi_hager_2025
+git clone https://github.com/nath54/pi_ir_hager_2025
+cd pi_ir_hager_2025
 
-# Setup the STM32 build environment
-cd export_model_on_stm32_with_gcc
-bash build.sh
+# Install the dependencies
+pip install -r requirements.txt
 
-# Flash a model (GCC Path)
-bash flash.sh
+# Pipeline Step 1: Convert PyTorch models to ONNX
+python onnx_models_conversion_and_benchmark/main_convert_to_onnx_and_measures.py --skip_measures
 
-# OR: Setup for HAL Project (NUCLEO-U545RE-Q)
+# Pipeline Step 2:
+#  - Go to [ST Edge AI Cloud](https://stm32ai-cs.st.com/)
+#  - Login / Create an account
+#  - Upload the ONNX models
+#  - Select the "STM32 MCUs" platform
+#  - Activate or not the model quantization
+#  - Optimize for inference time
+#  - Go directly into the Generate page
+#  - Choose the "NUCLEO-U545RE-Q" board
+#  - Download the C code
+#  - This will generate a zip file for each ONNX model you process
+#  - Then extract theses zip files into the `stm32_ai_models/` directory
+#    **IMPORTANT:** The name of the subdirectories must be the exact name of the zip file
+
+# Pipeline Step 3: Build and flash the STM32 project
 cd export_model_on_stm32_with_hal_gcc
-python3 manage_models.py
-# (Follow the interactive menu to load, build, and flash)
+python manage_models.py
+#  - Then select the option [1] to select the model you want to build and flash
+#  - Then select the option [7] to clean the build directory
+#  - Then select the option [3] to build the project
+#  - Then select the option [6] to flash the project
 ```
+
+Theses steps have been tested on Ubuntu and Arch-Linux computers.
+
+For windows, the workaround is to use WSL (Windows Subsystem for Linux). But there is a catch: the STM32 USB plugged is not detected via the WSL. So the next workaround is to use the STM32_Programmer_CLI tool on windows directly **after the build phase on the wsl `manage_models.py` script** on the `export_model_on_stm32_with_hal_gcc/build/Release/stm32_hal_ai.bin` result file.
 
 ---
 
 ## 🔗 Useful Links
 - [ST Edge AI Cloud](https://stm32ai-cs.st.com/)
-- [libopencm3 Documentation](http://libopencm3.org/)
-- [Fastor Library](https://github.com/romeric/Fastor)
 
 ---
 © 2024-2025 PI IR Hager Project Team.
