@@ -116,6 +116,11 @@ Located in [`export_model_on_stm32_with_hal_gcc/`](./export_model_on_stm32_with_
 git clone https://github.com/nath54/pi_ir_hager_2025
 cd pi_ir_hager_2025
 
+# Install the system dependencies (given here for ubuntu, may change for other linux distros)
+sudo apt install stlink-tools
+sudo apt install cmake
+sudo apt install gcc-arm-linux-gnueabi
+
 # Install the dependencies
 pip install -r requirements.txt
 
@@ -147,7 +152,7 @@ python manage_models.py
 
 Theses steps have been tested on Ubuntu and Arch-Linux computers.
 
-For windows, the workaround is to use WSL (Windows Subsystem for Linux). But there is a catch: the STM32 USB plugged is not detected via the WSL. So the next workaround is to use the STM32_Programmer_CLI tool on windows directly **after the build phase on the wsl `manage_models.py` script** on the `export_model_on_stm32_with_hal_gcc/build/Release/stm32_hal_ai.bin` result file.
+For windows, the workaround is to use WSL (Windows Subsystem for Linux) to be able to use `gcc-arm-linux-gnueabi`. But there is a catch: the STM32 USB plugged is not detected via the WSL. So the next workaround is to use the STM32_Programmer_CLI tool on windows directly **after the build phase on the wsl `manage_models.py` script** on the `export_model_on_stm32_with_hal_gcc/build/Release/stm32_hal_ai.bin` result file.
 
 ---
 
@@ -176,3 +181,4 @@ python main_convert_to_onnx_and_measures.py
 
 ---
 © 2025-2029 PI IR Hager Project Team.
+
