@@ -46,6 +46,12 @@ The project followed a multi-stage evolution, documented in detailed reports loc
 - **Pipeline finalization**: Our final pipeline is the one detailed a little later in this document.
 
 ---
+## Cloning the repository
+One can clone this repository by using the appropriate git command, depending on its operating system. For example, on Linux, after installing git, the command is :
+`git clone git@github.com:nath54/pi_ir_hager_2025.git`
+
+
+---
 
 ## Technical Architecture
 
@@ -181,4 +187,5 @@ python main_convert_to_onnx_and_measures.py
 
 ---
 © 2025-2029 PI IR Hager Project Team.
+
 
